@@ -30,6 +30,7 @@ const submit = () => {
         </div>
 
         <div class="space-y-6">
+            <h1 class="mb-1  font-bold text-2xl text-[#042c68] flex space-x-8 mb-8 ">Forget Password</h1>
             <form @submit.prevent="submit">
                 <div class="grid gap-2">
                     <Label for="email">Email address</Label>
@@ -38,14 +39,17 @@ const submit = () => {
                 </div>
 
                 <div class="my-6 flex items-center justify-start">
-                    <Button class="w-full" :disabled="form.processing">
+                    <Button class="mt-4 w-full
+                        inline-block rounded-sm bg-[#042c68]
+                         px-5 py-1.5 mx-2  text-sm leading-normal text-white cursor-pointer hover:bg-[#1D4BA8]
+                        " :disabled="form.processing">
                         <LoaderCircle v-if="form.processing" class="h-4 w-4 animate-spin" />
                         Email password reset link
                     </Button>
                 </div>
             </form>
 
-            <div class="space-x-1 text-center text-sm text-muted-foreground">
+            <div class="space-x-1 text-center text-sm text-muted-[#042c68]">
                 <span>Or, return to</span>
                 <TextLink :href="route('login')">log in</TextLink>
             </div>
