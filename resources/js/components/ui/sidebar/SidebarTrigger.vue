@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { PanelLeft } from 'lucide-vue-next'
 import { useSidebar } from './utils'
+import AppearanceTabs from '@/components/AppearanceTabs.vue';
 
 const props = defineProps<{
   class?: HTMLAttributes['class']
@@ -13,6 +14,7 @@ const { toggleSidebar } = useSidebar()
 </script>
 
 <template>
+
   <Button
     data-sidebar="trigger"
     data-slot="sidebar-trigger"
@@ -24,4 +26,7 @@ const { toggleSidebar } = useSidebar()
     <PanelLeft />
     <span class="sr-only">Toggle Sidebar</span>
   </Button>
+
+    <AppearanceTabs class="ml-5 mr-5" />
+
 </template>

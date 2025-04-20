@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { HTMLAttributes } from 'vue'
 import { cn } from '@/lib/utils'
-import AppearanceTabs from '@/components/AppearanceTabs.vue';
 
 const props = defineProps<{
   class?: HTMLAttributes['class']
@@ -9,12 +8,10 @@ const props = defineProps<{
 </script>
 
 <template>
-  <div
-    data-slot="sidebar-header"
-    data-sidebar="header"
-    :class="cn('flex flex-col gap-2 p-2', props.class)"
+  <tr
+    data-slot="table-row"
+    :class="cn('hover:bg-muted/50 data-[state=selected]:bg-muted border-b transition-colors', props.class)"
   >
     <slot />
-  </div>
-
+  </tr>
 </template>

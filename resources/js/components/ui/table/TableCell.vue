@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { HTMLAttributes } from 'vue'
 import { cn } from '@/lib/utils'
-import AppearanceTabs from '@/components/AppearanceTabs.vue';
 
 const props = defineProps<{
   class?: HTMLAttributes['class']
@@ -9,12 +8,15 @@ const props = defineProps<{
 </script>
 
 <template>
-  <div
-    data-slot="sidebar-header"
-    data-sidebar="header"
-    :class="cn('flex flex-col gap-2 p-2', props.class)"
+  <td
+    data-slot="table-cell"
+    :class="
+      cn(
+        'p-2 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]',
+        props.class,
+      )
+    "
   >
     <slot />
-  </div>
-
+  </td>
 </template>
