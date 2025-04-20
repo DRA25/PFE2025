@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('d_r_a_s', function (Blueprint $table) {
 
-            $table->string('n_dra')->unique();
+            $table->string('n_dra')->primary();
             $table->date('periode');
             $table->string('etat');
             $table->integer('cmp_gen');

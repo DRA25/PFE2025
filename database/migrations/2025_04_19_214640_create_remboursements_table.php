@@ -12,8 +12,10 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('remboursements', function (Blueprint $table) {
-            $table->id();
-            $table->timestamps();
+            $table->integer('n_remb')->primary();
+            $table->integer('montant_remb');
+            $table->date('date_remb');
+
         });
     }
 

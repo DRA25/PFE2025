@@ -12,8 +12,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('bon_achats', function (Blueprint $table) {
-            $table->id();
-            $table->timestamps();
+            $table->integer('n_ba')->primary();
+            $table->integer('montant_ba');
+            $table->date('date_ba');
         });
     }
 

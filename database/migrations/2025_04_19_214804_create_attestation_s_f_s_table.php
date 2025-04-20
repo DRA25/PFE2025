@@ -12,8 +12,10 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('attestation_s_f_s', function (Blueprint $table) {
-            $table->id();
-            $table->timestamps();
+            $table->integer('id_attes')->primary();
+            $table->string('libelle_attes');
+            $table->integer('debit_attes');
+            $table->date('date_attes');
         });
     }
 

@@ -12,8 +12,10 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('bon_de_commandes', function (Blueprint $table) {
-            $table->id();
-            $table->timestamps();
+            $table->integer('n_bc')->primary();
+            $table->integer('total_bc');
+            $table->string('etat_bc');
+            $table->date('date_bc');
         });
     }
 

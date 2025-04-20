@@ -12,8 +12,11 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('accuse_receptions', function (Blueprint $table) {
-            $table->id();
-            $table->timestamps();
+            $table->integer('id_acc')->primary();
+            $table->string('method_pai');
+            $table->string('ordre');
+            $table->string('libelle');
+            $table->integer('montant');
         });
     }
 

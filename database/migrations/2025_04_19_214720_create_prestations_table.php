@@ -12,8 +12,11 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('prestations', function (Blueprint $table) {
-            $table->id();
-            $table->timestamps();
+            $table->integer('id_pres')->primary();
+            $table->string('desc_pres');
+            $table->string('libelle_pres');
+            $table->integer('prix_pres');
+            $table->date('date_pres');
         });
     }
 
