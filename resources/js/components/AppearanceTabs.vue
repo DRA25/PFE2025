@@ -30,7 +30,7 @@ const tabs = [
                     : 'text-neutral-500 hover:bg-neutral-200/60 hover:text-black dark:text-neutral-400 dark:hover:bg-neutral-700/60',
             ]"
         >
-            <component :is="Icon" class="ml-0.5 h-4 w-4 dark:text-[#F3B41CFF] text-[#042B62FF]" />
+            <component :is="Icon" class="ml-0.5 h-4 w-4 dark:text-[#BDBDBDFF] text-[#042B62FF]" />
 
         </button>
     </div>

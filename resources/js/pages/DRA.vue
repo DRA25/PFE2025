@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { defineComponent } from 'vue';
-
+import { Head,Link } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { TableCaption, TableHeader, TableBody, TableRow, TableCell, TableHead } from '@/components/ui/table';
 import { type BreadcrumbItem } from '@/types';
@@ -20,18 +20,19 @@ const breadcrumbs: BreadcrumbItem[] = [
 <template>
     <Head title="DRA" />
     <AppLayout :breadcrumbs="breadcrumbs">
-        <Table>
-            <TableCaption>Liste Des DRA</TableCaption>
+
+        <Table class="m-5 mt-0">
+            <TableCaption class="text-lg font-bold text-left mb-5  text-[#042B62FF] dark:text-[#BDBDBDFF] ">Liste Des DRA</TableCaption>
             <TableHeader>
-                <TableRow>
-                    <TableHead> Numero DRA </TableHead>
-                    <TableHead>Periode</TableHead>
-                    <TableHead>Etat</TableHead>
-                    <TableHead>compte generaux</TableHead>
-                    <TableHead>compte analytique</TableHead>
-                    <TableHead>Debit</TableHead>
-                    <TableHead>Libelle</TableHead>
-                    <TableHead>Fournisseur</TableHead>
+                <TableRow >
+                    <TableHead class=" text-[#042B62FF] dark:text-[#BDBDBDFF]"> Numero DRA </TableHead>
+                    <TableHead class=" text-[#042B62FF] dark:text-[#BDBDBDFF]">Periode</TableHead>
+                    <TableHead class=" text-[#042B62FF] dark:text-[#BDBDBDFF]">Etat</TableHead>
+                    <TableHead class=" text-[#042B62FF] dark:text-[#BDBDBDFF]">compte generaux</TableHead>
+                    <TableHead class=" text-[#042B62FF] dark:text-[#BDBDBDFF]">compte analytique</TableHead>
+                    <TableHead class=" text-[#042B62FF] dark:text-[#BDBDBDFF]">Debit</TableHead>
+                    <TableHead class=" text-[#042B62FF] dark:text-[#BDBDBDFF]">Libelle</TableHead>
+                    <TableHead class=" text-[#042B62FF] dark:text-[#BDBDBDFF]">Fournisseur</TableHead>
 
 
 

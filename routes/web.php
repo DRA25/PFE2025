@@ -8,7 +8,9 @@ Route::get('/', function () {
 })->name('home');
 
 
-
+Route::get('/testrole', function () {
+    return Inertia::render('testrole');
+})->middleware(['auth', 'role:admin']);
 
 Route::get('dashboard', function () {
     return Inertia::render('Dashboard');
