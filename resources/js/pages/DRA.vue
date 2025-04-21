@@ -20,8 +20,8 @@ const breadcrumbs: BreadcrumbItem[] = [
 <template>
     <Head title="DRA" />
     <AppLayout :breadcrumbs="breadcrumbs">
-
-        <Table class="m-5 mt-0">
+        <div class=" m-5  bg-[#dedede] dark:bg-[#042B62] rounded-lg" >
+        <Table class=" m-3  w-39/40 ">
             <TableCaption class="text-lg font-bold text-left mb-5  text-[#042B62FF] dark:text-[#BDBDBDFF] ">Liste Des DRA</TableCaption>
             <TableHeader>
                 <TableRow >
@@ -71,5 +71,6 @@ const breadcrumbs: BreadcrumbItem[] = [
                 </TableRow>
             </TableBody>
         </Table>
+        </div>
     </AppLayout>
 </template>

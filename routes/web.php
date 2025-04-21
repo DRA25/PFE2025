@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -7,6 +8,12 @@ Route::get('/', function () {
     return Inertia::render('auth/Login');
 })->name('home');
 
+Route::middleware(['auth', 'role:admin'])->group(function () {
+    Route::get('/users', [UserController::class, 'index'])->name('users.index');
+    Route::post('/users/{user}/roles', [UserController::class, 'assignRoles'])->name('users.assignRoles');
+    Route::delete('/roles/{role}', [UserController::class, 'destroyRole'])->name('roles.destroy');
+    Route::post('/users/{user}/remove-role/{role}', [UserController::class, 'removeRole'])->name('users.removeRole');
+});
 
 Route::get('/testrole', function () {
     return Inertia::render('testrole');

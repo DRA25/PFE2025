@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Middleware;
 use Tighten\Ziggy\Ziggy;
 
@@ -50,7 +51,25 @@ class HandleInertiaRequests extends Middleware
                 ...(new Ziggy)->toArray(),
                 'location' => $request->url(),
             ],
+
+            [
+                'auth' => [
+                    'user' => Auth::check() ? [
+                        'id' => $request->user()->id,
+                        'name' => $request->user()->name,
+                        'email' => $request->user()->email,
+                        'roles' => $request->user()->getRoleNames(), // returns ['admin', 'editor']
+                        'permissions' => $request->user()->getAllPermissions()->pluck('name'), // returns ['edit-post', 'delete-post']
+                    ] : null,
+                ],
+            ],
+
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+
+
+
         ];
     }
+
+
 }
