@@ -27,6 +27,6 @@ const { toggleSidebar } = useSidebar()
     <span class="sr-only">Toggle Sidebar</span>
   </Button>
 
-    <AppearanceTabs class="ml-5 mr-5" />
+
 
 </template>

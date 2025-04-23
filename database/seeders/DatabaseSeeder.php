@@ -30,6 +30,11 @@ class DatabaseSeeder extends Seeder
             'name' => 'Admin User',
             'email' => 'admin@example.com',
         ]);
+        $atelier = User::factory()->create([
+            'name' => 'Atelier User',
+            'email' => 'atelier@example.com',
+        ]);
+        $atelier->assignRole($atelierRole);
         $admin->assignRole($adminRole);
 
         $editor = User::factory()->create([

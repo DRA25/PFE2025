@@ -1,7 +1,8 @@
 <?php
 
 use App\Http\Controllers\AchatController;
-use App\Http\Controllers\AtelierController;
+use App\Http\Controllers\Atelier\AtelierController;
+use App\Http\Controllers\Atelier\DemandepieceController;
 use App\Http\Controllers\MagasinController;
 use App\Http\Controllers\paimentController;
 use App\Http\Controllers\ScfController;
@@ -22,6 +23,8 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
 //Atelier routes
 Route::middleware(['auth', 'role:service atelier|admin'])->group(function () {
     Route::get('/atelier', [AtelierController::class, 'index'])->name('atelier.index');
+    Route::get('/demandepiece', [DemandepieceController::class, 'index'])->name('demandepiece.index');
+
 
 });
 

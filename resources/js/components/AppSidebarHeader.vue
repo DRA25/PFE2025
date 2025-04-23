@@ -2,10 +2,21 @@
 import Breadcrumbs from '@/components/Breadcrumbs.vue';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import type { BreadcrumbItemType } from '@/types';
+import { Button } from '@/components/ui/button';
+import { usePage } from '@inertiajs/vue3';
+import { computed } from 'vue';
+import MenuForeachRole from '@/components/MenuForeachRole.vue';
+import AppearanceTabs from '@/components/AppearanceTabs.vue';
+
+const page = usePage();
+const userHasRole = computed(() => page.props.userHasRole as string);
 
 defineProps<{
     breadcrumbs?: BreadcrumbItemType[];
+    userHasRole?: string;
 }>();
+
+
 </script>
 
 <template>
@@ -14,9 +25,14 @@ defineProps<{
     >
         <div class="flex items-center gap-2">
             <SidebarTrigger class="-ml-1" />
+
             <template v-if="breadcrumbs.length > 0">
                 <Breadcrumbs :breadcrumbs="breadcrumbs" />
             </template>
+
+            <MenuForeachRole class="ml-10"/>
         </div>
+        <div class="absolute right-0"> <AppearanceTabs class="ml-5 mr-5" /></div>
+
     </header>
 </template>
