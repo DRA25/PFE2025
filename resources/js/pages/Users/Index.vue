@@ -4,9 +4,24 @@ import { Button } from '@/components/ui/button/index.js';
 import AppLayout from '@/layouts/AppLayout.vue';
 import breadcrumbs from '@/components/Breadcrumbs.vue';
 import { TableCaption, TableHeader, TableBody, TableRow, TableCell, TableHead } from '@/components/ui/table';
-import { isRowSelected } from '@tanstack/vue-table';
+import { watchEffect } from 'vue';
+
 
 const props = defineProps({ users: Array, roles: Array, success: String });
+
+// Initialize user.role for each user on mounted
+watchEffect(() => {
+    props.users.forEach(user => {
+        // Set the initial role for each user if roles are available
+        if (Array.isArray(user.roles) && user.roles.length > 0) {
+            user.role = typeof user.roles[0] === 'string' ? user.roles[0] : user.roles[0].name;
+        } else {
+            user.role = null; // No role assigned
+        }
+    });
+});
+
+
 
 function updateRoles(user, roles) {
     router.post(route('users.assignRoles', user.id), {
@@ -23,7 +38,7 @@ function updateRoles(user, roles) {
     });
 }
 
-const hasRole = (roleName) => props.auth?.user?.roles?.some(r => r.name === roleName);
+
 
 function removeUserRole(user, role) {
     // Send request to backend to remove role
@@ -62,19 +77,20 @@ function removeUserRole(user, role) {
             <TableRow v-for="user in users" :key="user.id" class="border-b">
                 <TableCell class="p-2">{{ user.name }}</TableCell>
                 <TableCell class="p-2">
-                    <!-- select role -->
-                    <select multiple
-                            v-model="user.roles"
-                            @change="updateRoles(user, user.roles)"
-                            class="bg-white rounded-lg p-2 dark:bg-[#070738] ">
-
-                        <option v-for="role in roles"
-                                :key="role.id"
+                    <div>
+                        <!-- Single-role radio group -->
+                        <label v-for="role in props.roles" :key="role.id" class="flex items-center space-x-2 my-1">
+                            <input
+                                type="radio"
                                 :value="role.name"
-                                class="hover:bg-gray-200 hover:dark:bg-[#042B62] rounded border-b" >
-                            {{ role.name }}
-                        </option>
-                    </select>
+                                v-model="user.role"
+                                :name="'user-role-' + user.id"
+                            @change="updateRoles(user, [user.role])"
+                            class="accent-blue-600"
+                            />
+                            <span>{{ role.name }}</span>
+                        </label>
+                    </div>
                 </TableCell>
                 <TableCell class="p-2">
   <span
@@ -96,7 +112,7 @@ function removeUserRole(user, role) {
                             @click="removeUserRole(user, role)"
                             class="text-white hover:underline text-xs bg-red-500 hover:bg-red-400"
                         >
-                            Remove {{ role.name }}
+                            Remove Role
                         </Button>
                     </div>
                 </TableCell>

@@ -39,25 +39,11 @@ class UserController extends Controller
         $roles = Role::all();
 
         // Pass the updated data to Inertia
-        return inertia('Users/Index', [
-            'users' => $users,
-            'roles' => $roles,
-            'success' => 'Roles updated successfully!', // Optional: show success message
-        ]);
+        return redirect()->route('users.index')->with('success', 'Role removed successfully.');
     }
 
 
-    public function destroyRole(Role $role)
-    {
-        // Optional: prevent deleting essential roles
-        if (in_array($role->name, ['admin'])) {
-            return back()->withErrors(['error' => 'Cannot delete admin role.']);
-        }
 
-        $role->delete();
-
-        return back()->with('success', 'Role deleted successfully.');
-    }
 
     public function removeRole(Request $request, User $user)
     {
@@ -67,11 +53,8 @@ class UserController extends Controller
         // Reload user roles after removal
         $user->load('roles');
 
-        return inertia('Users/Index', [
-            'users' => User::with('roles')->get(),
-            'roles' => Role::all(),
-            'success' => 'Role removed successfully!'
-        ]);
+        return redirect()->route('users.index')->with('success', 'Role removed successfully.');
+
     }
 
 }
