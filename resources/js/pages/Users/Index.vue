@@ -60,7 +60,7 @@ function removeUserRole(user, role) {
         <div v-if="success" class="alert alert-success text-red-600 mb-2">
             {{ success }}
         </div>
-<div class=" m-5  bg-[#dedede] dark:bg-[#042B62] rounded-lg" >
+<div class=" m-5  bg-gray-100 dark:bg-gray-800 rounded-lg" >
         <Table class=" m-3  w-39/40 ">
 
             <TableCaption class="text-lg font-bold text-left mb-5 ml-3 text-[#042B62FF] dark:text-[#BDBDBDFF] ">User Role Manager</TableCaption>
@@ -77,20 +77,30 @@ function removeUserRole(user, role) {
             <TableRow v-for="user in users" :key="user.id" class="border-b">
                 <TableCell class="p-2">{{ user.name }}</TableCell>
                 <TableCell class="p-2">
-                    <div>
-                        <!-- Single-role radio group -->
-                        <label v-for="role in props.roles" :key="role.id" class="flex items-center space-x-2 my-1">
-                            <input
-                                type="radio"
-                                :value="role.name"
-                                v-model="user.role"
-                                :name="'user-role-' + user.id"
-                            @change="updateRoles(user, [user.role])"
-                            class="accent-blue-600"
-                            />
-                            <span>{{ role.name }}</span>
-                        </label>
+                    <div class="space-y-2">
+
+
+                        <div class="space-y-1">
+                            <label
+                                v-for="role in props.roles"
+                                :key="role.id"
+                                class="flex items-center gap-2 p-2  rounded-lg cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition"
+                            >
+                                <input
+                                    type="radio"
+                                    :value="role.name"
+                                    v-model="user.role"
+                                    :name="'user-role-' + user.id"
+                                    @change="updateRoles(user, [user.role])"
+                                    class="accent-blue-800 dark:accent-yellow-600"
+                                />
+                                <span class="text-sm text-gray-800 dark:text-gray-100 capitalize">
+                {{ role.name }}
+            </span>
+                            </label>
+                        </div>
                     </div>
+
                 </TableCell>
                 <TableCell class="p-2">
   <span

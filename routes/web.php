@@ -4,6 +4,7 @@ use App\Http\Controllers\AchatController;
 use App\Http\Controllers\Atelier\AtelierController;
 use App\Http\Controllers\Atelier\DemandepieceController;
 use App\Http\Controllers\MagasinController;
+use App\Http\Controllers\DRAController;
 use App\Http\Controllers\paimentController;
 use App\Http\Controllers\ScfController;
 use App\Http\Controllers\UserController;
@@ -38,6 +39,7 @@ Route::middleware(['auth', 'role:service magasin|admin'])->group(function () {
 Route::middleware(['auth', 'role:service achat|admin'])->group(function () {
     Route::get('/achat', [AchatController::class, 'index'])->name('achat.index');
 
+
 });
 
 //SCF routes
@@ -65,9 +67,22 @@ Route::get('about', function () {
     return Inertia::render('About');
 })->middleware(['auth', 'verified'])->name('about');
 
-Route::get('dra', function () {
-    return Inertia::render('DRA');
-})->middleware(['auth', 'verified'])->name('dra');
+//Route::get('dra', function () {
+//    return Inertia::render('DRA');
+//})->middleware(['auth', 'verified'])->name('dra');
+
+
+
+Route::middleware(['auth', 'verified','role:service cf|service achat|admin'])->group(function () {
+    Route::resource('dra', DRAController::class)->names([
+        'index' => 'dra.index',
+        'create' => 'dra.create',
+        'store' => 'dra.store',
+        'edit' => 'dra.edit',
+        'update' => 'dra.update',
+        'destroy' => 'dra.destroy',
+    ]);
+});
 
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';

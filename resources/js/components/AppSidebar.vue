@@ -25,14 +25,19 @@ const mainNavItems: NavItem[] = [
         href: '/about',
         icon: Info,
     },
-    {
-        title: 'DRA',
-        href: '/dra',
-        icon: Archive,
-    },
+
 
 
 ];
+
+// Conditionally add "Achat"
+if (user.value?.roles?.some((role: any) => role.name === 'admin' || role.name === 'service achat' || role.name === 'service cf')) {
+    mainNavItems.push({
+        title: 'DRA',
+        href: '/dra',
+        icon: Archive,
+    });
+}
 
 // Conditionally add "Roles"
 if (user.value?.roles?.some((role: any) => role.name === 'admin')) {
