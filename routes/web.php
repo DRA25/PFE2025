@@ -22,12 +22,15 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
 });
 
 //Atelier routes
-Route::middleware(['auth', 'role:service atelier|admin'])->group(function () {
-    Route::get('/atelier', [AtelierController::class, 'index'])->name('atelier.index');
-    Route::get('/demandepiece', [DemandepieceController::class, 'index'])->name('demandepiece.index');
+
+//Route::middleware(['auth', 'role:service atelier|admin'])->group(function () {
+  //  Route::get('/atelier', [AtelierController::class, 'index'])->name('atelier.index');
+    //Route::get('/demandepiece', [DemandepieceController::class, 'index'])->name('demandepiece.index');
 
 
-});
+//});
+
+
 
 //Magasin routes
 Route::middleware(['auth', 'role:service magasin|admin'])->group(function () {
@@ -83,6 +86,31 @@ Route::middleware(['auth', 'verified','role:service cf|service achat|admin'])->g
         'destroy' => 'dra.destroy',
     ]);
 });
+
+
+/*Route::middleware(['auth', 'verified', 'role:service atelier|admin'])->group(function () {
+    Route::resource('atelier', DemandepieceController::class)->names([
+        'index' => 'atelier.index',
+        'create' => 'atelier.create',
+        'store' => 'atelier.store',
+        'edit' => 'atelier.edit',
+        'update' => 'atelier.update',
+        'destroy' => 'atelier.destroy',
+    ]);
+}); */
+Route::middleware(['auth', 'verified', 'role:service atelier|admin'])->group(function () {
+    Route::resource('atelier', DemandepieceController::class)
+        ->names([
+            'index' => 'atelier.index',
+            'create' => 'atelier.create',
+            'store' => 'atelier.store',
+            'show' => 'atelier.show',
+            'edit' => 'atelier.edit',
+            'update' => 'atelier.update',
+            'destroy' => 'atelier.destroy',
+        ]);
+});
+
 
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';
