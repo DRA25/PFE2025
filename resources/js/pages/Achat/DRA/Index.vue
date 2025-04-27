@@ -21,8 +21,12 @@ defineProps<{
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
+        title: 'Service Achat',
+        href: '/achat/dra',
+    },
+    {
         title: 'DRA',
-        href: '/dra',
+        href: '/achat/dra',
     },
 ];
 
@@ -30,7 +34,7 @@ function deleteDra(n_dra: string) {
     if (confirm('Are you sure you want to delete this DRA?')) {
         // Call delete route (replace with actual delete endpoint)
         // Example route: route('dra.destroy', { id: n_dra })
-        axios.delete(`/dra/${n_dra}`).then(() => {
+        axios.delete(`/achat/dra/${n_dra}`).then(() => {
             // Optionally, you can update the table data here or refresh the page
             alert('DRA deleted successfully');
         }).catch((error) => {
@@ -47,7 +51,7 @@ function deleteDra(n_dra: string) {
 
         <div class="flex justify-end m-5 mb-0">
             <Link
-            href="/dra/create"
+            href="/achat/dra/create"
             class="bg-[#042B62] dark:bg-[#F3B21B] dark:text-[#042B62] text-white px-4 py-2 rounded-lg hover:bg-blue-900 dark:hover:bg-yellow-200 transition"
         >
             Créer une DRA
@@ -79,7 +83,7 @@ function deleteDra(n_dra: string) {
                         v-for="dra in dras"
                         :key="dra.n_dra"
                         class="hover:bg-gray-300 dark:hover:bg-gray-900 cursor-pointer"
-                        @click="$inertia.visit(`/dra/${dra.n_dra}/edit`)"
+                        @click="$inertia.visit(`/achat/dra/${dra.n_dra}/edit`)"
                     >
 
 
@@ -94,7 +98,7 @@ function deleteDra(n_dra: string) {
                         <TableCell class="flex space-x-2">
 
                             <Link
-                                :href="`/dra/${dra.n_dra}/edit`"
+                                :href="`/achat/dra/${dra.n_dra}/edit`"
                                 class="bg-green-600 text-white px-3 py-1 rounded-lg hover:bg-green-400 transition"
                             >
                                <span class="inline-flex items-center space-x-1">

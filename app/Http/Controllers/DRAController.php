@@ -1,6 +1,8 @@
 <?php
 namespace App\Http\Controllers;
+
 use App\Models\DRA;
+use App\Models\Fournisseur;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -8,14 +10,20 @@ class DRAController extends Controller
 {
     public function index()
     {
-        return Inertia::render('DRA/Index', [
+        return Inertia::render('Achat/DRA/Index', [
             'dras' => DRA::all()
         ]);
     }
 
     public function create()
     {
-        return Inertia::render('DRA/Create');
+        // Fetch all fournisseurs (id + name)
+        $fournisseurs = Fournisseur::select('id_fourn', 'nom_fourn')->get();
+
+        // Pass them to the Vue component
+        return Inertia::render('Achat/DRA/Create', [
+            'fournisseurs' => $fournisseurs,
+        ]);
     }
 
     public function store(Request $request)
@@ -29,7 +37,7 @@ class DRAController extends Controller
             'debit' => 'required|numeric',
             'libelle_dra' => 'required|string',
             'date_dra' => 'required|date',
-            'fourn_dra' => 'required|string',
+            'fourn_dra' => 'required|integer|exists:fournisseurs,id_fourn', // Validate fournisseur id
             'destinataire_dra' => 'required|string',
         ]);
 
@@ -40,28 +48,35 @@ class DRAController extends Controller
 
     public function edit(DRA $dra)
     {
-        return Inertia::render('DRA/Edit', [
-            'dra' => $dra
+        $fournisseurs = Fournisseur::select('id_fourn', 'nom_fourn')->get();
+
+        return Inertia::render('Achat/DRA/Edit', [
+            'dra' => $dra,
+            'fournisseurs' => $fournisseurs,
         ]);
     }
 
-    public function update(Request $request, DRA $dra)
+    public function update(Request $request, $n_dra)
     {
+        $dra = DRA::where('n_dra', $n_dra)->firstOrFail();
+
         $validated = $request->validate([
             'periode' => 'required|date',
             'etat' => 'required|string',
-            'cmp_gen' => 'required|integer',
-            'cmp_ana' => 'required|integer',
-            'debit' => 'required|numeric',
+            'cmp_gen' => 'nullable|numeric',
+            'cmp_ana' => 'nullable|numeric',
+            'debit' => 'nullable|numeric',
             'libelle_dra' => 'required|string',
             'date_dra' => 'required|date',
-            'fourn_dra' => 'required|string',
+            'fourn_dra' => 'required|integer|exists:fournisseurs,id_fourn', // Validate fournisseur id
             'destinataire_dra' => 'required|string',
         ]);
 
+        // Update the dra object with validated data
         $dra->update($validated);
 
-        return redirect()->route('dra.index')->with('success', 'DRA updated successfully.');
+        // Return a redirect response after successful update
+        return redirect()->route('dra.index')->with('success', 'DRA mise à jour avec succès.');
     }
 
     public function destroy(DRA $dra)

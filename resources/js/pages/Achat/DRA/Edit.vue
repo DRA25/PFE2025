@@ -16,17 +16,22 @@ const props = defineProps<{
         date_dra: string;
         fourn_dra: string;
         destinataire_dra: string;
-    }
+    };
+    fournisseurs: { id_fourn: number; nom_fourn: string }[];
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
+        title: 'Service Achat',
+        href: '/achat/dra',
+    },
+    {
         title: 'DRA',
-        href: '/dra',
+        href: '/achat/dra',
     },
     {
         title: 'Modifier',
-        href: `/dra/${props.dra.n_dra}/edit`,
+        href: `/achat/dra/${props.dra.n_dra}/edit`,
     },
 ];
 
@@ -57,7 +62,7 @@ function submit() {
             </div>
 
             <form @submit.prevent="submit" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <!-- Reusable Field Group -->
+                <!-- Input fields -->
                 <div v-for="(label, field) in {
                     n_dra: 'Numéro DRA',
                     periode: 'Période',
@@ -67,10 +72,9 @@ function submit() {
                     debit: 'Débit',
                     libelle_dra: 'Libellé',
                     date_dra: 'Date DRA',
-                    fourn_dra: 'Fournisseur',
                     destinataire_dra: 'Destinataire'
                 }" :key="field">
-                    <label :for="field" class="block  text-sm font-medium text-gray-700 dark:text-gray-300">
+                    <label :for="field" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
                         {{ label }}
                     </label>
                     <input
@@ -78,10 +82,32 @@ function submit() {
                         :id="field"
                         :type="field.includes('date') || field === 'periode' ? 'date' : field.includes('debit') || field.includes('cmp') ? 'number' : 'text'"
                         :disabled="field === 'n_dra'"
-                        class="mt-1 p-1  block w-full rounded-md bg-white border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-900 dark:border-[#070736] dark:text-white"
+                        class="mt-1 p-1 block w-full rounded-md bg-white border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-900 dark:border-[#070736] dark:text-white"
                     />
                 </div>
 
+                <!-- Fournisseur Dropdown -->
+                <div>
+                    <label for="fourn_dra" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Fournisseur
+                    </label>
+                    <select
+                        v-model="form.fourn_dra"
+                        id="fourn_dra"
+                        class="mt-1 p-1 block w-full rounded-md bg-white border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-900 dark:border-[#070736] dark:text-white"
+                    >
+                        <option value="">-- Sélectionnez un fournisseur --</option>
+                        <option
+                            v-for="fourn in props.fournisseurs"
+                            :key="fourn.id_fourn"
+                            :value="fourn.id_fourn"
+                        >
+                            {{ fourn.nom_fourn }}
+                        </option>
+                    </select>
+                </div>
+
+                <!-- Submit button -->
                 <div class="md:col-span-2 flex justify-end mt-4">
                     <button
                         type="submit"

@@ -36,9 +36,13 @@ Route::middleware(['auth', 'role:service magasin|admin'])->group(function () {
 });
 
 //Achat routes
-Route::middleware(['auth', 'role:service achat|admin'])->group(function () {
-    Route::get('/achat', [AchatController::class, 'index'])->name('achat.index');
-
+Route::middleware(['auth', 'role:service cf|service achat|admin'])->group(function () {
+    Route::get('/achat/dra', [DRAController::class, 'index'])->name('dra.index');
+    Route::get('/achat/dra/create', [DRAController::class, 'create'])->name('dra.create');
+    Route::post('/achat/dra', [DRAController::class, 'store'])->name('dra.store');
+    Route::get('/achat/dra/{dra}/edit', [DRAController::class, 'edit'])->name('dra.edit');
+    Route::put('/achat/dra/{dra}', [DRAController::class, 'update'])->name('dra.update');
+    Route::delete('/achat/dra/{dra}', [DRAController::class, 'destroy'])->name('dra.destroy');
 
 });
 
@@ -67,22 +71,9 @@ Route::get('about', function () {
     return Inertia::render('About');
 })->middleware(['auth', 'verified'])->name('about');
 
-//Route::get('dra', function () {
-//    return Inertia::render('DRA');
-//})->middleware(['auth', 'verified'])->name('dra');
 
 
 
-Route::middleware(['auth', 'verified','role:service cf|service achat|admin'])->group(function () {
-    Route::resource('dra', DRAController::class)->names([
-        'index' => 'dra.index',
-        'create' => 'dra.create',
-        'store' => 'dra.store',
-        'edit' => 'dra.edit',
-        'update' => 'dra.update',
-        'destroy' => 'dra.destroy',
-    ]);
-});
 
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';

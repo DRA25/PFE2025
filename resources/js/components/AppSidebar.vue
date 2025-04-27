@@ -30,14 +30,7 @@ const mainNavItems: NavItem[] = [
 
 ];
 
-// Conditionally add "Achat"
-if (user.value?.roles?.some((role: any) => role.name === 'admin' || role.name === 'service achat' || role.name === 'service cf')) {
-    mainNavItems.push({
-        title: 'DRA',
-        href: '/dra',
-        icon: Archive,
-    });
-}
+
 
 // Conditionally add "Roles"
 if (user.value?.roles?.some((role: any) => role.name === 'admin')) {
@@ -65,10 +58,10 @@ if (user.value?.roles?.some((role: any) => role.name === 'admin' || role.name ==
     });
 }
     // Conditionally add "Achat"
-    if (user.value?.roles?.some((role: any) => role.name === 'admin' || role.name === 'service achat')) {
+    if (user.value?.roles?.some((role: any) => role.name === 'admin' || role.name === 'service achat' || role.name === 'service cf')) {
         mainNavItems.push({
             title: 'Service Achat',
-            href: '/achat',
+            href: '/achat/dra',
             icon: ShoppingCart,
         });
     }
