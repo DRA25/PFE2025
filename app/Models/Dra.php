@@ -15,6 +15,13 @@ class Dra extends Model
     protected $keyType = 'string';
 
 
+    protected $dates = ['date_creation', 'created_at', 'updated_at']; // If using Laravel <8
+    protected $casts = [
+        'date_creation' => 'datetime', // For Laravel 8+
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime'
+    ];
+
 
     protected $fillable = [
         'n_dra',
@@ -22,6 +29,7 @@ class Dra extends Model
         'etat',
         'seuil_dra',
         'total_dra',
+        'created_at'
     ];
 
     public function factures()

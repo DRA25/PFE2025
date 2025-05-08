@@ -11,9 +11,8 @@ const breadcrumbs: BreadcrumbItem[] = [
 const form = useForm({
     n_dra: '',
     date_creation: '',
-    etat: 'actif',
     seuil_dra: 0,
-    total_dra: 0,
+    // Removed total_dra as it will be calculated from factures
 })
 
 function submit() {
@@ -41,24 +40,9 @@ function submit() {
                 </div>
 
                 <div>
-                    <label>État</label>
-                    <select v-model="form.etat" class="w-full border p-2 rounded" required>
-                        <option value="actif">Actif</option>
-                        <option value="cloture">Clôturé</option>
-                    </select>
-                    <div v-if="form.errors.etat" class="text-red-500">{{ form.errors.etat }}</div>
-                </div>
-
-                <div>
                     <label>Seuil DRA</label>
                     <input v-model="form.seuil_dra" type="number" class="w-full border p-2 rounded" required />
                     <div v-if="form.errors.seuil_dra" class="text-red-500">{{ form.errors.seuil_dra }}</div>
-                </div>
-
-                <div>
-                    <label>Total DRA</label>
-                    <input v-model="form.total_dra" type="number" class="w-full border p-2 rounded" required />
-                    <div v-if="form.errors.total_dra" class="text-red-500">{{ form.errors.total_dra }}</div>
                 </div>
 
                 <div>

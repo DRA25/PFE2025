@@ -7,9 +7,7 @@ const props = defineProps<{
     dra: {
         n_dra: string
         date_creation: string
-        etat: string
         seuil_dra: number
-        total_dra: number
     }
 }>()
 
@@ -20,9 +18,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 const form = useForm({
     date_creation: props.dra.date_creation,
-    etat: props.dra.etat,
     seuil_dra: props.dra.seuil_dra,
-    total_dra: props.dra.total_dra,
 })
 
 function submit() {
@@ -47,24 +43,9 @@ function submit() {
                 </div>
 
                 <div>
-                    <label>État</label>
-                    <select v-model="form.etat" class="w-full border p-2 rounded">
-                        <option value="actif">Actif</option>
-                        <option value="cloture">Clôturé</option>
-                    </select>
-                    <div v-if="form.errors.etat" class="text-red-500">{{ form.errors.etat }}</div>
-                </div>
-
-                <div>
                     <label>Seuil DRA</label>
                     <input v-model="form.seuil_dra" type="number" class="w-full border p-2 rounded" />
                     <div v-if="form.errors.seuil_dra" class="text-red-500">{{ form.errors.seuil_dra }}</div>
-                </div>
-
-                <div>
-                    <label>Total DRA</label>
-                    <input v-model="form.total_dra" type="number" class="w-full border p-2 rounded" />
-                    <div v-if="form.errors.total_dra" class="text-red-500">{{ form.errors.total_dra }}</div>
                 </div>
 
                 <div>

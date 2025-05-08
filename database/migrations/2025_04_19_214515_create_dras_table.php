@@ -17,14 +17,17 @@ return new class extends Migration
             $table->enum('etat', ['actif', 'cloture'])->default('actif');
             $table->integer('seuil_dra');
             $table->integer('total_dra');
+            $table->timestamp('created_at')->useCurrent()->change();
         });
     }
 
     /**
      * Reverse the migrations.
      */
-    public function down(): void
+    public function down()
     {
-        Schema::dropIfExists('dras');
+        Schema::table('dras', function (Blueprint $table) {
+            $table->dropTimestamps();
+        });
     }
 };

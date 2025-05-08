@@ -6,7 +6,7 @@ import { type BreadcrumbItem } from '@/types'
 const props = defineProps<{
     dra: { n_dra: string },
     facture: {
-        n_facture: number,
+        n_facture: string,  // Changed from number to string
         montant_facture: number,
         date_facture: string,
         id_fourn: number
@@ -20,16 +20,14 @@ const breadcrumbs: BreadcrumbItem[] = [
 ]
 
 const form = useForm({
+    n_facture: props.facture.n_facture,  // Added this field
     montant_facture: props.facture.montant_facture,
     date_facture: props.facture.date_facture,
     id_fourn: props.facture.id_fourn,
 })
 
 function submit() {
-    form.transform(data => ({
-        ...data,
-        _method: 'put',
-    })).post(`/dras/${props.dra.n_dra}/factures/${props.facture.n_facture}`)
+    form.put(`/dras/${props.dra.n_dra}/factures/${props.facture.n_facture}`)
 }
 </script>
 
@@ -37,9 +35,15 @@ function submit() {
     <Head title="Modifier Facture" />
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="p-5">
-            <h1 class="text-lg font-bold mb-5">Modifier la Facture</h1>
+            <h1 class="text-lg font-bold mb-5">Modifier la Facture {{ form.n_facture }}</h1>
 
             <form @submit.prevent="submit" class="space-y-4">
+                <div>
+                    <label>Numéro Facture</label>
+                    <input v-model="form.n_facture" type="text" class="w-full border p-2 rounded" />
+                    <div v-if="form.errors.n_facture" class="text-red-500">{{ form.errors.n_facture }}</div>
+                </div>
+
                 <div>
                     <label>Montant Facture</label>
                     <input v-model="form.montant_facture" type="number" class="w-full border p-2 rounded" />
@@ -59,8 +63,13 @@ function submit() {
                 </div>
 
                 <div>
-                    <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-800">
-                        Enregistrer les modifications
+                    <button
+                        type="submit"
+                        class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-800"
+                        :disabled="form.processing"
+                    >
+                        <span v-if="form.processing">Enregistrement...</span>
+                        <span v-else>Enregistrer les modifications</span>
                     </button>
                 </div>
             </form>

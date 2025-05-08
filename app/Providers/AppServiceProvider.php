@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Models\Dra;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -19,6 +20,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        Dra::creating(function ($dra) {
+            $dra->created_at = $dra->created_at ?: now();
+        });
     }
 }

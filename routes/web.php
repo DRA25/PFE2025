@@ -57,18 +57,24 @@ Route::middleware(['auth', 'role:service magasin|admin'])->group(function () {
 //});
 
 Route::middleware(['auth', 'role:service cf|service achat|admin'])->group(function () {
-
+    // DRAs routes
     Route::resource('dras', DraController::class);
 
+    // Close route
+    Route::put('dras/{dra}/close', [DraController::class, 'close'])
+        ->name('dras.close');
+    Route::delete('dras/{dra}', [DraController::class, 'destroy'])
+        ->name('dras.destroy');
+
+    // Factures routes grouped under DRA
     Route::prefix('dras/{dra}/factures')->name('dras.factures.')->group(function () {
         Route::get('/', [FactureController::class, 'index'])->name('index');
         Route::get('/create', [FactureController::class, 'create'])->name('create');
         Route::post('/', [FactureController::class, 'store'])->name('store');
         Route::get('/{facture}/edit', [FactureController::class, 'edit'])->name('edit');
-        Route::put('/{facture}', [FactureController::class, 'update'])->name('update');
+        Route::put('/{facture}', [FactureController::class, 'update'])->name('update'); // Fixed this line
         Route::delete('/{facture}', [FactureController::class, 'destroy'])->name('destroy');
     });
-
 });
 
 
