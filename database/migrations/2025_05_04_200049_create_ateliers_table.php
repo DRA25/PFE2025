@@ -11,11 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('attestation_s_f_s', function (Blueprint $table) {
-            $table->integer('n_asf')->primary();
-            $table->integer('n_facture');
-            $table->foreign('n_facture')->references('n_facture')->on('factures')->onDelete('cascade');
-            $table->date('date_asf');
+        Schema::create('ateliers', function (Blueprint $table) {
+            $table->integer('id_atelier')->primary();
+            $table->string('adresse_atelier');
         });
     }
 
@@ -24,6 +22,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('attestation_s_f_s');
+        Schema::dropIfExists('ateliers');
     }
 };

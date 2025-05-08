@@ -13,8 +13,10 @@ return new class extends Migration
     {
         Schema::create('remboursements', function (Blueprint $table) {
             $table->integer('n_remb')->primary();
-            $table->integer('montant_remb');
             $table->date('date_remb');
+            $table->integer('method_remb');
+            $table->string('n_dra');
+            $table->foreign('n_dra')->references('n_dra')->on('dras')->onDelete('cascade');
 
         });
     }

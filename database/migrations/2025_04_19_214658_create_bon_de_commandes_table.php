@@ -13,7 +13,6 @@ return new class extends Migration
     {
         Schema::create('bon_de_commandes', function (Blueprint $table) {
             $table->integer('n_bc')->primary();
-            $table->integer('total_bc');
             $table->string('etat_bc');
             $table->date('date_bc');
         });

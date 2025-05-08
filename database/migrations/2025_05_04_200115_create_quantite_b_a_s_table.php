@@ -11,13 +11,18 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('accuse_receptions', function (Blueprint $table) {
-            $table->integer('n_acc')->primary();
-            $table->integer('n_facture');
+        Schema::create('quantite_b_a_s', function (Blueprint $table) {
             $table->integer('n_ba');
-            $table->foreign('n_facture')->references('n_facture')->on('factures')->onDelete('cascade');
+            $table->integer('id_piece');
+            $table->integer('qte_ba');
+
+
+            $table->primary(['n_ba', 'id_piece']);
+
             $table->foreign('n_ba')->references('n_ba')->on('bon_achats')->onDelete('cascade');
+            $table->foreign('id_piece')->references('id_piece')->on('pieces')->onDelete('cascade');
         });
+
     }
 
     /**
@@ -25,6 +30,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('accuse_receptions');
+        Schema::dropIfExists('quantite_b_a_s');
     }
 };

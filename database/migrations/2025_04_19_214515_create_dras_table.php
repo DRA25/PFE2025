@@ -11,11 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('attestation_s_f_s', function (Blueprint $table) {
-            $table->integer('n_asf')->primary();
-            $table->integer('n_facture');
-            $table->foreign('n_facture')->references('n_facture')->on('factures')->onDelete('cascade');
-            $table->date('date_asf');
+        Schema::create('dras', function (Blueprint $table) {
+            $table->string('n_dra')->primary();
+            $table->date('date_creation');
+            $table->enum('etat', ['actif', 'cloture'])->default('actif');
+            $table->integer('seuil_dra');
+            $table->integer('total_dra');
         });
     }
 
@@ -24,6 +25,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('attestation_s_f_s');
+        Schema::dropIfExists('dras');
     }
 };

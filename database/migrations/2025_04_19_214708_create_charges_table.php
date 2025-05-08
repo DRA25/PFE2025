@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('nom_charge');
             $table->string('desc_change');
             $table->string('type_change');
-            $table->integer('montant_charge');
+            $table->integer('prix_charge');
         });
     }
 

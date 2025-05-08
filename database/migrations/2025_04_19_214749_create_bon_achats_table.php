@@ -15,6 +15,10 @@ return new class extends Migration
             $table->integer('n_ba')->primary();
             $table->integer('montant_ba');
             $table->date('date_ba');
+            $table->integer('id_fourn');
+            $table->string('n_dra');
+            $table->foreign('id_fourn')->references('id_fourn')->on('fournisseurs')->onDelete('cascade');
+            $table->foreign('n_dra')->references('n_dra')->on('dras')->onDelete('cascade');
         });
     }
 

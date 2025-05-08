@@ -3,8 +3,9 @@
 use App\Http\Controllers\AchatController;
 use App\Http\Controllers\Atelier\AtelierController;
 use App\Http\Controllers\Atelier\DemandepieceController;
+use App\Http\Controllers\DraController;
+use App\Http\Controllers\FactureController;
 use App\Http\Controllers\MagasinController;
-use App\Http\Controllers\DRAController;
 use App\Http\Controllers\paimentController;
 use App\Http\Controllers\ScfController;
 use App\Http\Controllers\UserController;
@@ -22,12 +23,15 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
 });
 
 //Atelier routes
-Route::middleware(['auth', 'role:service atelier|admin'])->group(function () {
-    Route::get('/atelier', [AtelierController::class, 'index'])->name('atelier.index');
-    Route::get('/demandepiece', [DemandepieceController::class, 'index'])->name('demandepiece.index');
+
+//Route::middleware(['auth', 'role:service atelier|admin'])->group(function () {
+  //  Route::get('/atelier', [AtelierController::class, 'index'])->name('atelier.index');
+    //Route::get('/demandepiece', [DemandepieceController::class, 'index'])->name('demandepiece.index');
 
 
-});
+//});
+
+
 
 //Magasin routes
 Route::middleware(['auth', 'role:service magasin|admin'])->group(function () {
@@ -36,15 +40,37 @@ Route::middleware(['auth', 'role:service magasin|admin'])->group(function () {
 });
 
 //Achat routes
+//Route::middleware(['auth', 'role:service cf|service achat|admin'])->group(function () {
+//    Route::get('/achat', [AchatController::class, 'index'])->name('achat.index');
+//    Route::resource('dras', DraController::class);
+//
+//    Route::prefix('dras/{dra}/factures')->name('dras.factures.')->group(function () {
+//        Route::get('/', [FactureController::class, 'index'])->name('index');
+//        Route::get('/create', [FactureController::class, 'create'])->name('create');
+//        Route::post('/', [FactureController::class, 'store'])->name('store');
+//        Route::get('/{facture}/edit', [FactureController::class, 'edit'])->name('edit');
+//        Route::put('/{facture}', [FactureController::class, 'update'])->name('update');
+//        Route::delete('/{facture}', [FactureController::class, 'destroy'])->name('destroy');
+//    });
+//
+//
+//});
+
 Route::middleware(['auth', 'role:service cf|service achat|admin'])->group(function () {
-    Route::get('/achat/dra', [DRAController::class, 'index'])->name('dra.index');
-    Route::get('/achat/dra/create', [DRAController::class, 'create'])->name('dra.create');
-    Route::post('/achat/dra', [DRAController::class, 'store'])->name('dra.store');
-    Route::get('/achat/dra/{dra}/edit', [DRAController::class, 'edit'])->name('dra.edit');
-    Route::put('/achat/dra/{dra}', [DRAController::class, 'update'])->name('dra.update');
-    Route::delete('/achat/dra/{dra}', [DRAController::class, 'destroy'])->name('dra.destroy');
+
+    Route::resource('dras', DraController::class);
+
+    Route::prefix('dras/{dra}/factures')->name('dras.factures.')->group(function () {
+        Route::get('/', [FactureController::class, 'index'])->name('index');
+        Route::get('/create', [FactureController::class, 'create'])->name('create');
+        Route::post('/', [FactureController::class, 'store'])->name('store');
+        Route::get('/{facture}/edit', [FactureController::class, 'edit'])->name('edit');
+        Route::put('/{facture}', [FactureController::class, 'update'])->name('update');
+        Route::delete('/{facture}', [FactureController::class, 'destroy'])->name('destroy');
+    });
 
 });
+
 
 //SCF routes
 Route::middleware(['auth', 'role:service cf|admin'])->group(function () {
@@ -73,6 +99,31 @@ Route::get('about', function () {
 
 
 
+
+
+
+/*Route::middleware(['auth', 'verified', 'role:service atelier|admin'])->group(function () {
+    Route::resource('atelier', DemandepieceController::class)->names([
+        'index' => 'atelier.index',
+        'create' => 'atelier.create',
+        'store' => 'atelier.store',
+        'edit' => 'atelier.edit',
+        'update' => 'atelier.update',
+        'destroy' => 'atelier.destroy',
+    ]);
+}); */
+Route::middleware(['auth', 'verified', 'role:service atelier|admin'])->group(function () {
+    Route::resource('atelier', DemandepieceController::class)
+        ->names([
+            'index' => 'atelier.index',
+            'create' => 'atelier.create',
+            'store' => 'atelier.store',
+            'show' => 'atelier.show',
+            'edit' => 'atelier.edit',
+            'update' => 'atelier.update',
+            'destroy' => 'atelier.destroy',
+        ]);
+});
 
 
 require __DIR__.'/settings.php';

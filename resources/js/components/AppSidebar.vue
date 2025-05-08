@@ -61,7 +61,7 @@ if (user.value?.roles?.some((role: any) => role.name === 'admin' || role.name ==
     if (user.value?.roles?.some((role: any) => role.name === 'admin' || role.name === 'service achat' || role.name === 'service cf')) {
         mainNavItems.push({
             title: 'Service Achat',
-            href: '/achat/dra',
+            href: '/dras',
             icon: ShoppingCart,
         });
     }

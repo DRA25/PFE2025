@@ -5,25 +5,27 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Facture extends Model
+class Dra extends Model
 {
     use HasFactory;
 
     public $timestamps = false;
-    protected $primaryKey = 'n_facture';
+    protected $primaryKey = 'n_dra';
     public $incrementing = false;
-    protected $keyType = 'int';
+    protected $keyType = 'string';
+
+
 
     protected $fillable = [
-        'n_facture',
-        'montant_facture',
-        'date_facture',
-        'id_fourn',
         'n_dra',
+        'date_creation',
+        'etat',
+        'seuil_dra',
+        'total_dra',
     ];
 
-    public function dra()
+    public function factures()
     {
-        return $this->belongsTo(Dra::class, 'n_dra', 'n_dra');
+        return $this->hasMany(Facture::class, 'n_dra', 'n_dra');
     }
 }
