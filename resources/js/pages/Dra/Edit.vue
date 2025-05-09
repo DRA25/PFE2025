@@ -32,25 +32,48 @@ function submit() {
 <template>
     <Head title="Modifier DRA" />
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="p-5">
-            <h1 class="text-lg font-bold mb-5">Modifier le DRA</h1>
+        <div class="m-5 mr-2 bg-gray-100 dark:bg-gray-800 rounded-lg p-6">
+            <div class="flex justify-between mb-6">
+                <h1 class="text-lg font-bold text-left text-[#042B62FF] dark:text-[#BDBDBDFF]">
+                    Modifier le DRA {{ dra.n_dra }}
+                </h1>
+            </div>
 
-            <form @submit.prevent="submit" class="space-y-4">
-                <div>
-                    <label>Date de création</label>
-                    <input v-model="form.date_creation" type="date" class="w-full border p-2 rounded" />
-                    <div v-if="form.errors.date_creation" class="text-red-500">{{ form.errors.date_creation }}</div>
+            <form @submit.prevent="submit" class="space-y-6 bg-white dark:bg-gray-700 p-6 rounded-lg shadow">
+                <div class="space-y-2">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Date de création</label>
+                    <input
+                        v-model="form.date_creation"
+                        type="date"
+                        class="w-full border border-gray-300 dark:border-gray-600 p-2 rounded focus:ring-2 focus:ring-[#042B62] dark:focus:ring-[#F3B21B] focus:border-transparent dark:bg-gray-800 dark:text-white"
+                    />
+                    <div v-if="form.errors.date_creation" class="text-red-500 text-sm">{{ form.errors.date_creation }}</div>
                 </div>
 
-                <div>
-                    <label>Seuil DRA</label>
-                    <input v-model="form.seuil_dra" type="number" class="w-full border p-2 rounded" />
-                    <div v-if="form.errors.seuil_dra" class="text-red-500">{{ form.errors.seuil_dra }}</div>
+                <div class="space-y-2">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Seuil DRA</label>
+                    <input
+                        v-model="form.seuil_dra"
+                        type="number"
+                        class="w-full border border-gray-300 dark:border-gray-600 p-2 rounded focus:ring-2 focus:ring-[#042B62] dark:focus:ring-[#F3B21B] focus:border-transparent dark:bg-gray-800 dark:text-white"
+                    />
+                    <div v-if="form.errors.seuil_dra" class="text-red-500 text-sm">{{ form.errors.seuil_dra }}</div>
                 </div>
 
-                <div>
-                    <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-800">
-                        Enregistrer les modifications
+                <div class="flex justify-end space-x-4 pt-4">
+                    <Link
+                        :href="`/dras`"
+                        class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+                    >
+                        Annuler
+                    </Link>
+                    <button
+                        type="submit"
+                        :disabled="form.processing"
+                        class="px-4 py-2 bg-[#042B62] dark:bg-[#F3B21B] text-white dark:text-[#042B62] rounded-lg hover:bg-blue-900 dark:hover:bg-yellow-200 transition flex items-center gap-2 disabled:opacity-50"
+                    >
+                        <span>Enregistrer les modifications</span>
+                        <span v-if="form.processing" class="animate-spin">↻</span>
                     </button>
                 </div>
             </form>
