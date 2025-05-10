@@ -1,12 +1,133 @@
-<script setup lang="ts">
+<template>
+    <div class="min-h-screen bg-[#e0f2fe] py-6 flex flex-col justify-center sm:py-12">
+        <div class="relative py-3 sm:max-w-3xl sm:mx-auto">
+            <div class="absolute inset-0 bg-gradient-to-br from-[#042c68]/90 to-[#1d4ba8]/90 shadow-lg transform -skew-y-6 sm:skew-y-0 sm:-rotate-6 sm:rounded-3xl"></div>
+            <div
+                ref="formContainer"
+                class="relative bg-gray-100 shadow-xl sm:rounded-3xl flex flex-col md:flex-row overflow-hidden transition-all duration-300"
+                :class="{ 'opacity-100 scale-100': isMounted, 'opacity-0 scale-95': !isMounted }"
+            >
+                <div class="md:w-1/2 p-12 flex items-center justify-center">
+                    <img src="/images/Naftal.png" alt="Logo Naftal" class="max-w-full max-h-72 object-contain transition-opacity duration-300 hover:opacity-90" />
+                </div>
+                <div class="md:w-1/2 p-8">
+                    <div class="max-w-md mx-auto">
+                        <Head title="S'inscrire" />
 
-import { Head, Link, useForm } from '@inertiajs/vue3';
+                        <div class="mb-8">
+                            <h2 class="text-2xl font-semibold text-[#042c68] tracking-tight">Créer un compte</h2>
+                            <p class="text-gray-600 text-sm">Veuillez remplir les informations ci-dessous pour créer votre compte.</p>
+                        </div>
+
+                        <div v-if="status" class="mb-4 text-center text-sm font-medium text-green-600">
+                            {{ status }}
+                        </div>
+
+                        <form @submit.prevent="submit" class="space-y-6">
+                            <div class="space-y-4">
+                                <div>
+                                    <Label for="name" class="block text-sm font-medium text-gray-700">Nom</Label>
+                                    <div class="mt-1">
+                                        <Input
+                                            id="name"
+                                            type="text"
+                                            required
+                                            autofocus
+                                            :tabindex="1"
+                                            autocomplete="name"
+                                            v-model="form.name"
+                                            placeholder="Nom complet"
+                                            class="shadow-sm focus:ring-[#f3b41c] focus:border-[#f3b41c] block w-full sm:text-sm border-gray-300 rounded-md transition-shadow duration-200 focus:shadow-md"
+                                        />
+                                        <InputError :message="form.errors.name" class="mt-2 text-red-500 text-sm" />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <Label for="email" class="block text-sm font-medium text-gray-700">Adresse e-mail</Label>
+                                    <div class="mt-1">
+                                        <Input
+                                            id="email"
+                                            type="email"
+                                            required
+                                            :tabindex="2"
+                                            autocomplete="email"
+                                            v-model="form.email"
+                                            placeholder="votre.email@naftal.dz"
+                                            class="shadow-sm focus:ring-[#f3b41c] focus:border-[#f3b41c] block w-full sm:text-sm border-gray-300 rounded-md transition-shadow duration-200 focus:shadow-md"
+                                        />
+                                        <InputError :message="form.errors.email" class="mt-2 text-red-500 text-sm" />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <Label for="password" class="block text-sm font-medium text-gray-700">Mot de passe</Label>
+                                    <div class="mt-1">
+                                        <Input
+                                            id="password"
+                                            type="password"
+                                            required
+                                            :tabindex="3"
+                                            autocomplete="new-password"
+                                            v-model="form.password"
+                                            placeholder="••••••••"
+                                            class="shadow-sm focus:ring-[#f3b41c] focus:border-[#f3b41c] block w-full sm:text-sm border-gray-300 rounded-md transition-shadow duration-200 focus:shadow-md"
+                                        />
+                                        <InputError :message="form.errors.password" class="mt-2 text-red-500 text-sm" />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <Label for="password_confirmation" class="block text-sm font-medium text-gray-700">Confirmer le mot de passe</Label>
+                                    <div class="mt-1">
+                                        <Input
+                                            id="password_confirmation"
+                                            type="password"
+                                            required
+                                            :tabindex="4"
+                                            autocomplete="new-password"
+                                            v-model="form.password_confirmation"
+                                            placeholder="••••••••"
+                                            class="shadow-sm focus:ring-[#f3b41c] focus:border-[#f3b41c] block w-full sm:text-sm border-gray-300 rounded-md transition-shadow duration-200 focus:shadow-md"
+                                        />
+                                        <InputError :message="form.errors.password_confirmation" class="mt-2 text-red-500 text-sm" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <Button
+                                    type="submit"
+                                    class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-md text-sm font-medium text-white bg-[#042c68] hover:bg-[#1d4ba8] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#042c68] transition-colors duration-200"
+                                    :tabindex="5"
+                                    :disabled="form.processing"
+                                >
+                                    <LoaderCircle v-if="form.processing" class="h-5 w-5 mr-2 animate-spin text-white" />
+                                    Créer un compte
+                                </Button>
+                            </div>
+                        </form>
+
+                        <div class="mt-6 text-center text-sm text-gray-500">
+                            Déjà un compte?
+                            <TextLink :href="route('login')" class="font-medium text-[#042c68] hover:underline transition-colors duration-200" :tabindex="6">Se connecter</TextLink>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
+
+<script setup lang="ts">
+import { Head, useForm } from '@inertiajs/vue3';
 import InputError from '@/components/InputError.vue';
 import TextLink from '@/components/TextLink.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { LoaderCircle } from 'lucide-vue-next';
+import { ref, onMounted } from 'vue';
 
 const form = useForm({
     name: '',
@@ -15,95 +136,18 @@ const form = useForm({
     password_confirmation: '',
 });
 
+const formContainer = ref<HTMLDivElement | null>(null);
+const isMounted = ref(false);
+
 const submit = () => {
     form.post(route('register'), {
         onFinish: () => form.reset('password', 'password_confirmation'),
     });
 };
+
+onMounted(() => {
+    setTimeout(() => {
+        isMounted.value = true;
+    }, 100); // Small delay for smooth transition
+});
 </script>
-
-<template>
-    <div class="flex min-h-screen flex-col items-center bg-[#042c68] p-6 text-[#1b1b18]  lg:justify-center lg:p-8">
-        <div class="duration-750 starting:opacity-0 flex w-full items-center justify-center opacity-100 transition-opacity lg:grow">
-            <main class="flex w-full max-w-[335px] flex-col-reverse overflow-hidden rounded-lg lg:max-w-4xl lg:flex-row">
-                <div
-                    class="flex-1 rounded-bl-lg rounded-br-lg bg-[#f3b41c] p-6  text-[13px] leading-[20px] shadow-[inset_0px_0px_0px_1px_rgba(26,26,0,0.16)]  lg:rounded-br-none lg:rounded-tl-lg lg:p-20">
-
-                    <Head title="Register" />
-                    <h1 class="mb-1  font-bold text-2xl text-[#042c68] flex space-x-8 mb-8 ">Register</h1>
-                    <form @submit.prevent="submit" class="flex flex-col gap-6 text-[#042c68]">
-                        <div class="grid gap-6">
-                            <div class="grid gap-2">
-                                <Label for="name">Name</Label>
-                                <Input id="name" type="text" required autofocus :tabindex="1" autocomplete="name" v-model="form.name" placeholder="Full name" />
-                                <InputError :message="form.errors.name" />
-                            </div>
-
-                            <div class="grid gap-2">
-                                <Label for="email">Email address</Label>
-                                <Input id="email" type="email" required :tabindex="2" autocomplete="email" v-model="form.email" placeholder="email@example.com" />
-                                <InputError :message="form.errors.email" />
-                            </div>
-
-                            <div class="grid gap-2">
-                                <Label for="password">Password</Label>
-                                <Input
-                                    id="password"
-                                    type="password"
-                                    required
-                                    :tabindex="3"
-                                    autocomplete="new-password"
-                                    v-model="form.password"
-                                    placeholder="Password"
-                                />
-                                <InputError :message="form.errors.password" />
-                            </div>
-
-                            <div class="grid gap-2">
-                                <Label for="password_confirmation">Confirm password</Label>
-                                <Input
-                                    id="password_confirmation"
-                                    type="password"
-                                    required
-                                    :tabindex="4"
-                                    autocomplete="new-password"
-                                    v-model="form.password_confirmation"
-                                    placeholder="Confirm password"
-                                />
-                                <InputError :message="form.errors.password_confirmation" />
-                            </div>
-
-                            <Button type="submit" class="mt-2 w-full
-inli                        ne-block rounded-sm bg-[#042c68]
-                            px-5 py-1.5 mx-2  text-sm leading-normal text-white cursor-pointer hover:bg-[#1D4BA8]
-" tabindex="5" :disabled="form.processing">
-                                <LoaderCircle v-if="form.processing" class="h-4 w-4 animate-spin" />
-                                Create account
-                            </Button>
-                        </div>
-
-                        <div class="text-center text-sm text-muted-[#042c68]">
-                            Already have an account?
-                            <TextLink :href="route('login')" class="underline underline-offset-4" :tabindex="6">Log in</TextLink>
-                        </div>
-                    </form>
-
-
-
-
-                </div>
-                <div class=" flex items-center justify-center  relative -mb-px aspect-335/376 w-1/3 shrink-0 overflow-hidden rounded-t-lg bg-white  lg:-ml-px lg:mb-0 lg:aspect-auto lg:w-[438px] lg:rounded-r-lg lg:rounded-t-none">
-                    <div v-if="$page.props.auth.user">
-                        <a href="/dashboard"><img src="/images/Naftal.png" class="p-10 "/></a>
-                    </div>
-
-                    <div v-if="!$page.props.auth.user">
-                        <a href="/login"><img src="/images/Naftal.png" class="p-10 "/></a>
-                    </div>
-
-                </div>
-            </main>
-        </div>
-        <div class="h-14.5 hidden lg:block"></div>
-    </div>
-</template>

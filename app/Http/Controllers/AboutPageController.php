@@ -1,6 +1,5 @@
 <?php
 
-
 namespace App\Http\Controllers;
 
 use App\Models\AboutPageContent;
@@ -10,13 +9,10 @@ use Inertia\Inertia;
 
 class AboutPageController extends Controller
 {
-
-
     public function show()
     {
         $sections = AboutPageContent::orderBy('order')->get();
-
-        return Inertia::render('About/Index', [  // Changed to match your working component
+        return Inertia::render('About/Index', [
             'sections' => $sections
         ]);
     }
@@ -24,7 +20,7 @@ class AboutPageController extends Controller
     public function edit()
     {
         $sections = AboutPageContent::orderBy('order')->get();
-        return Inertia::render('About/Edit', [  // Keep this if you have separate edit view
+        return Inertia::render('About/Edit', [
             'sections' => $sections
         ]);
     }
@@ -70,7 +66,7 @@ class AboutPageController extends Controller
             'sections.*.id' => 'required|exists:about_page_contents,id',
             'sections.*.section_title' => 'required|string',
             'sections.*.section_content' => 'required|string',
-            'sections.*.image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+            'sections.*.image' => 'nullable', // <-- changed
         ]);
 
         foreach ($request->sections as $sectionData) {
@@ -81,7 +77,7 @@ class AboutPageController extends Controller
                 'section_content' => $sectionData['section_content'],
             ];
 
-            if (isset($sectionData['image'])) {
+            if (isset($sectionData['image']) && $sectionData['image'] instanceof \Illuminate\Http\UploadedFile) {
                 $path = $sectionData['image']->store('about-page', 'public');
                 $updateData['image_path'] = $path;
             }
@@ -90,5 +86,17 @@ class AboutPageController extends Controller
         }
 
         return redirect()->route('about')->with('success', 'About page updated successfully');
+    }
+
+    public function destroy(Request $request)
+    {
+        $request->validate([
+            'id' => 'required|exists:about_page_contents,id'
+        ]);
+
+        $section = AboutPageContent::find($request->id);
+        $section->delete();
+
+        return redirect()->route('about.edit')->with('success', 'Section deleted successfully');
     }
 }

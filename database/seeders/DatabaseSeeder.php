@@ -27,8 +27,9 @@ class DatabaseSeeder extends Seeder
         $editPostPermission = Permission::create(['name' => 'edit-post']);
 
         $admin = User::factory()->create([
-            'name' => 'Admin User',
-            'email' => 'admin@example.com',
+            'name' => 'Hamid',
+            'email' => 'hamidpro198@gmail.com',
+            'password' => 'alemalem'
         ]);
         $atelier = User::factory()->create([
             'name' => 'Atelier User',

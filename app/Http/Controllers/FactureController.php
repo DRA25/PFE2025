@@ -30,7 +30,6 @@ class FactureController extends Controller
             'id_fourn' => 'required|integer',
         ]);
 
-        // Start a database transaction
         DB::beginTransaction();
 
         try {
@@ -43,19 +42,17 @@ class FactureController extends Controller
                 'n_dra' => $dra->n_dra,
             ]);
 
-            // Update the DRA's total_dra by summing all its factures
+            // Update total_dra by summing bonAchats and factures
             $dra->update([
-                'total_dra' => $dra->factures()->sum('montant_facture')
+                'total_dra' => $dra->bonAchats()->sum('montant_ba') + $dra->factures()->sum('montant_facture')
             ]);
 
-            // Commit the transaction
             DB::commit();
 
             return redirect()->route('dras.factures.index', $dra->n_dra)
                 ->with('success', 'Facture créée avec succès.');
 
         } catch (\Exception $e) {
-            // Rollback the transaction on error
             DB::rollBack();
             return back()->withErrors(['error' => 'Une erreur est survenue lors de la création de la facture.']);
         }
@@ -88,8 +85,9 @@ class FactureController extends Controller
                 'id_fourn' => $request->id_fourn
             ]);
 
+            // Update total_dra by summing bonAchats and factures
             $dra->update([
-                'total_dra' => $dra->factures()->sum('montant_facture')
+                'total_dra' => $dra->bonAchats()->sum('montant_ba') + $dra->factures()->sum('montant_facture')
             ]);
 
             DB::commit();
@@ -110,8 +108,9 @@ class FactureController extends Controller
         try {
             $facture->delete();
 
+            // Update total_dra by summing bonAchats and factures
             $dra->update([
-                'total_dra' => $dra->factures()->sum('montant_facture')
+                'total_dra' => $dra->bonAchats()->sum('montant_ba') + $dra->factures()->sum('montant_facture')
             ]);
 
             DB::commit();

@@ -22,7 +22,6 @@ const props = defineProps<{
     }>
 }>()
 
-// Sort DRAs by created_at in descending order (newest first)
 const sortedDras = computed(() => {
     return [...props.dras].sort((a, b) =>
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
@@ -34,17 +33,14 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Liste des DRAs', href: '/dras' },
 ]
 
-// Initialize localDras with sortedDras
 const localDras = ref([...sortedDras.value])
 
-// Watch for changes in props.dras and update localDras
 watch(() => props.dras, (newDras) => {
     localDras.value = [...newDras].sort((a, b) =>
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     )
 }, { deep: true })
 
-// Reactive check for active DRAs
 const hasActiveDra = computed(() => localDras.value.some(dra => dra.etat === 'actif'))
 
 const handleCreateClick = (e: Event) => {
@@ -56,7 +52,6 @@ const handleCreateClick = (e: Event) => {
 
 const closeDra = (draId: string) => {
     if (confirm('Êtes-vous sûr de vouloir clôturer ce DRA ?')) {
-        // Optimistically update the UI
         const updatedDras = localDras.value.map(dra =>
             dra.n_dra === draId ? { ...dra, etat: 'cloture' } : dra
         )
@@ -64,11 +59,8 @@ const closeDra = (draId: string) => {
 
         router.put(route('dras.close', { dra: draId }), {
             preserveScroll: true,
-            onSuccess: () => {
-                // The page will automatically update with fresh data from the server
-            },
+            onSuccess: () => {},
             onError: (errors) => {
-                // Revert if error occurs
                 localDras.value = [...sortedDras.value]
                 alert('Erreur lors de la clôture du DRA: ' + (errors.message || 'Une erreur est survenue'));
             }
@@ -81,7 +73,6 @@ const deleteDra = (draId: string) => {
         router.delete(route('dras.destroy', { dra: draId }), {
             preserveScroll: true,
             onSuccess: () => {
-                // Remove the deleted DRA from local state
                 localDras.value = localDras.value.filter(dra => dra.n_dra !== draId);
             },
             onError: (errors) => {
@@ -89,6 +80,16 @@ const deleteDra = (draId: string) => {
             }
         })
     }
+}
+
+// Method to update dra totals after modification
+const updateDraTotal = (draId: string) => {
+    router.get(route('dras.index'), {
+        preserveScroll: true,
+        onSuccess: (updatedDras) => {
+            localDras.value = updatedDras;
+        },
+    });
 }
 </script>
 
@@ -150,8 +151,8 @@ const deleteDra = (draId: string) => {
                                 {{ dra.etat === 'actif' ? 'ACTIF' : 'CLÔTURÉ' }}
                             </span>
                         </TableCell>
-                        <TableCell class="flex space-x-2">
-                            <!-- Only show action buttons if DRA is actif -->
+                        <TableCell class="flex flex-wrap gap-2">
+                            <!-- Modifier Button -->
                             <Link
                                 v-if="dra.etat === 'actif'"
                                 :href="`/dras/${dra.n_dra}/edit`"
@@ -160,6 +161,8 @@ const deleteDra = (draId: string) => {
                                 <Pencil class="w-4 h-4" />
                                 <span>Modifier</span>
                             </Link>
+
+                            <!-- Clôturer Button -->
                             <button
                                 v-if="dra.etat === 'actif'"
                                 @click="closeDra(dra.n_dra)"
@@ -168,6 +171,8 @@ const deleteDra = (draId: string) => {
                                 <Lock class="w-4 h-4" />
                                 <span>Clôturer</span>
                             </button>
+
+                            <!-- Supprimer Button -->
                             <button
                                 v-if="dra.etat === 'actif'"
                                 @click="deleteDra(dra.n_dra)"
@@ -176,6 +181,8 @@ const deleteDra = (draId: string) => {
                                 <Trash2 class="w-4 h-4" />
                                 <span>Supprimer</span>
                             </button>
+
+                            <!-- Factures Button -->
                             <Link
                                 v-if="dra.etat === 'actif'"
                                 :href="`/dras/${dra.n_dra}/factures`"
@@ -183,6 +190,16 @@ const deleteDra = (draId: string) => {
                             >
                                 <FileText class="w-4 h-4" />
                                 <span>Factures</span>
+                            </Link>
+
+                            <!-- BonAchats Button -->
+                            <Link
+                                v-if="dra.etat === 'actif'"
+                                :href="`/dras/${dra.n_dra}/bon-achats`"
+                                class="bg-indigo-600 text-white px-3 py-1 rounded-lg hover:bg-indigo-800 transition flex items-center gap-1"
+                            >
+                                <FileText class="w-4 h-4" />
+                                <span>Bons d'Achat</span>
                             </Link>
                         </TableCell>
                     </TableRow>

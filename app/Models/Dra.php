@@ -36,4 +36,9 @@ class Dra extends Model
     {
         return $this->hasMany(Facture::class, 'n_dra', 'n_dra');
     }
+
+    public function bonachats()
+    {
+        return $this->hasMany(BonAchat::class, 'n_dra', 'n_dra');
+    }
 }

@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
-import { Head, useForm } from '@inertiajs/vue3';
+import { Head, useForm, router } from '@inertiajs/vue3';
 import { type BreadcrumbItem } from '@/types';
-import { Pencil, Plus, Trash2, Upload } from 'lucide-vue-next';
+import { Pencil, Trash2 } from 'lucide-vue-next';
 
 const props = defineProps<{
     sections: Array<{
@@ -31,26 +31,23 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Edit About', href: '/about/edit' },
 ];
 
-const addSection = () => {
-    form.sections.push({
-        id: 0, // New sections will have ID 0
-        section_title: '',
-        section_content: '',
-        image: null,
-        image_path: null,
-        order: form.sections.length,
-        _method: 'post'
-    });
-};
-
-const removeSection = (index: number) => {
-    form.sections.splice(index, 1);
-};
-
-const handleImageChange = (event: Event, index: number) => {
-    const input = event.target as HTMLInputElement;
-    if (input.files && input.files[0]) {
-        form.sections[index].image = input.files[0];
+const removeSection = async (index: number, sectionId: number) => {
+    if (sectionId > 0) {
+        // Existing section - delete from server
+        if (confirm('Are you sure you want to delete this section?')) {
+            try {
+                await router.delete(route('about.destroy'), {
+                    data: { id: sectionId },
+                    preserveScroll: true
+                });
+                form.sections.splice(index, 1);
+            } catch (error) {
+                console.error('Error deleting section:', error);
+            }
+        }
+    } else {
+        // New section - just remove from form
+        form.sections.splice(index, 1);
     }
 };
 </script>
@@ -65,15 +62,15 @@ const handleImageChange = (event: Event, index: number) => {
                         <h3 class="text-lg font-medium">Section {{ index + 1 }}</h3>
                         <button
                             type="button"
-                            @click="removeSection(index)"
+                            @click="removeSection(index, section.id)"
                             class="text-red-600 hover:text-red-800"
+                            :disabled="form.processing"
                         >
                             <Trash2 class="w-5 h-5" />
                         </button>
                     </div>
 
                     <div class="grid grid-cols-1 gap-6">
-                        <!-- Section Title -->
                         <div>
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Title</label>
                             <input
@@ -84,7 +81,6 @@ const handleImageChange = (event: Event, index: number) => {
                             >
                         </div>
 
-                        <!-- Section Content -->
                         <div>
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Content</label>
                             <textarea
@@ -95,38 +91,20 @@ const handleImageChange = (event: Event, index: number) => {
                             ></textarea>
                         </div>
 
-                        <!-- Image Upload -->
                         <div>
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Image</label>
-                            <div class="mt-1 flex items-center">
+                            <div class="mt-1">
                                 <img
                                     v-if="section.image_path"
                                     :src="`/storage/${section.image_path}`"
-                                    class="h-20 w-20 object-cover rounded-md mr-4"
+                                    class="h-20 w-auto object-contain rounded-md"
                                 >
-                                <input
-                                    type="file"
-                                    @change="handleImageChange($event, index)"
-                                    class="hidden"
-                                    :id="`image-upload-${index}`"
-                                    accept="image/*"
-                                >
-                                <label
-                                    :for="`image-upload-${index}`"
-                                    class="cursor-pointer bg-white py-2 px-3 border border-gray-300 rounded-md shadow-sm text-sm leading-4 font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 flex items-center"
-                                >
-                                    <Upload class="w-4 h-4 mr-2" />
-                                    {{ section.image_path ? 'Change Image' : 'Upload Image' }}
-                                </label>
-                                <span v-if="section.image" class="ml-2 text-sm text-gray-500">
-                                    {{ section.image.name }}
-                                </span>
+                                <span v-else class="text-gray-500">No image uploaded</span>
                             </div>
                         </div>
 
-                        <!-- Order -->
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 dark:text-gray-200">Display Order</label>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Display Order</label>
                             <input
                                 v-model="section.order"
                                 type="number"
@@ -137,16 +115,7 @@ const handleImageChange = (event: Event, index: number) => {
                     </div>
                 </div>
 
-                <div class="flex justify-between mt-6">
-                    <button
-                        type="button"
-                        @click="addSection"
-                        class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                    >
-                        <Plus class="w-4 h-4 mr-2" />
-                        Add Section
-                    </button>
-
+                <div class="flex justify-end mt-6">
                     <button
                         type="submit"
                         :disabled="form.processing"

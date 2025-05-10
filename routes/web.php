@@ -4,6 +4,7 @@ use App\Http\Controllers\AboutPageController;
 use App\Http\Controllers\AchatController;
 use App\Http\Controllers\Atelier\AtelierController;
 use App\Http\Controllers\Atelier\DemandepieceController;
+use App\Http\Controllers\BonAchatController;
 use App\Http\Controllers\DraController;
 use App\Http\Controllers\FactureController;
 use App\Http\Controllers\MagasinController;
@@ -76,6 +77,16 @@ Route::middleware(['auth', 'role:service cf|service achat|admin'])->group(functi
         Route::put('/{facture}', [FactureController::class, 'update'])->name('update'); // Fixed this line
         Route::delete('/{facture}', [FactureController::class, 'destroy'])->name('destroy');
     });
+
+    // BonAchats routes grouped under DRA
+    Route::prefix('dras/{dra}/bon-achats')->name('dras.bon-achats.')->group(function () {
+        Route::get('/', [BonAchatController::class, 'index'])->name('index');
+        Route::get('/create', [BonAchatController::class, 'create'])->name('create');
+        Route::post('/', [BonAchatController::class, 'store'])->name('store');
+        Route::get('/{bonAchat}/edit', [BonAchatController::class, 'edit'])->name('edit');
+        Route::put('/{bonAchat}', [BonAchatController::class, 'update'])->name('update');
+        Route::delete('/{bonAchat}', [BonAchatController::class, 'destroy'])->name('destroy');
+    });
 });
 
 
@@ -113,6 +124,7 @@ Route::middleware(['auth'])->group(function () {
     Route::put('/about', [AboutPageController::class, 'update'])->name('about.update');
     Route::get('/about/create', [AboutPageController::class, 'create'])->name('about.create');
     Route::post('/about', [AboutPageController::class, 'store'])->name('about.store');
+    Route::delete('/about', [AboutPageController::class, 'destroy'])->name('about.destroy');
 });
 
 
