@@ -43,22 +43,7 @@ Route::middleware(['auth', 'role:service magasin|admin'])->group(function () {
 
 });
 
-//Achat routes
-//Route::middleware(['auth', 'role:service cf|service achat|admin'])->group(function () {
-//    Route::get('/achat', [AchatController::class, 'index'])->name('achat.index');
-//    Route::resource('dras', DraController::class);
-//
-//    Route::prefix('dras/{dra}/factures')->name('dras.factures.')->group(function () {
-//        Route::get('/', [FactureController::class, 'index'])->name('index');
-//        Route::get('/create', [FactureController::class, 'create'])->name('create');
-//        Route::post('/', [FactureController::class, 'store'])->name('store');
-//        Route::get('/{facture}/edit', [FactureController::class, 'edit'])->name('edit');
-//        Route::put('/{facture}', [FactureController::class, 'update'])->name('update');
-//        Route::delete('/{facture}', [FactureController::class, 'destroy'])->name('destroy');
-//    });
-//
-//
-//});
+
 
 Route::middleware(['auth', 'role:service cf|service achat|admin'])->group(function () {
     // DRAs routes
@@ -113,9 +98,6 @@ Route::get('dashboard', function () {
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 
-//Route::get('about', function () {
-//    return Inertia::render('About');
-//})->middleware(['auth', 'verified'])->name('about');
 
 
 Route::get('/about', [AboutPageController::class, 'show'])->name('about');

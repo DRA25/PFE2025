@@ -17,7 +17,7 @@ return new class extends Migration
             $table->integer('prix_piece');
             $table->string('marque_piece');
             $table->string('ref_piece');
-            $table->string('modele_piece');
+
         });
     }
 

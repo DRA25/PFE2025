@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Centre;
 use App\Models\Dra;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -32,7 +33,11 @@ class DraController extends Controller
 
     public function create()
     {
-        return Inertia::render('Dra/Create');
+        $centres = Centre::all(); // Fetch all centres
+
+        return Inertia::render('Dra/Create', [
+            'centres' => $centres, // Pass the list of centres
+        ]);
     }
 
     public function store(Request $request)
@@ -60,7 +65,12 @@ class DraController extends Controller
     }
     public function edit(Dra $dra)
     {
-        return Inertia::render('Dra/Edit', compact('dra'));
+        $centres = Centre::all(); // Fetch all centres
+
+        return Inertia::render('Dra/Edit', [
+            'dra' => $dra,
+            'centres' => $centres, // Pass the list of centres
+        ]);
     }
     public function update(Request $request, Dra $dra)
     {

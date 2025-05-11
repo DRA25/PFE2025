@@ -17,6 +17,7 @@ class Piece extends Model
         'prix_piece',
         'marque_piece',
         'ref_piece',
+
     ];
 
 
