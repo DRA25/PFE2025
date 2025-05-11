@@ -25,9 +25,9 @@ class Dra extends Model
 
     protected $fillable = [
         'n_dra',
+        'id_centre',
         'date_creation',
         'etat',
-        'seuil_dra',
         'total_dra',
         'created_at'
     ];
@@ -40,5 +40,10 @@ class Dra extends Model
     public function bonachats()
     {
         return $this->hasMany(BonAchat::class, 'n_dra', 'n_dra');
+    }
+
+    public function centre()
+    {
+        return $this->belongsTo(Centre::class, 'id_centre', 'id_centre');
     }
 }

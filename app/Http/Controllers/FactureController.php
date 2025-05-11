@@ -1,9 +1,9 @@
 <?php
-
 namespace App\Http\Controllers;
 
 use App\Models\Dra;
 use App\Models\Facture;
+use App\Models\Fournisseur;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -12,14 +12,24 @@ class FactureController extends Controller
 {
     public function index(Dra $dra)
     {
-        $factures = $dra->factures;
-        return Inertia::render('Facture/Index', compact('dra', 'factures'));
+        // Eager load 'fournisseur' relationship with factures
+        $factures = $dra->factures()->with('fournisseur:id_fourn,nom_fourn')->get();
+
+        return Inertia::render('Facture/Index', [
+            'dra' => $dra,
+            'factures' => $factures,
+        ]);
     }
 
-    public function create(Dra $dra)
-    {
-        return Inertia::render('Facture/Create', compact('dra'));
-    }
+public function create(Dra $dra)
+{
+// Fetch all fournisseurs for the select dropdown in create page
+$fournisseurs = Fournisseur::all(['id_fourn', 'nom_fourn']);
+return inertia('Facture/Create', [
+'dra' => $dra,
+'fournisseurs' => $fournisseurs,
+]);
+}
 
     public function store(Request $request, Dra $dra)
     {
@@ -27,14 +37,14 @@ class FactureController extends Controller
             'n_facture' => 'required|unique:factures,n_facture',
             'montant_facture' => 'required|integer',
             'date_facture' => 'required|date',
-            'id_fourn' => 'required|integer',
+            'id_fourn' => 'required|exists:fournisseurs,id_fourn',
         ]);
 
         DB::beginTransaction();
 
         try {
-            // Create the new facture
-            $dra->factures()->create([
+            // Create the facture
+            $facture = $dra->factures()->create([
                 'n_facture' => $request->n_facture,
                 'montant_facture' => $request->montant_facture,
                 'date_facture' => $request->date_facture,
@@ -42,9 +52,18 @@ class FactureController extends Controller
                 'n_dra' => $dra->n_dra,
             ]);
 
-            // Update total_dra by summing bonAchats and factures
+            // Recalculate total
+            $totalDra = $dra->bonAchats()->sum('montant_ba') + $dra->factures()->sum('montant_facture');
+
+            // Check if the total exceeds the threshold
+            if ($totalDra > $dra->centre->seuil_centre) {
+                DB::rollBack();
+                return back()->withErrors(['total_dra' => 'Le total du DRA dépasse le seuil autorisé du centre.']);
+            }
+
+            // Otherwise, update and commit
             $dra->update([
-                'total_dra' => $dra->bonAchats()->sum('montant_ba') + $dra->factures()->sum('montant_facture')
+                'total_dra' => $totalDra,
             ]);
 
             DB::commit();
@@ -54,73 +73,85 @@ class FactureController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->withErrors(['error' => 'Une erreur est survenue lors de la création de la facture.']);
+            return back()->withErrors(['error' => 'Une erreur est survenue : ' . $e->getMessage()]);
         }
     }
 
-    public function edit(Dra $dra, Facture $facture)
-    {
-        return Inertia::render('Facture/Edit', compact('dra', 'facture'));
-    }
 
-    public function update(Request $request, $n_dra, $n_facture)
-    {
-        $request->validate([
-            'n_facture' => 'required|unique:factures,n_facture,'.$n_facture.',n_facture',
-            'montant_facture' => 'required|integer',
-            'date_facture' => 'required|date',
-            'id_fourn' => 'required|integer',
-        ]);
+public function edit(Dra $dra, Facture $facture)
+{
+// Fetch all fournisseurs for the select dropdown in edit page
+$fournisseurs = Fournisseur::all(['id_fourn', 'nom_fourn']);
 
-        DB::beginTransaction();
+return Inertia::render('Facture/Edit', [
+'dra' => $dra,
+'facture' => $facture,
+'fournisseurs' => $fournisseurs, // Pass the list of fournisseurs for the dropdown
+]);
+}
 
-        try {
-            $dra = Dra::where('n_dra', $n_dra)->firstOrFail();
-            $facture = Facture::where('n_facture', $n_facture)->firstOrFail();
+public function update(Request $request, $n_dra, $n_facture)
+{
+// Validate incoming request for the update
+$request->validate([
+'n_facture' => 'required|unique:factures,n_facture,' . $n_facture . ',n_facture',
+'montant_facture' => 'required|integer',
+'date_facture' => 'required|date',
+'id_fourn' => 'required|exists:fournisseurs,id_fourn',  // Ensure fournisseur exists
+]);
 
-            $facture->update([
-                'n_facture' => $request->n_facture,
-                'montant_facture' => $request->montant_facture,
-                'date_facture' => $request->date_facture,
-                'id_fourn' => $request->id_fourn
-            ]);
+DB::beginTransaction();
 
-            // Update total_dra by summing bonAchats and factures
-            $dra->update([
-                'total_dra' => $dra->bonAchats()->sum('montant_ba') + $dra->factures()->sum('montant_facture')
-            ]);
+try {
+// Find the dra and facture
+$dra = Dra::where('n_dra', $n_dra)->firstOrFail();
+$facture = Facture::where('n_facture', $n_facture)->firstOrFail();
 
-            DB::commit();
+// Update the facture
+$facture->update([
+'n_facture' => $request->n_facture,
+'montant_facture' => $request->montant_facture,
+'date_facture' => $request->date_facture,
+'id_fourn' => $request->id_fourn,
+]);
 
-            return redirect()->route('dras.factures.index', $dra->n_dra)
-                ->with('success', 'Facture mise à jour avec succès.');
+// Update total_dra by summing bonAchats and factures
+$dra->update([
+'total_dra' => $dra->bonAchats()->sum('montant_ba') + $dra->factures()->sum('montant_facture')
+]);
 
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return back()->withErrors(['error' => 'Erreur lors de la mise à jour: ' . $e->getMessage()]);
-        }
-    }
+DB::commit();
 
-    public function destroy(Dra $dra, Facture $facture)
-    {
-        DB::beginTransaction();
+return redirect()->route('dras.factures.index', $dra->n_dra)
+->with('success', 'Facture mise à jour avec succès.');
 
-        try {
-            $facture->delete();
+} catch (\Exception $e) {
+DB::rollBack();
+return back()->withErrors(['error' => 'Erreur lors de la mise à jour: ' . $e->getMessage()]);
+}
+}
 
-            // Update total_dra by summing bonAchats and factures
-            $dra->update([
-                'total_dra' => $dra->bonAchats()->sum('montant_ba') + $dra->factures()->sum('montant_facture')
-            ]);
+public function destroy(Dra $dra, Facture $facture)
+{
+DB::beginTransaction();
 
-            DB::commit();
+try {
+// Delete the facture
+$facture->delete();
 
-            return redirect()->route('dras.factures.index', $dra->n_dra)
-                ->with('success', 'Facture supprimée avec succès.');
+// Update total_dra by summing bonAchats and factures
+$dra->update([
+'total_dra' => $dra->bonAchats()->sum('montant_ba') + $dra->factures()->sum('montant_facture')
+]);
 
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return back()->withErrors(['error' => 'Erreur lors de la suppression']);
-        }
-    }
+DB::commit();
+
+return redirect()->route('dras.factures.index', $dra->n_dra)
+->with('success', 'Facture supprimée avec succès.');
+
+} catch (\Exception $e) {
+DB::rollBack();
+return back()->withErrors(['error' => 'Erreur lors de la suppression']);
+}
+}
 }

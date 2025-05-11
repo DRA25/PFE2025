@@ -15,6 +15,7 @@ import { ref, computed, watch } from 'vue'
 const props = defineProps<{
     dras: Array<{
         n_dra: string,
+        id_centre:string,
         date_creation: string,
         etat: string,
         total_dra: number,
@@ -123,7 +124,8 @@ const updateDraTotal = (draId: string) => {
             <Table class="m-3 w-39/40">
                 <TableHeader>
                     <TableRow>
-                        <TableHead class="text-[#042B62FF] dark:text-[#BDBDBDFF]">ID</TableHead>
+                        <TableHead class="text-[#042B62FF] dark:text-[#BDBDBDFF]">ID Centre</TableHead>
+                        <TableHead class="text-[#042B62FF] dark:text-[#BDBDBDFF]">N DRA</TableHead>
                         <TableHead class="text-[#042B62FF] dark:text-[#BDBDBDFF]">Date de création</TableHead>
                         <TableHead class="text-[#042B62FF] dark:text-[#BDBDBDFF]">Total DRA</TableHead>
                         <TableHead class="text-[#042B62FF] dark:text-[#BDBDBDFF]">État</TableHead>
@@ -137,6 +139,7 @@ const updateDraTotal = (draId: string) => {
                         :key="dra.n_dra"
                         class="hover:bg-gray-300 dark:hover:bg-gray-900"
                     >
+                        <TableCell>{{ dra.id_centre }}</TableCell>
                         <TableCell>{{ dra.n_dra }}</TableCell>
                         <TableCell>{{ new Date(dra.date_creation).toLocaleDateString() }}</TableCell>
                         <TableCell>{{ dra.total_dra.toLocaleString('fr-FR') }} DA</TableCell>

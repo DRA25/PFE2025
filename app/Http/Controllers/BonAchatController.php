@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Dra;
 use App\Models\BonAchat;
+use App\Models\Fournisseur;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -12,13 +13,25 @@ class BonAchatController extends Controller
 {
     public function index(Dra $dra)
     {
-        $bonAchats = $dra->bonAchats;
-        return Inertia::render('BonAchat/Index', compact('dra', 'bonAchats'));
+        // Eager load 'fournisseur' relationship with bonAchats
+        $bonAchats = $dra->bonAchats()->with('fournisseur:id_fourn,nom_fourn')->get();
+
+        return Inertia::render('BonAchat/Index', [
+            'dra' => $dra,
+            'bonAchats' => $bonAchats,
+        ]);
     }
 
     public function create(Dra $dra)
     {
-        return Inertia::render('BonAchat/Create', compact('dra'));
+        // Fetch all fournisseurs to pass to the view
+        $fournisseurs = Fournisseur::all();
+
+        // Pass both 'dra' and 'fournisseurs' to the Inertia view
+        return Inertia::render('BonAchat/Create', [
+            'dra' => $dra,
+            'fournisseurs' => $fournisseurs,
+        ]);
     }
 
     public function store(Request $request, Dra $dra)
@@ -27,13 +40,13 @@ class BonAchatController extends Controller
             'n_ba' => 'required|unique:bon_achats,n_ba',
             'montant_ba' => 'required|integer',
             'date_ba' => 'required|date',
-            'id_fourn' => 'required|integer',
+            'id_fourn' => 'required|exists:fournisseurs,id_fourn',
         ]);
 
         DB::beginTransaction();
 
         try {
-            $dra->bonAchats()->create([
+            $bonAchat = $dra->bonAchats()->create([
                 'n_ba' => $request->n_ba,
                 'montant_ba' => $request->montant_ba,
                 'date_ba' => $request->date_ba,
@@ -41,9 +54,15 @@ class BonAchatController extends Controller
                 'n_dra' => $dra->n_dra,
             ]);
 
-            // Update total_dra by summing bonAchats and factures
+            $totalDra = $dra->bonAchats()->sum('montant_ba') + $dra->factures()->sum('montant_facture');
+
+            if ($totalDra > $dra->centre->seuil_centre) {
+                DB::rollBack();
+                return back()->withErrors(['total_dra' => 'Le total du DRA dépasse le seuil autorisé du centre.']);
+            }
+
             $dra->update([
-                'total_dra' => $dra->bonAchats()->sum('montant_ba') + $dra->factures()->sum('montant_facture')
+                'total_dra' => $totalDra,
             ]);
 
             DB::commit();
@@ -53,13 +72,22 @@ class BonAchatController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->withErrors(['error' => 'Une erreur est survenue lors de la création du bon d\'achat.']);
+            return back()->withErrors(['error' => 'Une erreur est survenue : ' . $e->getMessage()]);
         }
     }
 
+
     public function edit(Dra $dra, BonAchat $bonAchat)
     {
-        return Inertia::render('BonAchat/Edit', compact('dra', 'bonAchat'));
+        // Fetch all fournisseurs to pass to the view
+        $fournisseurs = Fournisseur::all();
+
+        // Pass the dra, bonAchat, and fournisseurs to the Inertia page
+        return Inertia::render('BonAchat/Edit', [
+            'dra' => $dra,
+            'bonAchat' => $bonAchat,
+            'fournisseurs' => $fournisseurs,
+        ]);
     }
 
     public function update(Request $request, $n_dra, $n_ba)

@@ -13,11 +13,12 @@ return new class extends Migration
     {
         Schema::create('dras', function (Blueprint $table) {
             $table->string('n_dra')->primary();
+            $table->string('id_centre');
+            $table->foreign('id_centre')->references('id_centre')->on('centres')->onDelete('cascade');
             $table->date('date_creation');
             $table->enum('etat', ['actif', 'cloture'])->default('actif');
-            $table->integer('seuil_dra');
             $table->integer('total_dra');
-            $table->timestamp('created_at')->useCurrent()->change();
+            $table->timestamp('created_at')->nullable()->default(null)->change();
         });
     }
 

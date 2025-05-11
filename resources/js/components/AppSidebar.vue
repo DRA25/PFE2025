@@ -5,7 +5,7 @@ import NavUser from '@/components/NavUser.vue';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/vue3';
-import { BookOpen, Folder, LayoutGrid,Info , Archive, Lock ,Contact,Wrench,Store,ShoppingCart,SearchCheck,Banknote} from 'lucide-vue-next';
+import { BookOpen, Folder, LayoutGrid,Info , Archive, Lock ,Contact,Wrench,Store,ShoppingCart,SearchCheck,Banknote,Building,User} from 'lucide-vue-next';
 import AppLogo from './AppLogo.vue';
 
 import { computed } from 'vue';
@@ -24,6 +24,16 @@ const mainNavItems: NavItem[] = [
         title: 'About',
         href: '/about',
         icon: Info,
+    },
+    {
+        title: 'Centres',
+        href: '/centres',
+        icon: Building,
+    },
+    {
+        title: 'Fournisseurs',
+        href: '/fournisseurs',
+        icon: User,
     },
 
 

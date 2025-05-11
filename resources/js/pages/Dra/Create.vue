@@ -10,8 +10,9 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 const form = useForm({
     n_dra: '',
+    id_centre: '',
     date_creation: '',
-    seuil_dra: 0,
+
     // Removed total_dra as it will be calculated from factures
 })
 
@@ -34,16 +35,18 @@ function submit() {
                 </div>
 
                 <div>
+                    <label>ID Centre</label>
+                    <input v-model="form.id_centre" type="number" class="w-full border p-2 rounded" required />
+                    <div v-if="form.errors.id_centre" class="text-red-500">{{ form.errors.id_centre }}</div>
+                </div>
+
+                <div>
                     <label>Date de création</label>
                     <input v-model="form.date_creation" type="date" class="w-full border p-2 rounded" required />
                     <div v-if="form.errors.date_creation" class="text-red-500">{{ form.errors.date_creation }}</div>
                 </div>
 
-                <div>
-                    <label>Seuil DRA</label>
-                    <input v-model="form.seuil_dra" type="number" class="w-full border p-2 rounded" required />
-                    <div v-if="form.errors.seuil_dra" class="text-red-500">{{ form.errors.seuil_dra }}</div>
-                </div>
+
 
                 <div>
                     <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-800">

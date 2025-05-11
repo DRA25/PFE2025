@@ -20,6 +20,7 @@ class DraController extends Controller
             'dras' => $dras->map(function ($dra) {
                 return [
                     'n_dra' => $dra->n_dra,
+                    'id_centre' => $dra->id_centre,
                     'date_creation' => $dra->date_creation->format('Y-m-d'),
                     'etat' => $dra->etat,
                     'total_dra' => $dra->total_dra,
@@ -44,8 +45,9 @@ class DraController extends Controller
 
         $validated = $request->validate([
             'n_dra' => 'required|unique:dras,n_dra',
+            'id_centre' => 'required',
             'date_creation' => 'required|date',
-            'seuil_dra' => 'required|numeric',
+
         ]);
 
         Dra::create(array_merge($validated, [
@@ -63,8 +65,8 @@ class DraController extends Controller
     public function update(Request $request, Dra $dra)
     {
         $validated = $request->validate([
+            'id_centre' => 'required',
             'date_creation' => 'required|date',
-            'seuil_dra' => 'required|numeric',
             // total_dra is no longer validated or updated here
         ]);
 

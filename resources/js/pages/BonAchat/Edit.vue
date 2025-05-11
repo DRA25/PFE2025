@@ -10,7 +10,8 @@ const props = defineProps<{
         montant_ba: number,
         date_ba: string,
         id_fourn: number
-    }
+    },
+    fournisseurs: Array // Add suppliers list
 }>()
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -27,7 +28,14 @@ const form = useForm({
 })
 
 function submit() {
-    form.put(`/dras/${props.dra.n_dra}/bon-achats/${props.bonAchat.n_ba}`)
+    form.put(`/dras/${props.dra.n_dra}/bon-achats/${props.bonAchat.n_ba}`, {
+        onSuccess: () => {
+            window.location.href = `/dras/${props.dra.n_dra}/bon-achats`
+        },
+        onError: () => {
+            console.log('Validation error:', form.errors)
+        }
+    })
 }
 </script>
 
@@ -38,27 +46,54 @@ function submit() {
             <h1 class="text-lg font-bold mb-5">Modifier le Bon d'achat {{ form.n_ba }}</h1>
 
             <form @submit.prevent="submit" class="space-y-4">
+
                 <div>
                     <label>Numéro Bon Achat</label>
-                    <input v-model="form.n_ba" type="text" class="w-full border p-2 rounded" />
+                    <input
+                        v-model="form.n_ba"
+                        type="text"
+                        class="w-full border p-2 rounded"
+                        disabled
+                    />
                     <div v-if="form.errors.n_ba" class="text-red-500">{{ form.errors.n_ba }}</div>
                 </div>
 
                 <div>
                     <label>Montant Bon Achat</label>
-                    <input v-model="form.montant_ba" type="number" class="w-full border p-2 rounded" />
+                    <input
+                        v-model="form.montant_ba"
+                        type="number"
+                        class="w-full border p-2 rounded"
+                    />
                     <div v-if="form.errors.montant_ba" class="text-red-500">{{ form.errors.montant_ba }}</div>
                 </div>
 
                 <div>
                     <label>Date Bon Achat</label>
-                    <input v-model="form.date_ba" type="date" class="w-full border p-2 rounded" />
+                    <input
+                        v-model="form.date_ba"
+                        type="date"
+                        class="w-full border p-2 rounded"
+                    />
                     <div v-if="form.errors.date_ba" class="text-red-500">{{ form.errors.date_ba }}</div>
                 </div>
 
+                <!-- Fournisseur Select -->
                 <div>
-                    <label>Fournisseur ID</label>
-                    <input v-model="form.id_fourn" type="number" class="w-full border p-2 rounded" />
+                    <label>Fournisseur</label>
+                    <select
+                        v-model="form.id_fourn"
+                        class="w-full border p-2 rounded"
+                    >
+                        <option value="">-- Sélectionnez un fournisseur --</option>
+                        <option
+                            v-for="fournisseur in fournisseurs"
+                            :key="fournisseur.id_fourn"
+                            :value="fournisseur.id_fourn"
+                        >
+                            {{ fournisseur.nom_fourn }}
+                        </option>
+                    </select>
                     <div v-if="form.errors.id_fourn" class="text-red-500">{{ form.errors.id_fourn }}</div>
                 </div>
 
@@ -72,6 +107,7 @@ function submit() {
                         <span v-else>Enregistrer les modifications</span>
                     </button>
                 </div>
+
             </form>
         </div>
     </AppLayout>

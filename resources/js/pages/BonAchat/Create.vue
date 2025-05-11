@@ -5,6 +5,7 @@ import { type BreadcrumbItem } from '@/types'
 
 const props = defineProps({
     dra: Object,
+    fournisseurs: Array,
 })
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -16,7 +17,7 @@ const form = useForm({
     n_ba: '',
     montant_ba: '',
     date_ba: '',
-    id_fourn: '',
+    id_fourn: '', // This will hold the selected fournisseur's ID
 })
 
 function submit() {
@@ -77,12 +78,20 @@ function submit() {
                 </div>
 
                 <div>
-                    <label>Fournisseur ID</label>
-                    <input
+                    <label>Fournisseur</label>
+                    <select
                         v-model="form.id_fourn"
-                        type="number"
                         class="w-full border p-2 rounded"
-                    />
+                    >
+                        <option value="">-- Sélectionnez un fournisseur --</option>
+                        <option
+                            v-for="fournisseur in props.fournisseurs"
+                            :key="fournisseur.id_fourn"
+                            :value="fournisseur.id_fourn"
+                        >
+                            {{ fournisseur.nom_fourn }}
+                        </option>
+                    </select>
                     <div v-if="form.errors.id_fourn" class="text-red-500">
                         {{ form.errors.id_fourn }}
                     </div>

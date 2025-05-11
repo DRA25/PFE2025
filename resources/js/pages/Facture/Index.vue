@@ -61,7 +61,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                         <TableCell>{{ facture.n_facture }}</TableCell>
                         <TableCell>{{ facture.montant_facture }}</TableCell>
                         <TableCell>{{ facture.date_facture }}</TableCell>
-                        <TableCell>{{ facture.id_fourn }}</TableCell>
+                        <TableCell>{{ facture.fournisseur.nom_fourn }}</TableCell> <!-- Display Fournisseur Name -->
                         <TableCell>
                             <Link
                                 :href="`/dras/${props.dra.n_dra}/factures/${facture.n_facture}/edit`"

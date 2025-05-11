@@ -61,7 +61,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                         <TableCell>{{ bonAchat.n_ba }}</TableCell>
                         <TableCell>{{ bonAchat.montant_ba }}</TableCell>
                         <TableCell>{{ bonAchat.date_ba }}</TableCell>
-                        <TableCell>{{ bonAchat.id_fourn }}</TableCell>
+                        <TableCell>{{ bonAchat.fournisseur.nom_fourn }}</TableCell> <!-- Display Fournisseur Name -->
                         <TableCell>
                             <Link
                                 :href="`/dras/${props.dra.n_dra}/bon-achats/${bonAchat.n_ba}/edit`"

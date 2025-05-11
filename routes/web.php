@@ -5,8 +5,10 @@ use App\Http\Controllers\AchatController;
 use App\Http\Controllers\Atelier\AtelierController;
 use App\Http\Controllers\Atelier\DemandepieceController;
 use App\Http\Controllers\BonAchatController;
+use App\Http\Controllers\CentreController;
 use App\Http\Controllers\DraController;
 use App\Http\Controllers\FactureController;
+use App\Http\Controllers\FournisseurController;
 use App\Http\Controllers\MagasinController;
 use App\Http\Controllers\paimentController;
 use App\Http\Controllers\ScfController;
@@ -151,6 +153,29 @@ Route::middleware(['auth', 'verified', 'role:service atelier|admin'])->group(fun
             'destroy' => 'atelier.destroy',
         ]);
 });
+
+//centre routes
+Route::middleware(['auth', 'role:admin'])->group(function () {
+    Route::get('/centres', [CentreController::class, 'index'])->name('centres.index');
+    Route::get('/centres/create', [CentreController::class, 'create'])->name('centres.create');
+    Route::post('/centres', [CentreController::class, 'store'])->name('centres.store');
+    Route::get('/centres/{centre}/edit', [CentreController::class, 'edit'])->name('centres.edit');
+    Route::put('/centres/{centre}', [CentreController::class, 'update'])->name('centres.update');
+    Route::delete('/centres/{centre}', [CentreController::class, 'destroy'])->name('centres.destroy');
+});
+
+
+
+//fournisseur routes
+Route::middleware(['auth', 'role:admin'])->group(function () {
+    Route::get('/fournisseurs', [FournisseurController::class, 'index'])->name('fournisseurs.index');
+    Route::get('/fournisseurs/create', [FournisseurController::class, 'create'])->name('fournisseurs.create');
+    Route::post('/fournisseurs', [FournisseurController::class, 'store'])->name('fournisseurs.store');
+    Route::get('/fournisseurs/{fournisseur}/edit', [FournisseurController::class, 'edit'])->name('fournisseurs.edit');
+    Route::put('/fournisseurs/{fournisseur}', [FournisseurController::class, 'update'])->name('fournisseurs.update');
+    Route::delete('/fournisseurs/{fournisseur}', [FournisseurController::class, 'destroy'])->name('fournisseurs.destroy');
+});
+
 
 
 require __DIR__.'/settings.php';

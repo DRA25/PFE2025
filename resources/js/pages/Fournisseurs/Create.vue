@@ -1,102 +1,73 @@
 <script setup lang="ts">
 import { Head, Link, useForm } from '@inertiajs/vue3'
 import AppLayout from '@/layouts/AppLayout.vue'
-import { type BreadcrumbItem } from '@/types'
-
-const props = defineProps({
-    dra: Object,
-    fournisseurs: Array,
-})
-
-const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Gestion des DRAs', href: '/dras' },
-    { title: `Créer une Facture pour DRA ${props.dra.n_dra}`, href: `/dras/${props.dra.n_dra}/factures/create` },
-]
 
 const form = useForm({
-    n_facture: '',
-    montant_facture: '',
-    date_facture: '',
     id_fourn: '',
+    nom_fourn: '',
+    adress_fourn: '',
+    nrc_fourn: '',
 })
 
 function submit() {
-    form.post(route('dras.factures.store', { dra: props.dra.n_dra }), {
-        onSuccess: () => {
-            form.reset()
-            window.location.href = `/dras/${props.dra.n_dra}/factures`
-        },
-        onError: () => {
-            console.log('Validation error:', form.errors)
-        }
-    })
+    form.post('/fournisseurs')
 }
 </script>
 
 <template>
-    <Head :title="`Créer une Facture pour DRA ${props.dra.n_dra}`" />
-    <AppLayout :breadcrumbs="breadcrumbs">
+    <Head title="Créer un Fournisseur" />
+    <AppLayout>
         <div class="m-5 mr-2 bg-gray-100 dark:bg-gray-800 rounded-lg p-6">
             <div class="flex justify-between mb-6">
                 <h1 class="text-lg font-bold text-left text-[#042B62FF] dark:text-[#BDBDBDFF]">
-                    Créer une Facture pour DRA {{ props.dra.n_dra }}
+                    Créer un Fournisseur
                 </h1>
             </div>
 
             <form @submit.prevent="submit" class="space-y-6 bg-white dark:bg-gray-700 p-6 rounded-lg shadow">
+                <div class="space-y-2">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">ID Fournisseur</label>
+                    <input
+                        v-model="form.id_fourn"
+                        type="number"
+                        class="w-full border border-gray-300 dark:border-gray-600 p-2 rounded focus:ring-2 focus:ring-[#042B62] dark:focus:ring-[#F3B21B] focus:border-transparent dark:bg-gray-800 dark:text-white"
+                    />
+                    <div v-if="form.errors.id_fourn" class="text-red-500 text-sm">{{ form.errors.id_fourn }}</div>
+                </div>
 
                 <div class="space-y-2">
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">N° Facture</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Nom</label>
                     <input
-                        v-model="form.n_facture"
+                        v-model="form.nom_fourn"
                         type="text"
                         class="w-full border border-gray-300 dark:border-gray-600 p-2 rounded focus:ring-2 focus:ring-[#042B62] dark:focus:ring-[#F3B21B] focus:border-transparent dark:bg-gray-800 dark:text-white"
                     />
-                    <div v-if="form.errors.n_facture" class="text-red-500 text-sm">{{ form.errors.n_facture }}</div>
+                    <div v-if="form.errors.nom_fourn" class="text-red-500 text-sm">{{ form.errors.nom_fourn }}</div>
                 </div>
 
                 <div class="space-y-2">
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Montant Facture</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Adresse</label>
                     <input
-                        v-model="form.montant_facture"
-                        type="number"
-                        step="0.01"
+                        v-model="form.adress_fourn"
+                        type="text"
                         class="w-full border border-gray-300 dark:border-gray-600 p-2 rounded focus:ring-2 focus:ring-[#042B62] dark:focus:ring-[#F3B21B] focus:border-transparent dark:bg-gray-800 dark:text-white"
                     />
-                    <div v-if="form.errors.montant_facture" class="text-red-500 text-sm">{{ form.errors.montant_facture }}</div>
+                    <div v-if="form.errors.adress_fourn" class="text-red-500 text-sm">{{ form.errors.adress_fourn }}</div>
                 </div>
 
                 <div class="space-y-2">
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Date Facture</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">NRC</label>
                     <input
-                        v-model="form.date_facture"
-                        type="date"
+                        v-model="form.nrc_fourn"
+                        type="text"
                         class="w-full border border-gray-300 dark:border-gray-600 p-2 rounded focus:ring-2 focus:ring-[#042B62] dark:focus:ring-[#F3B21B] focus:border-transparent dark:bg-gray-800 dark:text-white"
                     />
-                    <div v-if="form.errors.date_facture" class="text-red-500 text-sm">{{ form.errors.date_facture }}</div>
-                </div>
-
-                <div class="space-y-2">
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Fournisseur</label>
-                    <select
-                        v-model="form.id_fourn"
-                        class="w-full border border-gray-300 dark:border-gray-600 p-2 rounded focus:ring-2 focus:ring-[#042B62] dark:focus:ring-[#F3B21B] focus:border-transparent dark:bg-gray-800 dark:text-white"
-                    >
-                        <option value="">-- Sélectionnez un fournisseur --</option>
-                        <option
-                            v-for="fournisseur in fournisseurs"
-                            :key="fournisseur.id_fourn"
-                            :value="fournisseur.id_fourn"
-                        >
-                            {{ fournisseur.nom_fourn }}
-                        </option>
-                    </select>
-                    <div v-if="form.errors.id_fourn" class="text-red-500 text-sm">{{ form.errors.id_fourn }}</div>
+                    <div v-if="form.errors.nrc_fourn" class="text-red-500 text-sm">{{ form.errors.nrc_fourn }}</div>
                 </div>
 
                 <div class="flex justify-end space-x-4 pt-4">
                     <Link
-                        :href="`/dras/${props.dra.n_dra}/factures`"
+                        href="/fournisseurs"
                         class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition"
                     >
                         Annuler
@@ -110,7 +81,6 @@ function submit() {
                         <span v-if="form.processing" class="animate-spin">↻</span>
                     </button>
                 </div>
-
             </form>
         </div>
     </AppLayout>

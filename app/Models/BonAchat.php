@@ -26,5 +26,10 @@ class BonAchat extends Model
     {
         return $this->belongsTo(Dra::class, 'n_dra', 'n_dra');
     }
+
+    public function fournisseur()
+    {
+        return $this->belongsTo(Fournisseur::class, 'id_fourn', 'id_fourn');
+    }
 }
 
