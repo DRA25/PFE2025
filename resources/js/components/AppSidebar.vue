@@ -98,14 +98,7 @@ if (user.value?.roles?.some((role: any) => role.name === 'admin' || role.name ==
 
 
 
-const footerNavItems: NavItem[] = [
 
-    {
-        title: 'Documentation',
-        href: 'https://laravel.com/docs/starter-kits',
-        icon: BookOpen,
-    },
-];
 
 
 </script>

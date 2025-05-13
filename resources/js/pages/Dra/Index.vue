@@ -155,16 +155,30 @@ const updateDraTotal = (draId: string) => {
                             </span>
                         </TableCell>
                         <TableCell class="flex flex-wrap gap-2">
-                            <!-- Modifier Button -->
+
+
+
+
+
+                            <!-- Factures Button -->
                             <Link
                                 v-if="dra.etat === 'actif'"
-                                :href="`/dras/${dra.n_dra}/edit`"
-                                class="bg-green-600 text-white px-3 py-1 rounded-lg hover:bg-green-400 transition flex items-center gap-1"
+                                :href="`/dras/${dra.n_dra}/factures`"
+                                class="bg-[#042B62] dark:bg-[#F3B21B] text-white px-3 py-1 rounded-lg hover:bg-indigo-600 dark:hover:bg-yellow-400 transition flex items-center gap-1"
                             >
-                                <Pencil class="w-4 h-4" />
-                                <span>Modifier</span>
+                                <FileText class="w-4 h-4" />
+                                <span>Factures</span>
                             </Link>
 
+                            <!-- BonAchats Button -->
+                            <Link
+                                v-if="dra.etat === 'actif'"
+                                :href="`/dras/${dra.n_dra}/bon-achats`"
+                                class="bg-[#042B62] text-white px-3 py-1 rounded-lg hover:bg-indigo-600 dark:bg-[#F3B21B] dark:hover:bg-yellow-400 transition flex items-center gap-1"
+                            >
+                                <FileText class="w-4 h-4" />
+                                <span>Bons d'Achat</span>
+                            </Link>
                             <!-- Clôturer Button -->
                             <button
                                 v-if="dra.etat === 'actif'"
@@ -175,6 +189,15 @@ const updateDraTotal = (draId: string) => {
                                 <span>Clôturer</span>
                             </button>
 
+                            <!-- Modifier Button -->
+                            <Link
+                                v-if="dra.etat === 'actif'"
+                                :href="`/dras/${dra.n_dra}/edit`"
+                                class="bg-green-600 text-white px-3 py-1 rounded-lg hover:bg-green-400 transition flex items-center gap-1"
+                            >
+                                <Pencil class="w-4 h-4" />
+                                <span>Modifier</span>
+                            </Link>
                             <!-- Supprimer Button -->
                             <button
                                 v-if="dra.etat === 'actif'"
@@ -185,25 +208,6 @@ const updateDraTotal = (draId: string) => {
                                 <span>Supprimer</span>
                             </button>
 
-                            <!-- Factures Button -->
-                            <Link
-                                v-if="dra.etat === 'actif'"
-                                :href="`/dras/${dra.n_dra}/factures`"
-                                class="bg-[#042B62] dark:bg-[#F3B21B] text-white px-3 py-1 rounded-lg hover:bg-[#042B40] dark:hover:bg-yellow-400 transition flex items-center gap-1"
-                            >
-                                <FileText class="w-4 h-4" />
-                                <span>Factures</span>
-                            </Link>
-
-                            <!-- BonAchats Button -->
-                            <Link
-                                v-if="dra.etat === 'actif'"
-                                :href="`/dras/${dra.n_dra}/bon-achats`"
-                                class="bg-indigo-600 text-white px-3 py-1 rounded-lg hover:bg-indigo-800 transition flex items-center gap-1"
-                            >
-                                <FileText class="w-4 h-4" />
-                                <span>Bons d'Achat</span>
-                            </Link>
                         </TableCell>
                     </TableRow>
                 </TableBody>

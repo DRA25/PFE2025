@@ -124,16 +124,18 @@ Route::middleware(['auth'])->group(function () {
     ]);
 }); */
 Route::middleware(['auth', 'verified', 'role:service atelier|admin'])->group(function () {
-    Route::resource('atelier', DemandepieceController::class)
-        ->names([
-            'index' => 'atelier.index',
-            'create' => 'atelier.create',
-            'store' => 'atelier.store',
-            'show' => 'atelier.show',
-            'edit' => 'atelier.edit',
-            'update' => 'atelier.update',
-            'destroy' => 'atelier.destroy',
-        ]);
+    // Main atelier dashboard
+    Route::get('/atelier', [AtelierController::class, 'index'])->name('atelier.index');
+
+    // Pieces management routes (now under /atelier/pieces)
+    Route::prefix('atelier/pieces')->group(function () {
+        Route::get('/', [DemandepieceController::class, 'index'])->name('atelier.pieces.index');
+        Route::get('/create', [DemandepieceController::class, 'create'])->name('atelier.pieces.create');
+        Route::post('/', [DemandepieceController::class, 'store'])->name('atelier.pieces.store');
+        Route::get('/{piece}/edit', [DemandepieceController::class, 'edit'])->name('atelier.pieces.edit');
+        Route::put('/{piece}', [DemandepieceController::class, 'update'])->name('atelier.pieces.update');
+        Route::delete('/{piece}', [DemandepieceController::class, 'destroy'])->name('atelier.pieces.destroy');
+    });
 });
 
 //centre routes
