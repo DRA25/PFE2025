@@ -9,23 +9,22 @@ const props = defineProps({
 })
 
 const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Gestion des DRAs', href: '/dras' },
-    { title: `Créer un Bon d'achat pour DRA ${props.dra.n_dra}`, href: `/dras/${props.dra.n_dra}/bon-achats/create` },
+    { title: 'Gestion des DRAs', href: '/achat/dras' },
+    { title: `Créer un Bon d'achat pour DRA ${props.dra.n_dra}`, href: `/achat/dras/${props.dra.n_dra}/bon-achats/create` },
 ]
 
 const form = useForm({
     n_ba: '',
     montant_ba: '',
     date_ba: '',
-    id_fourn: '', // This will hold the selected fournisseur's ID
+    id_fourn: '',
 })
 
 function submit() {
-    form.post(route('dras.bon-achats.store', { dra: props.dra.n_dra }), {
+    form.post(route('achat.dras.bon-achats.store', { dra: props.dra.n_dra }), {
         onSuccess: () => {
             form.reset()
-            // Redirect back to bon-achat index of that dra
-            window.location.href = `/dras/${props.dra.n_dra}/bon-achats`
+            window.location.href = `/achat/dras/${props.dra.n_dra}/bon-achats`
         },
         onError: () => {
             console.log('Validation error:', form.errors)
@@ -42,46 +41,50 @@ function submit() {
 
             <form @submit.prevent="submit" class="space-y-4">
                 <div>
-                    <label>N° Bon Achat</label>
+                    <label for="n_ba" class="block text-gray-700 text-sm font-bold mb-2">N° Bon Achat</label>
                     <input
+                        id="n_ba"
                         v-model="form.n_ba"
                         type="number"
-                        class="w-full border p-2 rounded"
+                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                     />
-                    <div v-if="form.errors.n_ba" class="text-red-500">
+                    <div v-if="form.errors.n_ba" class="text-red-500 text-xs italic">
                         {{ form.errors.n_ba }}
                     </div>
                 </div>
 
                 <div>
-                    <label>Montant Bon Achat</label>
+                    <label for="montant_ba" class="block text-gray-700 text-sm font-bold mb-2">Montant Bon Achat</label>
                     <input
+                        id="montant_ba"
                         v-model="form.montant_ba"
                         type="number"
-                        class="w-full border p-2 rounded"
+                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                     />
-                    <div v-if="form.errors.montant_ba" class="text-red-500">
+                    <div v-if="form.errors.montant_ba" class="text-red-500 text-xs italic">
                         {{ form.errors.montant_ba }}
                     </div>
                 </div>
 
                 <div>
-                    <label>Date Bon Achat</label>
+                    <label for="date_ba" class="block text-gray-700 text-sm font-bold mb-2">Date Bon Achat</label>
                     <input
+                        id="date_ba"
                         v-model="form.date_ba"
                         type="date"
-                        class="w-full border p-2 rounded"
+                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                     />
-                    <div v-if="form.errors.date_ba" class="text-red-500">
+                    <div v-if="form.errors.date_ba" class="text-red-500 text-xs italic">
                         {{ form.errors.date_ba }}
                     </div>
                 </div>
 
                 <div>
-                    <label>Fournisseur</label>
+                    <label for="id_fourn" class="block text-gray-700 text-sm font-bold mb-2">Fournisseur</label>
                     <select
+                        id="id_fourn"
                         v-model="form.id_fourn"
-                        class="w-full border p-2 rounded"
+                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                     >
                         <option value="">-- Sélectionnez un fournisseur --</option>
                         <option
@@ -92,19 +95,25 @@ function submit() {
                             {{ fournisseur.nom_fourn }}
                         </option>
                     </select>
-                    <div v-if="form.errors.id_fourn" class="text-red-500">
+                    <div v-if="form.errors.id_fourn" class="text-red-500 text-xs italic">
                         {{ form.errors.id_fourn }}
                     </div>
                 </div>
 
-                <div>
+                <div class="flex items-center justify-between">
                     <button
                         type="submit"
-                        class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-800"
+                        class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
                         :disabled="form.processing"
                     >
                         Enregistrer
                     </button>
+                    <Link
+                        :href="`/achat/dras/${props.dra.n_dra}/bon-achats`"
+                        class="inline-block align-baseline font-bold text-sm text-blue-500 hover:text-blue-800"
+                    >
+                        Annuler
+                    </Link>
                 </div>
             </form>
         </div>

@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Http\Controllers;
 
 use App\Models\Centre;
@@ -10,121 +9,115 @@ use Inertia\Inertia;
 
 class DraController extends Controller
 {
-    // In your DraController.php
-    public function index()
-    {
-        $dras = Dra::query()
-            ->orderBy('created_at', 'desc')
-            ->get();
+public function index()
+{
+$dras = Dra::query()
+->orderBy('created_at', 'desc')
+->get();
 
-        return Inertia::render('Dra/Index', [
-            'dras' => $dras->map(function ($dra) {
-                return [
-                    'n_dra' => $dra->n_dra,
-                    'id_centre' => $dra->id_centre,
-                    'date_creation' => $dra->date_creation->format('Y-m-d'),
-                    'etat' => $dra->etat,
-                    'total_dra' => $dra->total_dra,
-                    'created_at' => $dra->created_at ? $dra->created_at->toISOString() : now()->toISOString()
-                ];
-            })
-        ]);
-    }
+return Inertia::render('Dra/Index', [
+'dras' => $dras->map(function ($dra) {
+return [
+'n_dra' => $dra->n_dra,
+'id_centre' => $dra->id_centre,
+'date_creation' => $dra->date_creation->format('Y-m-d'),
+'etat' => $dra->etat,
+'total_dra' => $dra->total_dra,
+'created_at' => $dra->created_at ? $dra->created_at->toISOString() : now()->toISOString()
+];
+})
+]);
+}
 
-    public function create()
-    {
-        $centres = Centre::all(); // Fetch all centres
+public function create()
+{
+$centres = Centre::all();
 
-        return Inertia::render('Dra/Create', [
-            'centres' => $centres, // Pass the list of centres
-        ]);
-    }
+return Inertia::render('Dra/Create', [
+'centres' => $centres,
+]);
+}
 
-    public function store(Request $request)
-    {
-        if (Dra::where('etat', 'actif')->exists()) {
-            return back()->withErrors([
-                'etat' => 'Un DRA actif existe déjà. Veuillez le clôturer avant de créer un nouveau.'
-            ]);
-        }
+public function store(Request $request)
+{
+if (Dra::where('etat', 'actif')->exists()) {
+return back()->withErrors([
+'etat' => 'Un DRA actif existe déjà. Veuillez le clôturer avant de créer un nouveau.'
+]);
+}
 
-        $validated = $request->validate([
-            'n_dra' => 'required|unique:dras,n_dra',
-            'id_centre' => 'required',
-            'date_creation' => 'required|date',
+$validated = $request->validate([
+'n_dra' => 'required|unique:dras,n_dra',
+'id_centre' => 'required',
+'date_creation' => 'required|date',
+]);
 
-        ]);
+Dra::create(array_merge($validated, [
+'etat' => 'actif',
+'total_dra' => 0,
+'created_at' => now()
+]));
 
-        Dra::create(array_merge($validated, [
-            'etat' => 'actif',
-            'total_dra' => 0,
-            'created_at' => now() // Explicitly set current timestamp
-        ]));
+return redirect()->route('achat.dras.index')->with('success', 'DRA créé avec succès');
+}
 
-        return redirect()->route('dras.index')->with('success', 'DRA créé avec succès');
-    }
-    public function edit(Dra $dra)
-    {
-        $centres = Centre::all(); // Fetch all centres
+public function edit(Dra $dra)
+{
+$centres = Centre::all();
 
-        return Inertia::render('Dra/Edit', [
-            'dra' => $dra,
-            'centres' => $centres, // Pass the list of centres
-        ]);
-    }
-    public function update(Request $request, Dra $dra)
-    {
-        $validated = $request->validate([
-            'id_centre' => 'required',
-            'date_creation' => 'required|date',
-            // total_dra is no longer validated or updated here
-        ]);
+return Inertia::render('Dra/Edit', [
+'dra' => $dra,
+'centres' => $centres,
+]);
+}
 
-        $dra->update($validated);
+public function update(Request $request, Dra $dra)
+{
+$validated = $request->validate([
+'id_centre' => 'required',
+'date_creation' => 'required|date',
+]);
 
-        return redirect()->route('dras.index')
-            ->with('success', 'DRA mis à jour avec succès');
-    }
+$dra->update($validated);
 
-    public function destroy($n_dra)
-    {
-        DB::beginTransaction();
+return redirect()->route('achat.dras.index')
+->with('success', 'DRA mis à jour avec succès');
+}
 
-        try {
-            $dra = Dra::where('n_dra', $n_dra)->firstOrFail();
+public function destroy($n_dra)
+{
+DB::beginTransaction();
 
-            // Check if DRA is active
-            if ($dra->etat !== 'actif') {
-                return back()->withErrors(['error' => 'Seuls les DRAs actifs peuvent être supprimés']);
-            }
+try {
+$dra = Dra::where('n_dra', $n_dra)->firstOrFail();
 
-            // Delete associated factures first
-            $dra->factures()->delete();
+if ($dra->etat !== 'actif') {
+return back()->withErrors(['error' => 'Seuls les DRAs actifs peuvent être supprimés']);
+}
 
-            // Then delete the DRA
-            $dra->delete();
+$dra->factures()->delete();
+$dra->delete();
 
-            DB::commit();
+DB::commit();
 
-            return redirect()->route('dras.index')
-                ->with('success', 'DRA supprimé avec succès');
+return redirect()->route('achat.dras.index')
+->with('success', 'DRA supprimé avec succès');
 
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return back()->withErrors(['error' => 'Erreur lors de la suppression: ' . $e->getMessage()]);
-        }
-    }
+} catch (\Exception $e) {
+DB::rollBack();
+return back()->withErrors(['error' => 'Erreur lors de la suppression: ' . $e->getMessage()]);
+}
+}
 
-    public function close(Dra $dra)
-    {
-        if ($dra->etat !== 'actif') {
-            return back()->withErrors(['etat' => 'Seuls les DRAs actifs peuvent être clôturés']);
-        }
+public function close(Dra $dra)
+{
+if ($dra->etat !== 'actif') {
+return back()->withErrors(['etat' => 'Seuls les DRAs actifs peuvent être clôturés']);
+}
 
-        $dra->update(['etat' => 'cloture']);
+$dra->update(['etat' => 'cloture']);
 
-        return redirect()->route('dras.index')
-            ->with('success', 'DRA clôturé avec succès');
-    }
-
+return redirect()->route('achat.dras.index')
+->with('success', 'DRA clôturé avec succès');
+}
 }

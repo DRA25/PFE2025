@@ -25,22 +25,30 @@ const mainNavItems: NavItem[] = [
         href: '/about',
         icon: Info,
     },
-    {
-        title: 'Centres',
-        href: '/centres',
-        icon: Building,
-    },
-    {
-        title: 'Fournisseurs',
-        href: '/fournisseurs',
-        icon: User,
-    },
+
+
 
 
 
 ];
 
+// Conditionally add "centre"
+if (user.value?.roles?.some((role: any) => role.name === 'admin' )) {
+    mainNavItems.push({
+        title: 'Centre',
+        href: '/centres',
+        icon: Building,
+    });
+}
 
+// Conditionally add "fournisseurs"
+if (user.value?.roles?.some((role: any) => role.name === 'admin' || role.name === 'service achat' )) {
+    mainNavItems.push({
+        title: 'Fournisseur',
+        href: '/fournisseurs',
+        icon: User,
+    });
+}
 
 // Conditionally add "Roles"
 if (user.value?.roles?.some((role: any) => role.name === 'admin')) {
@@ -71,7 +79,7 @@ if (user.value?.roles?.some((role: any) => role.name === 'admin' || role.name ==
     if (user.value?.roles?.some((role: any) => role.name === 'admin' || role.name === 'service achat' || role.name === 'service cf')) {
         mainNavItems.push({
             title: 'Service Achat',
-            href: '/dras',
+            href: '/achat',
             icon: ShoppingCart,
         });
     }

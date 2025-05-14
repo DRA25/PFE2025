@@ -39,7 +39,7 @@ onMounted(() => {
                 class="relative shadow-xl sm:rounded-3xl flex flex-col md:flex-row overflow-hidden transition-all duration-300"
                 :class="{ 'opacity-100 scale-100': isMounted, 'opacity-0 scale-95': !isMounted }"
             >
-                <div class="md:w-1/2 p-12 flex items-center justify-center bg-gray-100">
+                <div class="md:w-1/2 p-12 flex items-center justify-center bg-[#F3B21B]">
                     <img src="/images/Naftal.png" alt="Logo Naftal" class="max-w-full max-h-72 object-contain transition-opacity duration-300 hover:opacity-90" />
                 </div>
                 <div class="md:w-1/2 p-8 bg-gradient-to-t from-gray-100 to-white">

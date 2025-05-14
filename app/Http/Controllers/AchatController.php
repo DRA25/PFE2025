@@ -9,6 +9,6 @@ class AchatController extends Controller
 {
     public function index()
     {
-        return Inertia::render('Achat/Index');
+        return Inertia::render('Achat/Dashboard');
     }
 }

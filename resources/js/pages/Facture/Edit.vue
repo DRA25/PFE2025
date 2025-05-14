@@ -15,9 +15,9 @@ const props = defineProps<{
 }>()
 
 const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Gestion des DRAs', href: '/dras' },
-    { title: `Factures de ${props.dra.n_dra}`, href: `/dras/${props.dra.n_dra}/factures` },
-    { title: `Modifier Facture ${props.facture.n_facture}`, href: `/dras/${props.dra.n_dra}/factures/${props.facture.n_facture}/edit` },
+    { title: 'Gestion des DRAs', href: route('achat.dras.index') },
+    { title: `Factures de ${props.dra.n_dra}`, href: route('achat.dras.factures.index', { dra: props.dra.n_dra }) },
+    { title: `Modifier Facture ${props.facture.n_facture}`, href: route('achat.dras.factures.edit', { dra: props.dra.n_dra, facture: props.facture.n_facture }) },
 ]
 
 const form = useForm({
@@ -28,9 +28,9 @@ const form = useForm({
 })
 
 function submit() {
-    form.put(`/dras/${props.dra.n_dra}/factures/${props.facture.n_facture}`, {
+    form.put(route('achat.dras.factures.update', { dra: props.dra.n_dra, facture: props.facture.n_facture }), {
         onSuccess: () => {
-            window.location.href = `/dras/${props.dra.n_dra}/factures`
+            window.location.href = route('achat.dras.factures.index', { dra: props.dra.n_dra })
         },
         onError: () => {
             console.log('Validation errors:', form.errors)
@@ -50,7 +50,6 @@ function submit() {
             </div>
 
             <form @submit.prevent="submit" class="space-y-6 bg-white dark:bg-gray-700 p-6 rounded-lg shadow">
-
                 <div class="space-y-2">
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">N° Facture</label>
                     <input
@@ -103,7 +102,7 @@ function submit() {
 
                 <div class="flex justify-end space-x-4 pt-4">
                     <Link
-                        :href="`/dras/${props.dra.n_dra}/factures`"
+                        :href="route('achat.dras.factures.index', { dra: props.dra.n_dra })"
                         class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition"
                     >
                         Annuler
@@ -117,7 +116,6 @@ function submit() {
                         <span v-else class="animate-spin">↻</span>
                     </button>
                 </div>
-
             </form>
         </div>
     </AppLayout>

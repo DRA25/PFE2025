@@ -9,8 +9,8 @@ const props = defineProps({
 })
 
 const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Gestion des DRAs', href: '/dras' },
-    { title: `Créer une Facture pour DRA ${props.dra.n_dra}`, href: `/dras/${props.dra.n_dra}/factures/create` },
+    { title: 'Gestion des DRAs', href: route('achat.dras.index') },
+    { title: `Créer une Facture pour DRA ${props.dra.n_dra}`, href: route('achat.dras.factures.create', { dra: props.dra.n_dra }) },
 ]
 
 const form = useForm({
@@ -21,10 +21,10 @@ const form = useForm({
 })
 
 function submit() {
-    form.post(route('dras.factures.store', { dra: props.dra.n_dra }), {
+    form.post(route('achat.dras.factures.store', { dra: props.dra.n_dra }), {
         onSuccess: () => {
             form.reset()
-            window.location.href = `/dras/${props.dra.n_dra}/factures`
+            window.location.href = route('achat.dras.factures.index', { dra: props.dra.n_dra })
         },
         onError: () => {
             console.log('Validation error:', form.errors)
@@ -84,7 +84,7 @@ function submit() {
                     >
                         <option value="">-- Sélectionnez un fournisseur --</option>
                         <option
-                            v-for="fournisseur in fournisseurs"
+                            v-for="fournisseur in props.fournisseurs"
                             :key="fournisseur.id_fourn"
                             :value="fournisseur.id_fourn"
                         >
@@ -96,7 +96,7 @@ function submit() {
 
                 <div class="flex justify-end space-x-4 pt-4">
                     <Link
-                        :href="`/dras/${props.dra.n_dra}/factures`"
+                        :href="route('achat.dras.factures.index', { dra: props.dra.n_dra })"
                         class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition"
                     >
                         Annuler

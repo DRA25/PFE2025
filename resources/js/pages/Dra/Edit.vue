@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useForm, Head } from '@inertiajs/vue3'
+import { useForm, Head, Link } from '@inertiajs/vue3'
 import AppLayout from '@/layouts/AppLayout.vue'
 
 const props = defineProps<{
@@ -16,7 +16,7 @@ function submit() {
     form.transform(data => ({
         ...data,
         _method: 'put',
-    })).post(`/dras/${props.dra.n_dra}`)
+    })).post(route('achat.dras.update', { dra: props.dra.n_dra }))
 }
 </script>
 
@@ -57,7 +57,7 @@ function submit() {
                 <!-- Submit Button -->
                 <div class="flex justify-end space-x-4 pt-4">
                     <Link
-                        :href="`/dras`"
+                        :href="route('achat.dras.index')"
                         class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition"
                     >
                         Annuler

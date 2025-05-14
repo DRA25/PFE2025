@@ -17,8 +17,8 @@ const props = defineProps({
 })
 
 const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Gestion des DRAs', href: '/dras' },
-    { title: `Bons d'achat pour DRA ${props.dra.n_dra}`, href: `/dras/${props.dra.n_dra}/bon-achats` },
+    { title: 'Gestion des DRAs', href: '/achat/dras' },
+    { title: `Bons d'achat pour DRA ${props.dra.n_dra}`, href: `/achat/dras/${props.dra.n_dra}/bon-achats` },
 ]
 </script>
 
@@ -27,7 +27,7 @@ const breadcrumbs: BreadcrumbItem[] = [
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex justify-end m-5 mb-0">
             <Link
-                :href="`/dras/${props.dra.n_dra}/bon-achats/create`"
+                :href="`/achat/dras/${props.dra.n_dra}/bon-achats/create`"
                 class="bg-[#042B62] dark:bg-[#F3B21B] dark:text-[#042B62] text-white px-4 py-2 rounded-lg hover:bg-blue-900 dark:hover:bg-yellow-200 transition"
             >
                 Ajouter un Bon d'achat
@@ -61,25 +61,24 @@ const breadcrumbs: BreadcrumbItem[] = [
                         <TableCell>{{ bonAchat.n_ba }}</TableCell>
                         <TableCell>{{ bonAchat.montant_ba }}</TableCell>
                         <TableCell>{{ bonAchat.date_ba }}</TableCell>
-                        <TableCell>{{ bonAchat.fournisseur.nom_fourn }}</TableCell> <!-- Display Fournisseur Name -->
-                        <TableCell>
-                            <Link
-                                :href="`/dras/${props.dra.n_dra}/bon-achats/${bonAchat.n_ba}/edit`"
-                                class="bg-green-600 text-white px-3 py-1 rounded-lg hover:bg-green-400 transition"
-                            >
+                        <TableCell>{{ bonAchat.fournisseur.nom_fourn }}</TableCell> <TableCell>
+                        <Link
+                            :href="`/achat/dras/${props.dra.n_dra}/bon-achats/${bonAchat.n_ba}/edit`"
+                            class="bg-green-600 text-white px-3 py-1 rounded-lg hover:bg-green-400 transition"
+                        >
                                 <span class="inline-flex items-center space-x-1">
                                     <span>Modifier</span>
                                     <Pencil class="w-4 h-4" />
                                 </span>
-                            </Link>
-                        </TableCell>
+                        </Link>
+                    </TableCell>
                     </TableRow>
                 </TableBody>
             </Table>
 
             <div class="m-5">
                 <Link
-                    href="/dras"
+                    href="/achat/dras"
                     class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-400 transition inline-flex items-center space-x-1"
                 >
                     <ArrowLeft class="w-4 h-4" />

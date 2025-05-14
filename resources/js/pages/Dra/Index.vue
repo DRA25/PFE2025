@@ -29,9 +29,11 @@ const sortedDras = computed(() => {
     )
 })
 
+// Update breadcrumbs to use new route paths
 const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Gestion des DRAs', href: '/dras' },
-    { title: 'Liste des DRAs', href: '/dras' },
+    { title:'Achat', href: '/achat'},
+    { title: 'Gestion des DRAs', href: '/achat/dras' },
+    { title: 'Liste des DRAs', href: '/achat/dras' },
 ]
 
 const localDras = ref([...sortedDras.value])
@@ -58,7 +60,7 @@ const closeDra = (draId: string) => {
         )
         localDras.value = updatedDras
 
-        router.put(route('dras.close', { dra: draId }), {
+        router.put(route('achat.dras.close', { dra: draId }), {
             preserveScroll: true,
             onSuccess: () => {},
             onError: (errors) => {
@@ -71,7 +73,7 @@ const closeDra = (draId: string) => {
 
 const deleteDra = (draId: string) => {
     if (confirm('Êtes-vous sûr de vouloir supprimer ce DRA ? Cette action est irréversible et supprimera toutes les factures associées.')) {
-        router.delete(route('dras.destroy', { dra: draId }), {
+        router.delete(route('achat.dras.destroy', { dra: draId }), {
             preserveScroll: true,
             onSuccess: () => {
                 localDras.value = localDras.value.filter(dra => dra.n_dra !== draId);
@@ -85,7 +87,7 @@ const deleteDra = (draId: string) => {
 
 // Method to update dra totals after modification
 const updateDraTotal = (draId: string) => {
-    router.get(route('dras.index'), {
+    router.get(route('achat.dras.index'), {
         preserveScroll: true,
         onSuccess: (updatedDras) => {
             localDras.value = updatedDras;
@@ -99,7 +101,7 @@ const updateDraTotal = (draId: string) => {
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex justify-end m-5 mb-0">
             <Link
-                href="/dras/create"
+                :href="route('achat.dras.create')"
                 as="button"
                 :class="{
                     'bg-[#042B62] dark:bg-[#F3B21B] dark:text-[#042B62] text-white hover:bg-blue-900 dark:hover:bg-yellow-200 cursor-pointer': !hasActiveDra,
@@ -155,15 +157,10 @@ const updateDraTotal = (draId: string) => {
                             </span>
                         </TableCell>
                         <TableCell class="flex flex-wrap gap-2">
-
-
-
-
-
                             <!-- Factures Button -->
                             <Link
                                 v-if="dra.etat === 'actif'"
-                                :href="`/dras/${dra.n_dra}/factures`"
+                                :href="route('achat.dras.factures.index', { dra: dra.n_dra })"
                                 class="bg-[#042B62] dark:bg-[#F3B21B] text-white px-3 py-1 rounded-lg hover:bg-indigo-600 dark:hover:bg-yellow-400 transition flex items-center gap-1"
                             >
                                 <FileText class="w-4 h-4" />
@@ -173,12 +170,13 @@ const updateDraTotal = (draId: string) => {
                             <!-- BonAchats Button -->
                             <Link
                                 v-if="dra.etat === 'actif'"
-                                :href="`/dras/${dra.n_dra}/bon-achats`"
+                                :href="route('achat.dras.bon-achats.index', { dra: dra.n_dra })"
                                 class="bg-[#042B62] text-white px-3 py-1 rounded-lg hover:bg-indigo-600 dark:bg-[#F3B21B] dark:hover:bg-yellow-400 transition flex items-center gap-1"
                             >
                                 <FileText class="w-4 h-4" />
                                 <span>Bons d'Achat</span>
                             </Link>
+
                             <!-- Clôturer Button -->
                             <button
                                 v-if="dra.etat === 'actif'"
@@ -192,12 +190,13 @@ const updateDraTotal = (draId: string) => {
                             <!-- Modifier Button -->
                             <Link
                                 v-if="dra.etat === 'actif'"
-                                :href="`/dras/${dra.n_dra}/edit`"
+                                :href="route('achat.dras.edit', { dra: dra.n_dra })"
                                 class="bg-green-600 text-white px-3 py-1 rounded-lg hover:bg-green-400 transition flex items-center gap-1"
                             >
                                 <Pencil class="w-4 h-4" />
                                 <span>Modifier</span>
                             </Link>
+
                             <!-- Supprimer Button -->
                             <button
                                 v-if="dra.etat === 'actif'"
@@ -207,7 +206,6 @@ const updateDraTotal = (draId: string) => {
                                 <Trash2 class="w-4 h-4" />
                                 <span>Supprimer</span>
                             </button>
-
                         </TableCell>
                     </TableRow>
                 </TableBody>

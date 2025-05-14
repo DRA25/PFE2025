@@ -13,7 +13,7 @@ const form = useForm({
 })
 
 function submit() {
-    form.post('/dras')
+    form.post(route('achat.dras.store'))
 }
 </script>
 

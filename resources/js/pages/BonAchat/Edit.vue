@@ -6,18 +6,18 @@ import { type BreadcrumbItem } from '@/types'
 const props = defineProps<{
     dra: { n_dra: string },
     bonAchat: {
-        n_ba: string,  // ID is a string to match behavior
+        n_ba: string,
         montant_ba: number,
         date_ba: string,
         id_fourn: number
     },
-    fournisseurs: Array // Add suppliers list
+    fournisseurs: Array
 }>()
 
 const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Gestion des DRAs', href: '/dras' },
-    { title: `Bons d'achat de ${props.dra.n_dra}`, href: `/dras/${props.dra.n_dra}/bon-achats` },
-    { title: `Modifier Bon d'achat ${props.bonAchat.n_ba}`, href: `/dras/${props.dra.n_dra}/bon-achats/${props.bonAchat.n_ba}/edit` },
+    { title: 'Gestion des DRAs', href: route('achat.dras.index') },
+    { title: `Bons d'achat de ${props.dra.n_dra}`, href: route('achat.dras.bon-achats.index', { dra: props.dra.n_dra }) },
+    { title: `Modifier Bon d'achat ${props.bonAchat.n_ba}`, href: route('achat.dras.bon-achats.edit', { dra: props.dra.n_dra, bonAchat: props.bonAchat.n_ba }) },
 ]
 
 const form = useForm({
@@ -28,9 +28,12 @@ const form = useForm({
 })
 
 function submit() {
-    form.put(`/dras/${props.dra.n_dra}/bon-achats/${props.bonAchat.n_ba}`, {
+    form.put(route('achat.dras.bon-achats.update', {
+        dra: props.dra.n_dra,
+        bonAchat: props.bonAchat.n_ba
+    }), {
         onSuccess: () => {
-            window.location.href = `/dras/${props.dra.n_dra}/bon-achats`
+            window.location.href = route('achat.dras.bon-achats.index', { dra: props.dra.n_dra })
         },
         onError: () => {
             console.log('Validation error:', form.errors)
@@ -40,50 +43,54 @@ function submit() {
 </script>
 
 <template>
-    <Head title="Modifier Bon d'achat" />
+    <Head :title="`Modifier Bon d'achat ${form.n_ba}`" />
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="p-5">
-            <h1 class="text-lg font-bold mb-5">Modifier le Bon d'achat {{ form.n_ba }}</h1>
+        <div class="m-5 mr-2 bg-gray-100 dark:bg-gray-800 rounded-lg p-6">
+            <div class="flex justify-between mb-6">
+                <h1 class="text-lg font-bold text-left text-[#042B62FF] dark:text-[#BDBDBDFF]">
+                    Modifier le Bon d'achat {{ form.n_ba }}
+                </h1>
+            </div>
 
-            <form @submit.prevent="submit" class="space-y-4">
+            <form @submit.prevent="submit" class="space-y-6 bg-white dark:bg-gray-700 p-6 rounded-lg shadow">
 
-                <div>
-                    <label>Numéro Bon Achat</label>
+                <div class="space-y-2">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">N° Bon d'achat</label>
                     <input
                         v-model="form.n_ba"
                         type="text"
-                        class="w-full border p-2 rounded"
+                        class="w-full border border-gray-300 dark:border-gray-600 p-2 rounded focus:ring-2 focus:ring-[#042B62] dark:focus:ring-[#F3B21B] focus:border-transparent dark:bg-gray-800 dark:text-white"
                         disabled
                     />
-                    <div v-if="form.errors.n_ba" class="text-red-500">{{ form.errors.n_ba }}</div>
+                    <div v-if="form.errors.n_ba" class="text-red-500 text-sm">{{ form.errors.n_ba }}</div>
                 </div>
 
-                <div>
-                    <label>Montant Bon Achat</label>
+                <div class="space-y-2">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Montant</label>
                     <input
                         v-model="form.montant_ba"
                         type="number"
-                        class="w-full border p-2 rounded"
+                        step="0.01"
+                        class="w-full border border-gray-300 dark:border-gray-600 p-2 rounded focus:ring-2 focus:ring-[#042B62] dark:focus:ring-[#F3B21B] focus:border-transparent dark:bg-gray-800 dark:text-white"
                     />
-                    <div v-if="form.errors.montant_ba" class="text-red-500">{{ form.errors.montant_ba }}</div>
+                    <div v-if="form.errors.montant_ba" class="text-red-500 text-sm">{{ form.errors.montant_ba }}</div>
                 </div>
 
-                <div>
-                    <label>Date Bon Achat</label>
+                <div class="space-y-2">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Date</label>
                     <input
                         v-model="form.date_ba"
                         type="date"
-                        class="w-full border p-2 rounded"
+                        class="w-full border border-gray-300 dark:border-gray-600 p-2 rounded focus:ring-2 focus:ring-[#042B62] dark:focus:ring-[#F3B21B] focus:border-transparent dark:bg-gray-800 dark:text-white"
                     />
-                    <div v-if="form.errors.date_ba" class="text-red-500">{{ form.errors.date_ba }}</div>
+                    <div v-if="form.errors.date_ba" class="text-red-500 text-sm">{{ form.errors.date_ba }}</div>
                 </div>
 
-                <!-- Fournisseur Select -->
-                <div>
-                    <label>Fournisseur</label>
+                <div class="space-y-2">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Fournisseur</label>
                     <select
                         v-model="form.id_fourn"
-                        class="w-full border p-2 rounded"
+                        class="w-full border border-gray-300 dark:border-gray-600 p-2 rounded focus:ring-2 focus:ring-[#042B62] dark:focus:ring-[#F3B21B] focus:border-transparent dark:bg-gray-800 dark:text-white"
                     >
                         <option value="">-- Sélectionnez un fournisseur --</option>
                         <option
@@ -94,17 +101,23 @@ function submit() {
                             {{ fournisseur.nom_fourn }}
                         </option>
                     </select>
-                    <div v-if="form.errors.id_fourn" class="text-red-500">{{ form.errors.id_fourn }}</div>
+                    <div v-if="form.errors.id_fourn" class="text-red-500 text-sm">{{ form.errors.id_fourn }}</div>
                 </div>
 
-                <div>
+                <div class="flex justify-end space-x-4 pt-4">
+                    <Link
+                        :href="route('achat.dras.bon-achats.index', { dra: props.dra.n_dra })"
+                        class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+                    >
+                        Annuler
+                    </Link>
                     <button
                         type="submit"
-                        class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-800"
                         :disabled="form.processing"
+                        class="px-4 py-2 bg-[#042B62] dark:bg-[#F3B21B] text-white dark:text-[#042B62] rounded-lg hover:bg-blue-900 dark:hover:bg-yellow-200 transition flex items-center gap-2 disabled:opacity-50"
                     >
-                        <span v-if="form.processing">Enregistrement...</span>
-                        <span v-else>Enregistrer les modifications</span>
+                        <span>Enregistrer les modifications</span>
+                        <span v-if="form.processing" class="animate-spin">↻</span>
                     </button>
                 </div>
 
