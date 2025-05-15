@@ -5,11 +5,10 @@ import { Plus, Upload, Pencil, Trash2 } from 'lucide-vue-next';
 import { type BreadcrumbItem } from '@/types';
 
 const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'About', href: '/about' },
-    { title: 'Create About Section', href: '/about/create' },
+    { title: 'À propos', href: '/about' },
+    { title: 'Créer une section À propos', href: '/about/create' },
 ];
 
-// Create empty form initially
 const form = useForm({
     sections: [
         {
@@ -24,7 +23,6 @@ const form = useForm({
     ]
 });
 
-// Add new section
 const addSection = () => {
     form.sections.push({
         id: 0,
@@ -37,12 +35,10 @@ const addSection = () => {
     });
 };
 
-// Remove a section
 const removeSection = (index: number) => {
     form.sections.splice(index, 1);
 };
 
-// Handle image upload
 const handleImageChange = (event: Event, index: number) => {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files[0]) {
@@ -52,7 +48,7 @@ const handleImageChange = (event: Event, index: number) => {
 </script>
 
 <template>
-    <Head title="Create About Section" />
+    <Head title="Créer une section À propos" />
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="p-6">
             <form @submit.prevent="form.post(route('about.store'))">
@@ -69,9 +65,8 @@ const handleImageChange = (event: Event, index: number) => {
                     </div>
 
                     <div class="grid grid-cols-1 gap-6">
-                        <!-- Section Title -->
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Title</label>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Titre</label>
                             <input
                                 v-model="section.section_title"
                                 type="text"
@@ -80,9 +75,8 @@ const handleImageChange = (event: Event, index: number) => {
                             >
                         </div>
 
-                        <!-- Section Content -->
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Content</label>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Contenu</label>
                             <textarea
                                 v-model="section.section_content"
                                 rows="4"
@@ -91,7 +85,6 @@ const handleImageChange = (event: Event, index: number) => {
                             ></textarea>
                         </div>
 
-                        <!-- Image Upload -->
                         <div>
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Image</label>
                             <div class="mt-1 flex items-center">
@@ -107,7 +100,7 @@ const handleImageChange = (event: Event, index: number) => {
                                     class="cursor-pointer bg-white py-2 px-3 border border-gray-300 dark:border-gray-100 rounded-md shadow-sm dark:text-gray-700  text-sm leading-4 font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 flex items-center"
                                 >
                                     <Upload class="w-4 h-4 mr-2 dark:text-gray-700" />
-                                    Upload Image
+                                    Télécharger une image
                                 </label>
                                 <span v-if="section.image" class="ml-2 text-sm text-gray-500 dark:text-gray-200">
                                     {{ section.image.name }}
@@ -115,9 +108,8 @@ const handleImageChange = (event: Event, index: number) => {
                             </div>
                         </div>
 
-                        <!-- Order -->
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Display Order</label>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Ordre d'affichage</label>
                             <input
                                 v-model="section.order"
                                 type="number"
@@ -128,7 +120,6 @@ const handleImageChange = (event: Event, index: number) => {
                     </div>
                 </div>
 
-                <!-- Buttons -->
                 <div class="flex justify-between mt-6">
                     <button
                         type="button"
@@ -136,7 +127,7 @@ const handleImageChange = (event: Event, index: number) => {
                         class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
                     >
                         <Plus class="w-4 h-4 mr-2" />
-                        Add Section
+                        Ajouter une section
                     </button>
 
                     <button
@@ -145,7 +136,7 @@ const handleImageChange = (event: Event, index: number) => {
                         class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
                     >
                         <Pencil class="w-4 h-4 mr-2" />
-                        Save Sections
+                        Enregistrer les sections
                     </button>
                 </div>
             </form>

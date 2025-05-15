@@ -22,6 +22,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'id_centre'
 
     ];
 
@@ -46,5 +47,10 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    public function centre()
+    {
+        return $this->belongsTo(Centre::class, 'id_centre', 'id_centre');
     }
 }

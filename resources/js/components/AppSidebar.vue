@@ -21,7 +21,7 @@ const mainNavItems: NavItem[] = [
         icon: LayoutGrid,
     },
     {
-        title: 'About',
+        title: 'À propos',
         href: '/about',
         icon: Info,
     },
@@ -49,12 +49,20 @@ if (user.value?.roles?.some((role: any) => role.name === 'admin' || role.name ==
         icon: User,
     });
 }
+// Conditionally add "Users"
+if (user.value?.roles?.some((role: any) => role.name === 'admin')) {
+    mainNavItems.push({
+        title: 'Utilisateurs',
+        href: '/users',
+        icon: Contact,
+    });
+}
 
 // Conditionally add "Roles"
 if (user.value?.roles?.some((role: any) => role.name === 'admin')) {
     mainNavItems.push({
-        title: 'Roles',
-        href: '/users',
+        title: '\tRôles',
+        href: '/roles',
         icon: Contact,
     });
 }

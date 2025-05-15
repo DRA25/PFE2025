@@ -27,4 +27,9 @@ class Centre extends Model
         return $this->hasMany(Dra::class, 'id_centre', 'id_centre');
     }
 
+    public function users()
+    {
+        return $this->hasMany(User::class, 'id_centre', 'id_centre');
+    }
+
 }

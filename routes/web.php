@@ -14,6 +14,7 @@ use App\Http\Controllers\FournisseurController;
 use App\Http\Controllers\MagasinController;
 use App\Http\Controllers\paimentController;
 use App\Http\Controllers\ScfController;
+use App\Http\Controllers\RoleUserController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -23,19 +24,21 @@ Route::get('/', function () {
 })->name('home');
 
 Route::middleware(['auth', 'role:admin'])->group(function () {
-    Route::get('/users', [UserController::class, 'index'])->name('users.index');
-    Route::post('/users/{user}/roles', [UserController::class, 'assignRoles'])->name('users.assignRoles');
-    Route::post('/users/{user}/remove-role/{role}', [UserController::class, 'removeRole'])->name('users.removeRole');
+
+
+        // User CRUD Routes
+        Route::get('/users', [UserController::class, 'index'])->name('users.index');
+        Route::get('/users/create', [UserController::class, 'create'])->name('users.create');
+        Route::post('/users', [UserController::class, 'store'])->name('users.store');
+        Route::get('/users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
+        Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update');
+        Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
+
+    // Role Management Routes
+    Route::get('/roles', [RoleUserController::class, 'index'])->name('roles.index');
+    Route::post('/roles/{user}/assign', [RoleUserController::class, 'assignRoles'])->name('roles.assign');
+    Route::post('/roles/{user}/remove/{role}', [RoleUserController::class, 'removeRole'])->name('roles.remove');
 });
-
-//Atelier routes
-
-//Route::middleware(['auth', 'role:service atelier|admin'])->group(function () {
-  //  Route::get('/atelier', [AtelierController::class, 'index'])->name('atelier.index');
-    //Route::get('/demandepiece', [DemandepieceController::class, 'index'])->name('demandepiece.index');
-
-
-//});
 
 
 
@@ -46,37 +49,7 @@ Route::middleware(['auth', 'role:service magasin|admin'])->group(function () {
 });
 
 
-//
-//Route::middleware(['auth', 'role:service cf|service achat|admin'])->group(function () {
-//    // DRAs routes
-//    Route::resource('dras', DraController::class);
-//
-//    // Close route
-//    Route::put('dras/{dra}/close', [DraController::class, 'close'])
-//        ->name('dras.close');
-//    Route::delete('dras/{dra}', [DraController::class, 'destroy'])
-//        ->name('dras.destroy');
-//
-//    // Factures routes grouped under DRA
-//    Route::prefix('dras/{dra}/factures')->name('dras.factures.')->group(function () {
-//        Route::get('/', [FactureController::class, 'index'])->name('index');
-//        Route::get('/create', [FactureController::class, 'create'])->name('create');
-//        Route::post('/', [FactureController::class, 'store'])->name('store');
-//        Route::get('/{facture}/edit', [FactureController::class, 'edit'])->name('edit');
-//        Route::put('/{facture}', [FactureController::class, 'update'])->name('update'); // Fixed this line
-//        Route::delete('/{facture}', [FactureController::class, 'destroy'])->name('destroy');
-//    });
-//
-//    // BonAchats routes grouped under DRA
-//    Route::prefix('dras/{dra}/bon-achats')->name('dras.bon-achats.')->group(function () {
-//        Route::get('/', [BonAchatController::class, 'index'])->name('index');
-//        Route::get('/create', [BonAchatController::class, 'create'])->name('create');
-//        Route::post('/', [BonAchatController::class, 'store'])->name('store');
-//        Route::get('/{bonAchat}/edit', [BonAchatController::class, 'edit'])->name('edit');
-//        Route::put('/{bonAchat}', [BonAchatController::class, 'update'])->name('update');
-//        Route::delete('/{bonAchat}', [BonAchatController::class, 'destroy'])->name('destroy');
-//    });
-//});
+
 
 
 

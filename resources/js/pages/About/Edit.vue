@@ -27,14 +27,14 @@ const form = useForm({
 });
 
 const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'About', href: '/about' },
-    { title: 'Edit About', href: '/about/edit' },
+    { title: 'À propos', href: '/about' },
+    { title: 'Modifier la page À propos', href: '/about/edit' },
 ];
 
 const removeSection = async (index: number, sectionId: number) => {
     if (sectionId > 0) {
         // Existing section - delete from server
-        if (confirm('Are you sure you want to delete this section?')) {
+        if (confirm('Êtes-vous sûr de vouloir supprimer cette section ?')) {
             try {
                 await router.delete(route('about.destroy'), {
                     data: { id: sectionId },
@@ -42,7 +42,7 @@ const removeSection = async (index: number, sectionId: number) => {
                 });
                 form.sections.splice(index, 1);
             } catch (error) {
-                console.error('Error deleting section:', error);
+                console.error('Erreur lors de la suppression de la section :', error);
             }
         }
     } else {
@@ -53,7 +53,7 @@ const removeSection = async (index: number, sectionId: number) => {
 </script>
 
 <template>
-    <Head title="Edit About" />
+    <Head title="Modifier la page À propos" />
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="p-6">
             <form @submit.prevent="form.put(route('about.update'))">
@@ -67,12 +67,13 @@ const removeSection = async (index: number, sectionId: number) => {
                             :disabled="form.processing"
                         >
                             <Trash2 class="w-5 h-5" />
+
                         </button>
                     </div>
 
                     <div class="grid grid-cols-1 gap-6">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Title</label>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Titre</label>
                             <input
                                 v-model="section.section_title"
                                 type="text"
@@ -82,7 +83,7 @@ const removeSection = async (index: number, sectionId: number) => {
                         </div>
 
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Content</label>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Contenu</label>
                             <textarea
                                 v-model="section.section_content"
                                 rows="4"
@@ -99,12 +100,12 @@ const removeSection = async (index: number, sectionId: number) => {
                                     :src="`/storage/${section.image_path}`"
                                     class="h-20 w-auto object-contain rounded-md"
                                 >
-                                <span v-else class="text-gray-500">No image uploaded</span>
+                                <span v-else class="text-gray-500">Aucune image téléchargée</span>
                             </div>
                         </div>
 
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Display Order</label>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Ordre d'affichage</label>
                             <input
                                 v-model="section.order"
                                 type="number"
@@ -122,7 +123,7 @@ const removeSection = async (index: number, sectionId: number) => {
                         class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
                     >
                         <Pencil class="w-4 h-4 mr-2" />
-                        Save Changes
+                        Enregistrer les modifications
                     </button>
                 </div>
             </form>

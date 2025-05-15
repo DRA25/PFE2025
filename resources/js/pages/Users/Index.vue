@@ -1,138 +1,124 @@
-<script setup>
-import { Head, router, useForm } from '@inertiajs/vue3';
-import { Button } from '@/components/ui/button/index.js';
+<script setup lang="ts">
+import { Head, Link, router } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
-import breadcrumbs from '@/components/Breadcrumbs.vue';
-import { TableCaption, TableHeader, TableBody, TableRow, TableCell, TableHead } from '@/components/ui/table';
-import { watchEffect } from 'vue';
+import { Pencil, Plus, Trash2 } from 'lucide-vue-next';
+import {
+    TableHeader,
+    TableBody,
+    TableRow,
+    TableCell,
+    TableHead
+} from '@/components/ui/table';
 
+const props = defineProps<{
+    users: Array<{
+        id: number,
+        name: string,
+        email: string,
+        created_at: string,
+        roles: Array<{
+            id: number,
+            name: string
+        }>,
+        centre: { // Add the centre property to the type definition
+            id_centre: string | null
+        } | null
+    }>,
+    success?: string
+}>();
 
-const props = defineProps({ users: Array, roles: Array, success: String });
-
-// Initialize user.role for each user on mounted
-watchEffect(() => {
-    props.users.forEach(user => {
-        // Set the initial role for each user if roles are available
-        if (Array.isArray(user.roles) && user.roles.length > 0) {
-            user.role = typeof user.roles[0] === 'string' ? user.roles[0] : user.roles[0].name;
-        } else {
-            user.role = null; // No role assigned
-        }
-    });
-});
-
-
-
-function updateRoles(user, roles) {
-    router.post(route('users.assignRoles', user.id), {
-        roles: roles, // Send the selected roles as an array of role names
-    }, {
-        preserveScroll: true, // Keep the page scroll position
-        onSuccess: () => {
-            // Optionally handle success actions here (e.g., update UI or show message)
-            console.log('Roles updated');
-        },
-        onError: (errors) => {
-            console.log(errors); // Log any errors if they occur
-        }
-    });
-}
-
-
-
-function removeUserRole(user, role) {
-    // Send request to backend to remove role
-    router.post(route('users.removeRole', { user: user.id, role: role.name }))
-        .then(() => {
-            // After the response, update the local user roles list
-            user.roles = user.roles.filter(r => r !== role.name);
-        })
-        .catch(error => console.error(error));
+const deleteUser = (id: number) => {
+    if (confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ?')) {
+        router.delete(route('users.destroy', id), {
+            preserveScroll: true,
+            onSuccess: () => {},
+            onError: (errors) => {
+                alert('Erreur lors de la suppression de l’utilisateur : ' + (errors.message || 'Une erreur s’est produite'));
+            }
+        });
+    }
 }
 </script>
 
-
 <template>
-    <AppLayout :breadcrumbs="breadcrumbs">
-        <Head title="Roles" />
+    <Head title="Liste des utilisateurs" />
+    <AppLayout>
+        <div class="flex justify-end m-5 mb-0">
+            <Link
+                :href="route('users.create')"
+                as="button"
+                class="px-4 py-2 rounded-lg transition cursor-pointer flex items-center gap-1 bg-[#042B62] dark:bg-[#F3B21B] dark:text-[#042B62] text-white hover:bg-blue-900 dark:hover:bg-yellow-200"
+            >
+                <Plus class="w-4 h-4" />
+                <span>Créer un utilisateur</span>
+            </Link>
+        </div>
 
-        <!-- Success message (if any) -->
-        <div v-if="success" class="alert alert-success text-red-600 mb-2">
+        <div v-if="success" class="mx-5 mt-2 p-3 bg-green-100 text-green-800 rounded-lg">
             {{ success }}
         </div>
-<div class=" m-5  bg-gray-100 dark:bg-gray-800 rounded-lg" >
-        <Table class=" m-3  w-39/40 ">
 
-            <TableCaption class="text-lg font-bold text-left mb-5 ml-3 text-[#042B62FF] dark:text-[#BDBDBDFF] ">User Role Manager</TableCaption>
-            <TableHeader>
-            <TableRow class="border-b ">
-                <TableHead class="p-2">User</TableHead>
-                <TableHead class="p-2">Roles</TableHead>
-                <TableHead class="p-2">Assigned Roles</TableHead>
-                <TableHead class="p-2">Actions</TableHead>
-            </TableRow>
-            </TableHeader>
-            <TableBody>
-            <!-- Loop through each user -->
-            <TableRow v-for="user in users" :key="user.id" class="border-b">
-                <TableCell class="p-2">{{ user.name }}</TableCell>
-                <TableCell class="p-2">
-                    <div class="space-y-2">
+        <div class="m-5 mr-2 bg-gray-100 dark:bg-gray-800 rounded-lg">
+            <div class="flex justify-between m-5">
+                <h1 class="text-lg font-bold text-left text-[#042B62FF] dark:text-[#BDBDBDFF]">
+                    Liste des utilisateurs
+                </h1>
+            </div>
 
+            <Table class="m-3 w-39/40">
+                <TableHeader>
+                    <TableRow>
+                        <TableHead class="text-[#042B62FF] dark:text-[#BDBDBDFF]">Nom</TableHead>
+                        <TableHead class="text-[#042B62FF] dark:text-[#BDBDBDFF]">E-mail</TableHead>
+                        <TableHead class="text-[#042B62FF] dark:text-[#BDBDBDFF]">Date de création</TableHead>
+                        <TableHead class="text-[#042B62FF] dark:text-[#BDBDBDFF]">Centre</TableHead>
+                        <TableHead class="text-[#042B62FF] dark:text-[#BDBDBDFF]">Rôle</TableHead>
+                        <TableHead class="text-[#042B62FF] dark:text-[#BDBDBDFF]">Actions</TableHead>
+                    </TableRow>
+                </TableHeader>
 
-                        <div class="space-y-1">
-                            <label
-                                v-for="role in props.roles"
-                                :key="role.id"
-                                class="flex items-center gap-2 p-2  rounded-lg cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition"
+                <TableBody>
+                    <TableRow
+                        v-for="user in users"
+                        :key="user.id"
+                        class="hover:bg-gray-300 dark:hover:bg-gray-900"
+                    >
+                        <TableCell>{{ user.name }}</TableCell>
+                        <TableCell>{{ user.email }}</TableCell>
+                        <TableCell>{{ new Date(user.created_at).toLocaleDateString('fr-FR') }}</TableCell>
+                        <TableCell>{{ user.centre ? user.centre.id_centre : 'N/A' }}</TableCell>
+                        <TableCell>
+                            <div v-if="user.roles && user.roles.length" class="flex flex-wrap gap-1">
+                                <span
+                                    v-for="role in user.roles"
+                                    :key="role.id"
+                                    class="inline-block bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-100 text-xs px-2 py-1 rounded"
+                                >
+                                    {{ role.name }}
+                                </span>
+                            </div>
+                            <span v-else class="text-gray-500 text-sm">Aucun rôle attribué</span>
+                        </TableCell>
+                        <TableCell class="flex flex-wrap gap-2">
+                            <Link
+                                :href="route('users.edit', user.id)"
+                                class="bg-green-600 text-white px-3 py-1 rounded-lg hover:bg-green-400 transition flex items-center gap-1"
                             >
-                                <input
-                                    type="radio"
-                                    :value="role.name"
-                                    v-model="user.role"
-                                    :name="'user-role-' + user.id"
-                                    @change="updateRoles(user, [user.role])"
-                                    class="accent-blue-800 dark:accent-yellow-600"
-                                />
-                                <span class="text-sm text-gray-800 dark:text-gray-100 capitalize">
-                {{ role.name }}
-            </span>
-                            </label>
-                        </div>
-                    </div>
+                                <Pencil class="w-4 h-4" />
+                                <span>Modifier</span>
+                            </Link>
 
-                </TableCell>
-                <TableCell class="p-2">
-  <span
-      v-for="role in user.roles"
-      :key="role.id || role.name"
-      class="inline-block bg-green-100 text-green-800 text-xs px-2 py-1 rounded mr-1"
-  >
-    {{ typeof role === 'string' ? role : role.name }}
-  </span>
-
-                </TableCell>
-                <!-- Actions (Delete Button) -->
-                <TableCell class="p-2">
-                    <div class="space-y-1">
-                        <!-- Delete button for each assigned role -->
-                        <Button
-                            v-for="role in user.roles"
-                            :key="role + '-delete'"
-                            @click="removeUserRole(user, role)"
-                            class="text-white hover:underline text-xs bg-red-500 hover:bg-red-400"
-                        >
-                            Remove Role
-                        </Button>
-                    </div>
-                </TableCell>
-            </TableRow>
-            </TableBody>
-        </Table>
-</div>
-
-
-
+                            <button
+                                @click="deleteUser(user.id)"
+                                class="bg-red-800 text-white px-3 py-1 rounded-lg hover:bg-red-600 transition flex items-center gap-1"
+                            >
+                                <Trash2 class="w-4 h-4" />
+                                <span>Supprimer</span>
+                            </button>
+                        </TableCell>
+                    </TableRow>
+                </TableBody>
+            </Table>
+        </div>
     </AppLayout>
 </template>
-
