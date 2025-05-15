@@ -1,6 +1,8 @@
+<!-- resources/js/Pages/Achat/Dras/Edit.vue -->
 <script setup lang="ts">
-import { useForm, Head, Link } from '@inertiajs/vue3'
+import { useForm, Head, Link, router } from '@inertiajs/vue3'
 import AppLayout from '@/layouts/AppLayout.vue'
+import { Trash2 } from 'lucide-vue-next'
 
 const props = defineProps<{
     dra: { n_dra: string, id_centre: string, date_creation: string }
@@ -17,6 +19,18 @@ function submit() {
         ...data,
         _method: 'put',
     })).post(route('achat.dras.update', { dra: props.dra.n_dra }))
+}
+
+const deleteDra = () => {
+    if (confirm('Êtes-vous sûr de vouloir supprimer ce DRA ? Cette action est irréversible et supprimera toutes les factures associées.')) {
+        router.delete(route('achat.dras.destroy', { dra: props.dra.n_dra }), {
+            preserveScroll: true,
+            onSuccess: () => router.visit(route('achat.dras.index')),
+            onError: (errors) => {
+                alert('Erreur lors de la suppression du DRA: ' + (errors.message || 'Une erreur est survenue'))
+            }
+        })
+    }
 }
 </script>
 
@@ -54,22 +68,33 @@ function submit() {
                     <div v-if="form.errors.date_creation" class="text-red-500 text-sm">{{ form.errors.date_creation }}</div>
                 </div>
 
-                <!-- Submit Button -->
-                <div class="flex justify-end space-x-4 pt-4">
-                    <Link
-                        :href="route('achat.dras.index')"
-                        class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition"
-                    >
-                        Annuler
-                    </Link>
+                <!-- Action Buttons -->
+                <div class="flex justify-between items-center pt-4">
                     <button
-                        type="submit"
-                        :disabled="form.processing"
-                        class="px-4 py-2 bg-[#042B62] dark:bg-[#F3B21B] text-white dark:text-[#042B62] rounded-lg hover:bg-blue-900 dark:hover:bg-yellow-200 transition flex items-center gap-2 disabled:opacity-50"
+                        type="button"
+                        @click="deleteDra"
+                        class="px-4 py-2 bg-red-800 text-white rounded-lg hover:bg-red-600 transition flex items-center gap-2"
                     >
-                        <span>Enregistrer les modifications</span>
-                        <span v-if="form.processing" class="animate-spin">↻</span>
+                        <Trash2 class="w-4 h-4" />
+                        <span>Supprimer</span>
                     </button>
+
+                    <div class="flex gap-4">
+                        <Link
+                            :href="route('achat.dras.index')"
+                            class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+                        >
+                            Annuler
+                        </Link>
+                        <button
+                            type="submit"
+                            :disabled="form.processing"
+                            class="px-4 py-2 bg-[#042B62] dark:bg-[#F3B21B] text-white dark:text-[#042B62] rounded-lg hover:bg-blue-900 dark:hover:bg-yellow-200 transition flex items-center gap-2 disabled:opacity-50"
+                        >
+                            <span>Enregistrer</span>
+                            <span v-if="form.processing" class="animate-spin">↻</span>
+                        </button>
+                    </div>
                 </div>
             </form>
         </div>

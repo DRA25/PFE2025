@@ -2,6 +2,7 @@
 import { Head, Link, useForm } from '@inertiajs/vue3'
 import AppLayout from '@/layouts/AppLayout.vue'
 import { type BreadcrumbItem } from '@/types'
+import { Plus } from 'lucide-vue-next'
 
 const props = defineProps({
     dra: Object,
@@ -36,55 +37,51 @@ function submit() {
 <template>
     <Head title="Créer un Bon d'achat pour DRA" />
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="p-5">
-            <h1 class="text-lg font-bold mb-5">Créer un Bon d'achat pour DRA {{ props.dra.n_dra }}</h1>
+        <div class="m-5 mr-2 bg-gray-100 dark:bg-gray-800 rounded-lg p-6">
+            <div class="flex justify-between mb-6">
+                <h1 class="text-lg font-bold text-left text-[#042B62] dark:text-[#BDBDBD]">
+                    Créer un Bon d'achat pour DRA {{ props.dra.n_dra }}
+                </h1>
+            </div>
 
-            <form @submit.prevent="submit" class="space-y-4">
-                <div>
-                    <label for="n_ba" class="block text-gray-700 text-sm font-bold mb-2">N° Bon Achat</label>
+            <form @submit.prevent="submit" class="space-y-6 bg-white dark:bg-gray-700 p-6 rounded-lg shadow">
+
+                <div class="space-y-2">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">N° Bon d'achat</label>
                     <input
-                        id="n_ba"
                         v-model="form.n_ba"
                         type="number"
-                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                        class="w-full border border-gray-300 dark:border-gray-600 p-2 rounded focus:ring-2 focus:ring-[#042B62] dark:focus:ring-[#F3B21B] focus:border-transparent dark:bg-gray-800 dark:text-white"
                     />
-                    <div v-if="form.errors.n_ba" class="text-red-500 text-xs italic">
-                        {{ form.errors.n_ba }}
-                    </div>
+                    <div v-if="form.errors.n_ba" class="text-red-500 text-sm">{{ form.errors.n_ba }}</div>
                 </div>
 
-                <div>
-                    <label for="montant_ba" class="block text-gray-700 text-sm font-bold mb-2">Montant Bon Achat</label>
+                <div class="space-y-2">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Montant</label>
                     <input
-                        id="montant_ba"
                         v-model="form.montant_ba"
                         type="number"
-                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                        step="0.01"
+                        class="w-full border border-gray-300 dark:border-gray-600 p-2 rounded focus:ring-2 focus:ring-[#042B62] dark:focus:ring-[#F3B21B] focus:border-transparent dark:bg-gray-800 dark:text-white"
                     />
-                    <div v-if="form.errors.montant_ba" class="text-red-500 text-xs italic">
-                        {{ form.errors.montant_ba }}
-                    </div>
+                    <div v-if="form.errors.montant_ba" class="text-red-500 text-sm">{{ form.errors.montant_ba }}</div>
                 </div>
 
-                <div>
-                    <label for="date_ba" class="block text-gray-700 text-sm font-bold mb-2">Date Bon Achat</label>
+                <div class="space-y-2">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Date</label>
                     <input
-                        id="date_ba"
                         v-model="form.date_ba"
                         type="date"
-                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                        class="w-full border border-gray-300 dark:border-gray-600 p-2 rounded focus:ring-2 focus:ring-[#042B62] dark:focus:ring-[#F3B21B] focus:border-transparent dark:bg-gray-800 dark:text-white"
                     />
-                    <div v-if="form.errors.date_ba" class="text-red-500 text-xs italic">
-                        {{ form.errors.date_ba }}
-                    </div>
+                    <div v-if="form.errors.date_ba" class="text-red-500 text-sm">{{ form.errors.date_ba }}</div>
                 </div>
 
-                <div>
-                    <label for="id_fourn" class="block text-gray-700 text-sm font-bold mb-2">Fournisseur</label>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Fournisseur</label>
+                <div class="mt-1 flex gap-3">
                     <select
-                        id="id_fourn"
                         v-model="form.id_fourn"
-                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                        class="w-1/3 border border-gray-300 dark:border-gray-600 p-2 rounded focus:ring-2 focus:ring-[#042B62] dark:focus:ring-[#F3B21B] focus:border-transparent dark:bg-gray-800 dark:text-white"
                     >
                         <option value="">-- Sélectionnez un fournisseur --</option>
                         <option
@@ -95,26 +92,33 @@ function submit() {
                             {{ fournisseur.nom_fourn }}
                         </option>
                     </select>
-                    <div v-if="form.errors.id_fourn" class="text-red-500 text-xs italic">
-                        {{ form.errors.id_fourn }}
-                    </div>
+                    <Link
+                        href="/fournisseurs/create"
+                        as="button"
+                        class="px-4 py-2 rounded-lg transition flex items-center gap-1 bg-[#042B62] dark:bg-[#F3B21B] dark:text-[#042B62] text-white hover:bg-blue-900 dark:hover:bg-yellow-200"
+                    >
+                        <Plus class="w-4 h-4" />
+                    </Link>
+                    <div v-if="form.errors.id_fourn" class="text-red-500 text-sm">{{ form.errors.id_fourn }}</div>
                 </div>
 
-                <div class="flex items-center justify-between">
-                    <button
-                        type="submit"
-                        class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-                        :disabled="form.processing"
-                    >
-                        Enregistrer
-                    </button>
+                <div class="flex justify-end space-x-4 pt-4">
                     <Link
                         :href="`/achat/dras/${props.dra.n_dra}/bon-achats`"
-                        class="inline-block align-baseline font-bold text-sm text-blue-500 hover:text-blue-800"
+                        class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition"
                     >
                         Annuler
                     </Link>
+                    <button
+                        type="submit"
+                        :disabled="form.processing"
+                        class="px-4 py-2 bg-[#042B62] dark:bg-[#F3B21B] text-white dark:text-[#042B62] rounded-lg hover:bg-blue-900 dark:hover:bg-yellow-200 transition flex items-center gap-2 disabled:opacity-50"
+                    >
+                        <span>Enregistrer</span>
+                        <span v-if="form.processing" class="animate-spin">↻</span>
+                    </button>
                 </div>
+
             </form>
         </div>
     </AppLayout>

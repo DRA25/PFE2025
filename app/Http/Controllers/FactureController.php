@@ -119,14 +119,22 @@ $dra->update([
 'total_dra' => $dra->bonAchats()->sum('montant_ba') + $dra->factures()->sum('montant_facture')
 ]);
 
-DB::commit();
+    if ($totalDra > $dra->centre->seuil_centre) {
+        DB::rollBack();
+        return back()->withErrors(['total_dra' => 'Le total du DRA dépasse le seuil autorisé du centre.']);
+    }
 
-return redirect()->route('achat.dras.factures.index', $dra->n_dra)
-->with('success', 'Facture mise à jour avec succès.');
+    $dra->update([
+        'total_dra' => $totalDra
+    ]);
 
+    DB::commit();
+
+    return redirect()->route('achat.dras.factures.index', $dra->n_dra)
+        ->with('success', 'Facture mis à jour avec succès.');
 } catch (\Exception $e) {
-DB::rollBack();
-return back()->withErrors(['error' => 'Erreur lors de la mise à jour: ' . $e->getMessage()]);
+    DB::rollBack();
+    return back()->withErrors(['error' => 'Erreur lors de la mise à jour : ' . $e->getMessage()]);
 }
 }
 

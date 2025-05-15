@@ -23,7 +23,9 @@ return [
 'date_creation' => $dra->date_creation->format('Y-m-d'),
 'etat' => $dra->etat,
 'total_dra' => $dra->total_dra,
-'created_at' => $dra->created_at ? $dra->created_at->toISOString() : now()->toISOString()
+'created_at' => $dra->created_at ? $dra->created_at->toISOString() : now()->toISOString(),
+    'centre' => [
+        'seuil_centre' => $dra->centre->seuil_centre]
 ];
 })
 ]);

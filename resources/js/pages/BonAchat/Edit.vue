@@ -2,6 +2,7 @@
 import { Head, Link, useForm } from '@inertiajs/vue3'
 import AppLayout from '@/layouts/AppLayout.vue'
 import { type BreadcrumbItem } from '@/types'
+import { Plus, Trash2 } from 'lucide-vue-next';
 
 const props = defineProps<{
     dra: { n_dra: string },
@@ -39,6 +40,22 @@ function submit() {
             console.log('Validation error:', form.errors)
         }
     })
+}
+
+function destroyBonAchat() {
+    if (confirm("Êtes-vous sûr de vouloir supprimer ce bon d'achat ?")) {
+        form.delete(route('achat.dras.bon-achats.destroy', {
+            dra: props.dra.n_dra,
+            bonAchat: props.bonAchat.n_ba
+        }), {
+            onSuccess: () => {
+                window.location.href = route('achat.dras.bon-achats.index', { dra: props.dra.n_dra });
+            },
+            onError: () => {
+                console.log("Erreur lors de la suppression.");
+            }
+        });
+    }
 }
 </script>
 
@@ -86,11 +103,11 @@ function submit() {
                     <div v-if="form.errors.date_ba" class="text-red-500 text-sm">{{ form.errors.date_ba }}</div>
                 </div>
 
-                <div class="space-y-2">
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Fournisseur</label>
+                <label class=" text-sm font-medium text-gray-700 dark:text-gray-300">Fournisseur</label>
+                <div class="mt-1 flex gap-3">
                     <select
                         v-model="form.id_fourn"
-                        class="w-full border border-gray-300 dark:border-gray-600 p-2 rounded focus:ring-2 focus:ring-[#042B62] dark:focus:ring-[#F3B21B] focus:border-transparent dark:bg-gray-800 dark:text-white"
+                        class="w-1/3 border border-gray-300 dark:border-gray-600 p-2 rounded focus:ring-2 focus:ring-[#042B62] dark:focus:ring-[#F3B21B] focus:border-transparent dark:bg-gray-800 dark:text-white"
                     >
                         <option value="">-- Sélectionnez un fournisseur --</option>
                         <option
@@ -101,10 +118,27 @@ function submit() {
                             {{ fournisseur.nom_fourn }}
                         </option>
                     </select>
+                    <Link
+                        href="/fournisseurs/create"
+                        as="button"
+                        class="px-4 py-2 rounded-lg transition flex items-center gap-1 bg-[#042B62] dark:bg-[#F3B21B] dark:text-[#042B62] text-white hover:bg-blue-900 dark:hover:bg-yellow-200"
+                    >
+                        <Plus class="w-4 h-4" />
+                    </Link>
                     <div v-if="form.errors.id_fourn" class="text-red-500 text-sm">{{ form.errors.id_fourn }}</div>
                 </div>
 
-                <div class="flex justify-end space-x-4 pt-4">
+                <div class="flex justify-between items-center pt-4">
+                    <button
+                        type="button"
+                        @click="destroyBonAchat"
+                        class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-600 transition flex items-center gap-2"
+                    >
+                        <Trash2 class="w-4 h-4" />
+                        Supprimer
+                    </button>
+
+                    <div class="flex gap-4">
                     <Link
                         :href="route('achat.dras.bon-achats.index', { dra: props.dra.n_dra })"
                         class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition"
@@ -119,6 +153,7 @@ function submit() {
                         <span>Enregistrer les modifications</span>
                         <span v-if="form.processing" class="animate-spin">↻</span>
                     </button>
+                    </div>
                 </div>
 
             </form>

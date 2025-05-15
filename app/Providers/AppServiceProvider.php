@@ -23,5 +23,7 @@ class AppServiceProvider extends ServiceProvider
         Dra::creating(function ($dra) {
             $dra->created_at = $dra->created_at ?: now();
         });
+
+
     }
 }
