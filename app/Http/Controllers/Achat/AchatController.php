@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Achat;
 
-use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
 use Inertia\Inertia;
 
 class AchatController extends Controller

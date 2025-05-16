@@ -7,7 +7,7 @@ use App\Models\Piece;
 use Inertia\Inertia;
 use Illuminate\Http\Request;
 
-class DemandepieceController extends Controller
+class PieceController extends Controller
 {
     public function index()
     {

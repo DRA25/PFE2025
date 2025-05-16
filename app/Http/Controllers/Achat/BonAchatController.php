@@ -1,8 +1,9 @@
 <?php
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Achat;
 
-use App\Models\Dra;
+use App\Http\Controllers\Controller;
 use App\Models\BonAchat;
+use App\Models\Dra;
 use App\Models\Fournisseur;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;

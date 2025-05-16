@@ -20,6 +20,11 @@ class Piece extends Model
 
     ];
 
+    public function demandePieces()
+    {
+        return $this->hasMany(DemandePiece::class, 'id_piece', 'id_piece');
+    }
+
 
 }
 

@@ -18,7 +18,7 @@ return new class extends Migration
             $table->date('date_creation');
             $table->enum('etat', ['actif', 'cloture'])->default('actif');
             $table->integer('total_dra');
-            $table->timestamp('created_at')->nullable()->default(null)->change();
+            $table->timestamp('created_at')->nullable();
         });
     }
 

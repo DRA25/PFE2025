@@ -1,6 +1,7 @@
 <?php
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Achat;
 
+use App\Http\Controllers\Controller;
 use App\Models\Centre;
 use App\Models\Dra;
 use Illuminate\Http\Request;

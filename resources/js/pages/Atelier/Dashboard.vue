@@ -6,7 +6,7 @@ import { type BreadcrumbItem } from '@/types';
 const breadcrumbs: BreadcrumbItem[] = [
     {
         title: 'Atelier',
-        href: '/atelier',
+        href: route('atelier.index'),
     },
 ];
 </script>
@@ -22,7 +22,7 @@ const breadcrumbs: BreadcrumbItem[] = [
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <!-- Piece Management Card -->
                 <Link
-                    href="/atelier/pieces"
+                    :href="route('atelier.pieces.index')"
                     class="bg-white dark:bg-gray-700 p-6 rounded-lg shadow hover:shadow-lg transition"
                 >
                     <h2 class="text-xl font-semibold mb-3 text-[#042B62FF] dark:text-[#F3B21B]">
@@ -30,6 +30,19 @@ const breadcrumbs: BreadcrumbItem[] = [
                     </h2>
                     <p class="text-gray-600 dark:text-gray-300">
                         Gérer l'inventaire des pièces détachées
+                    </p>
+                </Link>
+
+                <!-- Demandes de Pièces Card -->
+                <Link
+                    :href="route('atelier.demandes-pieces.index')"
+                    class="bg-white dark:bg-gray-700 p-6 rounded-lg shadow hover:shadow-lg transition"
+                >
+                    <h2 class="text-xl font-semibold mb-3 text-[#042B62FF] dark:text-[#F3B21B]">
+                        Demandes de Pièces
+                    </h2>
+                    <p class="text-gray-600 dark:text-gray-300">
+                        Gérer les demandes de pièces pour les ateliers
                     </p>
                 </Link>
 

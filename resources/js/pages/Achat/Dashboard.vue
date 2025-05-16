@@ -33,6 +33,18 @@ const breadcrumbs: BreadcrumbItem[] = [
                     </p>
                 </Link>
 
+                <!-- Demandes de Pièces Card -->
+                <Link
+                    :href="route('achat.demandes-pieces.index')"
+                    class="bg-white dark:bg-gray-700 p-6 rounded-lg shadow hover:shadow-lg transition"
+                >
+                    <h2 class="text-xl font-semibold mb-3 text-[#042B62FF] dark:text-[#F3B21B]">
+                        Gestion des Demandes de Pièces
+                    </h2>
+                    <p class="text-gray-600 dark:text-gray-300">
+                        Gérer les demandes de pièces des ateliers/magasins
+                    </p>
+                </Link>
             </div>
         </div>
     </AppLayout>

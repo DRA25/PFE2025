@@ -2,22 +2,24 @@
 
 
 use App\Http\Controllers\AboutPageController;
-use App\Http\Controllers\AchatController;
+use App\Http\Controllers\Achat\AchatController;
+use App\Http\Controllers\Achat\AchatDemandePieceController;
+use App\Http\Controllers\Achat\BonAchatController;
+use App\Http\Controllers\Achat\DraController;
+use App\Http\Controllers\Achat\FactureController;
 use App\Http\Controllers\Atelier\AtelierController;
-use App\Http\Controllers\Atelier\DemandepieceController;
-use App\Http\Controllers\BonAchatController;
+use App\Http\Controllers\Atelier\DPieceController;
+use App\Http\Controllers\Atelier\PieceController;
 use App\Http\Controllers\CentreController;
-
-use App\Http\Controllers\DraController;
-use App\Http\Controllers\FactureController;
 use App\Http\Controllers\FournisseurController;
 use App\Http\Controllers\MagasinController;
 use App\Http\Controllers\paimentController;
-use App\Http\Controllers\ScfController;
 use App\Http\Controllers\RoleUserController;
+use App\Http\Controllers\ScfController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+
 
 Route::get('/', function () {
     return Inertia::render('auth/Login');
@@ -56,7 +58,19 @@ Route::middleware(['auth', 'role:service magasin|admin'])->group(function () {
 Route::middleware(['auth', 'role:service cf|service achat|admin'])->group(function () {
     // Group all achat-related routes under /achat prefix
     Route::prefix('achat')->name('achat.')->group(function () {
-        Route::get('/', [AchatController::class, 'index'])->name('achat.index');
+        // Main dashboard route - name it simply 'index' (will become 'achat.index')
+        Route::get('/', [AchatController::class, 'index'])->name('index');
+
+        // Demandes pieces routes - will automatically get 'achat.' prefix
+        Route::resource('demandes-pieces', AchatDemandePieceController::class)
+            ->parameters(['demandes-pieces' => 'demande_piece'])
+            ->names([
+                'index' => 'demandes-pieces.index', // Full name: achat.demandes-pieces.index
+                'show' => 'demandes-pieces.show',
+                'update' => 'demandes-pieces.update'
+            ]);
+
+
         // DRAs routes - views located in pages/dra/
         Route::resource('dras', DraController::class)->names([
             'index' => 'dras.index',
@@ -141,12 +155,25 @@ Route::middleware(['auth', 'verified', 'role:service atelier|admin'])->group(fun
 
     // Pieces management routes (now under /atelier/pieces)
     Route::prefix('atelier/pieces')->group(function () {
-        Route::get('/', [DemandepieceController::class, 'index'])->name('atelier.pieces.index');
-        Route::get('/create', [DemandepieceController::class, 'create'])->name('atelier.pieces.create');
-        Route::post('/', [DemandepieceController::class, 'store'])->name('atelier.pieces.store');
-        Route::get('/{piece}/edit', [DemandepieceController::class, 'edit'])->name('atelier.pieces.edit');
-        Route::put('/{piece}', [DemandepieceController::class, 'update'])->name('atelier.pieces.update');
-        Route::delete('/{piece}', [DemandepieceController::class, 'destroy'])->name('atelier.pieces.destroy');
+        Route::get('/', [PieceController::class, 'index'])->name('atelier.pieces.index');
+        Route::get('/create', [PieceController::class, 'create'])->name('atelier.pieces.create');
+        Route::post('/', [PieceController::class, 'store'])->name('atelier.pieces.store');
+        Route::get('/{piece}/edit', [PieceController::class, 'edit'])->name('atelier.pieces.edit');
+        Route::put('/{piece}', [PieceController::class, 'update'])->name('atelier.pieces.update');
+        Route::delete('/{piece}', [PieceController::class, 'destroy'])->name('atelier.pieces.destroy');
+    });
+
+    Route::prefix('atelier')->group(function () {
+        Route::resource('demandes-pieces', DPieceController::class)
+            ->parameters(['demandes-pieces' => 'demande_piece'])
+            ->names([
+                'index' => 'atelier.demandes-pieces.index',
+                'create' => 'atelier.demandes-pieces.create',
+                'store' => 'atelier.demandes-pieces.store',
+                'edit' => 'atelier.demandes-pieces.edit',
+                'update' => 'atelier.demandes-pieces.update',
+                'destroy' => 'atelier.demandes-pieces.destroy',
+            ]);
     });
 });
 
@@ -171,6 +198,9 @@ Route::middleware(['auth', 'role:service achat|admin'])->group(function () {
     Route::put('/fournisseurs/{fournisseur}', [FournisseurController::class, 'update'])->name('fournisseurs.update');
     Route::delete('/fournisseurs/{fournisseur}', [FournisseurController::class, 'destroy'])->name('fournisseurs.destroy');
 });
+
+
+
 
 
 

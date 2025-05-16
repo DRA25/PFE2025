@@ -1,6 +1,7 @@
 <?php
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Achat;
 
+use App\Http\Controllers\Controller;
 use App\Models\Dra;
 use App\Models\Facture;
 use App\Models\Fournisseur;
