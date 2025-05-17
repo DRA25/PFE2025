@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { useForm, Head } from '@inertiajs/vue3';
+import { useForm, Head, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
+import { computed } from 'vue';
 
 const props = defineProps<{
     piece: {
@@ -13,11 +14,67 @@ const props = defineProps<{
     }
 }>();
 
-const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Atelier', href: '/atelier' },
-    { title: 'Pièces', href: route('atelier.pieces.index') },
-    { title: 'Modifier', href: route('atelier.pieces.edit', props.piece.id_piece) }
-];
+const page = usePage();
+const user = computed(() => page.props.auth.user);
+const userContext = computed(() => {
+    const roles = user.value?.roles?.map(r => r.name) || [];
+
+    // Explicit check for admin first
+    if (roles.includes('admin')) {
+        return {
+            type: 'admin' as const,
+            base: 'atelier', // or 'magasin' depending on your admin default
+            title: 'Administrateur'
+        };
+    }
+
+    // Then check service roles
+    if (roles.includes('service atelier')) {
+        return {
+            type: 'atelier' as const,
+            base: 'atelier',
+            title: 'Atelier'
+        };
+    }
+
+    if (roles.includes('service magasin')) {
+        return {
+            type: 'magasin' as const,
+            base: 'magasin',
+            title: 'Magasin'
+        };
+    }
+
+    // Fallback (shouldn't happen if auth is properly set up)
+    return {
+        type: 'unknown' as const,
+        base: 'atelier',
+        title: 'Système'
+    };
+});
+
+// Usage in breadcrumbs
+const breadcrumbs = computed<BreadcrumbItem[]>(() => [
+    {
+        title: userContext.value.title,
+        href: route(`${userContext.value.base}.index`)
+    },
+    {
+        title: 'Pièces',
+        href: route(`${userContext.value.base}.pieces.index`)
+    },
+
+    {
+        title: 'Modifier',
+        href: route('atelier.pieces.edit',
+            props.piece.id_piece)
+    }
+
+]);
+
+
+
+
 
 const form = useForm({
     id_piece: props.piece.id_piece,

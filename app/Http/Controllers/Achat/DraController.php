@@ -5,6 +5,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Centre;
 use App\Models\Dra;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
@@ -12,7 +13,10 @@ class DraController extends Controller
 {
 public function index()
 {
+$userCentreId = Auth::user()->id_centre;
+
 $dras = Dra::query()
+->where('id_centre', $userCentreId)
 ->orderBy('created_at', 'desc')
 ->get();
 
@@ -25,8 +29,9 @@ return [
 'etat' => $dra->etat,
 'total_dra' => $dra->total_dra,
 'created_at' => $dra->created_at ? $dra->created_at->toISOString() : now()->toISOString(),
-    'centre' => [
-        'seuil_centre' => $dra->centre->seuil_centre]
+'centre' => [
+'seuil_centre' => $dra->centre->seuil_centre
+]
 ];
 })
 ]);
@@ -34,28 +39,32 @@ return [
 
 public function create()
 {
-$centres = Centre::all();
+$userCentreId = Auth::user()->id_centre;
+$centre = Centre::findOrFail($userCentreId);
 
 return Inertia::render('Dra/Create', [
-'centres' => $centres,
+'centre' => $centre, // Only pass the user's center
 ]);
 }
 
 public function store(Request $request)
 {
-if (Dra::where('etat', 'actif')->exists()) {
+$userCentreId = Auth::user()->id_centre;
+
+// Check if there's already an active DRA for this center
+if (Dra::where('etat', 'actif')->where('id_centre', $userCentreId)->exists()) {
 return back()->withErrors([
-'etat' => 'Un DRA actif existe déjà. Veuillez le clôturer avant de créer un nouveau.'
+'etat' => 'Un DRA actif existe déjà pour votre centre. Veuillez le clôturer avant de créer un nouveau.'
 ]);
 }
 
 $validated = $request->validate([
 'n_dra' => 'required|unique:dras,n_dra',
-'id_centre' => 'required',
 'date_creation' => 'required|date',
 ]);
 
 Dra::create(array_merge($validated, [
+'id_centre' => $userCentreId, // Automatically assign user's center
 'etat' => 'actif',
 'total_dra' => 0,
 'created_at' => now()
@@ -66,18 +75,28 @@ return redirect()->route('achat.dras.index')->with('success', 'DRA créé avec s
 
 public function edit(Dra $dra)
 {
-$centres = Centre::all();
+$userCentreId = Auth::user()->id_centre;
+
+// Authorization: Ensure the DRA belongs to the user's center
+if ($dra->id_centre !== $userCentreId) {
+abort(403, 'Unauthorized action.');
+}
 
 return Inertia::render('Dra/Edit', [
 'dra' => $dra,
-'centres' => $centres,
 ]);
 }
 
 public function update(Request $request, Dra $dra)
 {
+$userCentreId = Auth::user()->id_centre;
+
+// Authorization: Ensure the DRA belongs to the user's center
+if ($dra->id_centre !== $userCentreId) {
+abort(403, 'Unauthorized action.');
+}
+
 $validated = $request->validate([
-'id_centre' => 'required',
 'date_creation' => 'required|date',
 ]);
 
@@ -92,7 +111,13 @@ public function destroy($n_dra)
 DB::beginTransaction();
 
 try {
+$userCentreId = Auth::user()->id_centre;
 $dra = Dra::where('n_dra', $n_dra)->firstOrFail();
+
+// Authorization: Ensure the DRA belongs to the user's center
+if ($dra->id_centre !== $userCentreId) {
+abort(403, 'Unauthorized action.');
+}
 
 if ($dra->etat !== 'actif') {
 return back()->withErrors(['error' => 'Seuls les DRAs actifs peuvent être supprimés']);
@@ -114,6 +139,13 @@ return back()->withErrors(['error' => 'Erreur lors de la suppression: ' . $e->ge
 
 public function close(Dra $dra)
 {
+$userCentreId = Auth::user()->id_centre;
+
+// Authorization: Ensure the DRA belongs to the user's center
+if ($dra->id_centre !== $userCentreId) {
+abort(403, 'Unauthorized action.');
+}
+
 if ($dra->etat !== 'actif') {
 return back()->withErrors(['etat' => 'Seuls les DRAs actifs peuvent être clôturés']);
 }

@@ -52,7 +52,7 @@ if (user.value?.roles?.some((role: any) => role.name === 'admin' || role.name ==
 // Conditionally add "Users"
 if (user.value?.roles?.some((role: any) => role.name === 'admin')) {
     mainNavItems.push({
-        title: 'Utilisateurs',
+        title: 'Utilisateur',
         href: '/users',
         icon: Contact,
     });

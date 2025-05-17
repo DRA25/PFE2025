@@ -12,7 +12,8 @@ use App\Http\Controllers\Atelier\DPieceController;
 use App\Http\Controllers\Atelier\PieceController;
 use App\Http\Controllers\CentreController;
 use App\Http\Controllers\FournisseurController;
-use App\Http\Controllers\MagasinController;
+use App\Http\Controllers\Magasin\MagasinController;
+use App\Http\Controllers\Magasin\DMPieceController;
 use App\Http\Controllers\paimentController;
 use App\Http\Controllers\RoleUserController;
 use App\Http\Controllers\ScfController;
@@ -44,10 +45,7 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
 
 
 
-//Magasin routes
-Route::middleware(['auth', 'role:service magasin|admin'])->group(function () {
-    Route::get('/magasin', [MagasinController::class, 'index'])->name('magasin.index');
-});
+
 
 
 Route::middleware(['auth', 'role:service cf|service achat|admin'])->group(function () {
@@ -136,6 +134,34 @@ Route::middleware(['auth'])->group(function () {
 });
 
 
+// Magasin routes
+Route::middleware(['auth', 'verified', 'role:service magasin|admin'])->group(function () {
+    // Main magasin dashboard
+    Route::get('/magasin', [MagasinController::class, 'index'])->name('magasin.index');
+
+    // Pieces management routes (under /magasin/pieces)
+    Route::prefix('magasin/pieces')->group(function () {
+        Route::get('/', [PieceController::class, 'index'])->name('magasin.pieces.index');
+        Route::get('/create', [PieceController::class, 'create'])->name('magasin.pieces.create');
+        Route::post('/', [PieceController::class, 'store'])->name('magasin.pieces.store');
+        Route::get('/{piece}/edit', [PieceController::class, 'edit'])->name('magasin.pieces.edit');
+        Route::put('/{piece}', [PieceController::class, 'update'])->name('magasin.pieces.update');
+        Route::delete('/{piece}', [PieceController::class, 'destroy'])->name('magasin.pieces.destroy');
+    });
+
+    // Demandes pieces routes for magasin - scoped by centre
+    Route::prefix('magasin/demandes-pieces')->group(function () {
+        Route::get('/', [DMPieceController::class, 'index'])->name('magasin.demandes-pieces.index');
+        Route::get('/create', [DMPieceController::class, 'create'])->name('magasin.demandes-pieces.create');
+        Route::post('/', [DMPieceController::class, 'store'])->name('magasin.demandes-pieces.store');
+        Route::get('/{demande_piece}/edit', [DMPieceController::class, 'edit'])->name('magasin.demandes-pieces.edit');
+        Route::put('/{demande_piece}', [DMPieceController::class, 'update'])->name('magasin.demandes-pieces.update');
+        Route::delete('/{demande_piece}', [DMPieceController::class, 'destroy'])->name('magasin.demandes-pieces.destroy');
+    });
+});
+
+
+//atelier routes
 Route::middleware(['auth', 'verified', 'role:service atelier|admin'])->group(function () {
     // Main atelier dashboard
     Route::get('/atelier', [AtelierController::class, 'index'])->name('atelier.index');

@@ -10,9 +10,10 @@ import {
     TableHead
 } from '@/components/ui/table';
 import { type BreadcrumbItem } from '@/types';
-import { Eye } from 'lucide-vue-next';
+import { Eye, ArrowUpDown } from 'lucide-vue-next';
+import { ref, computed } from 'vue';
 
-defineProps<{
+const props = defineProps<{
     demandes: Array<{
         id_dp: number;
         date_dp: string;
@@ -34,6 +35,50 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Achat', href: route('achat.index') },
     { title: 'Demandes de Pièces', href: route('achat.demandes-pieces.index') }
 ];
+
+const sortConfig = ref<{ column: string; direction: 'asc' | 'desc' } | null>(null);
+
+const sortedDemandes = computed(() => {
+    const demandes = [...props.demandes]; // Create a copy to avoid mutating the original props
+
+    if (!sortConfig.value) {
+        return demandes;
+    }
+
+    const { column, direction } = sortConfig.value;
+    return demandes.sort((a, b) => {
+        const valueA = a[column as keyof typeof a];
+        const valueB = b[column as keyof typeof b];
+
+        if (column === 'date_dp') {
+            const dateA = new Date(valueA.replace(/(\d{2})\/(\d{2})\/(\d{4})/, '$3-$2-$1')).getTime();
+            const dateB = new Date(valueB.replace(/(\d{2})\/(\d{2})\/(\d{4})/, '$3-$2-$1')).getTime();
+            return direction === 'asc' ? dateA - dateB : dateB - dateA;
+        } else if (column === 'id_dp' || column === 'qte_demandep') {
+            return direction === 'asc'
+                ? Number(valueA) - Number(valueB)
+                : Number(valueB) - Number(valueA);
+        } else if (column === 'etat_dp') {
+            return direction === 'asc'
+                ? String(valueA).localeCompare(String(valueB))
+                : String(valueB).localeCompare(String(valueA));
+        }
+        else {
+            const stringA = String(valueA).toLowerCase();
+            const stringB = String(valueB).toLowerCase();
+            return direction === 'asc' ? stringA.localeCompare(stringB) : stringB.localeCompare(stringA);
+        }
+    });
+});
+
+const requestSort = (column: string) => {
+    if (!sortConfig.value || sortConfig.value.column !== column) {
+        sortConfig.value = { column, direction: 'asc' };
+    } else {
+        sortConfig.value.direction =
+            sortConfig.value.direction === 'asc' ? 'desc' : 'asc';
+    }
+};
 </script>
 
 <template>
@@ -56,10 +101,34 @@ const breadcrumbs: BreadcrumbItem[] = [
             <Table class="m-3 w-39/40">
                 <TableHeader>
                     <TableRow>
-                        <TableHead class="text-[#042B62FF] dark:text-[#BDBDBDFF]">ID</TableHead>
-                        <TableHead class="text-[#042B62FF] dark:text-[#BDBDBDFF]">Date</TableHead>
-                        <TableHead class="text-[#042B62FF] dark:text-[#BDBDBDFF]">État</TableHead>
-                        <TableHead class="text-[#042B62FF] dark:text-[#BDBDBDFF]">Quantité</TableHead>
+                        <TableHead
+                            class="text-[#042B62FF] dark:text-[#BDBDBDFF] cursor-pointer"
+                            @click="requestSort('id_dp')"
+                        >
+                            ID
+                            <ArrowUpDown class="ml-2 h-4 w-4 inline-block" />
+                        </TableHead>
+                        <TableHead
+                            class="text-[#042B62FF] dark:text-[#BDBDBDFF] cursor-pointer"
+                            @click="requestSort('date_dp')"
+                        >
+                            Date
+                            <ArrowUpDown class="ml-2 h-4 w-4 inline-block" />
+                        </TableHead>
+                        <TableHead
+                            class="text-[#042B62FF] dark:text-[#BDBDBDFF] cursor-pointer"
+                            @click="requestSort('etat_dp')"
+                        >
+                            État
+                            <ArrowUpDown class="ml-2 h-4 w-4 inline-block" />
+                        </TableHead>
+                        <TableHead
+                            class="text-[#042B62FF] dark:text-[#BDBDBDFF] cursor-pointer"
+                            @click="requestSort('qte_demandep')"
+                        >
+                            Quantité
+                            <ArrowUpDown class="ml-2 h-4 w-4 inline-block" />
+                        </TableHead>
                         <TableHead class="text-[#042B62FF] dark:text-[#BDBDBDFF]">Pièce</TableHead>
                         <TableHead class="text-[#042B62FF] dark:text-[#BDBDBDFF]">Origine</TableHead>
                         <TableHead class="text-[#042B62FF] dark:text-[#BDBDBDFF]">Centre</TableHead>
@@ -69,7 +138,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 
                 <TableBody>
                     <TableRow
-                        v-for="demande in demandes"
+                        v-for="demande in sortedDemandes"
                         :key="demande.id_dp"
                         class="hover:bg-gray-300 dark:hover:bg-gray-900"
                     >

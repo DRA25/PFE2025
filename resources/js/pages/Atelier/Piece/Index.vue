@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { TableHeader, TableBody, TableRow, TableCell, TableHead } from '@/components/ui/table';
 import { type BreadcrumbItem } from '@/types';
 import { Pencil, Trash2 } from 'lucide-vue-next';
+import { computed } from 'vue';
 
 defineProps<{
     pieces: {
@@ -15,27 +16,73 @@ defineProps<{
     }[]
 }>();
 
-const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Atelier', href: '/atelier' },
-    { title: 'Pièces', href: route('atelier.pieces.index') }
-];
+const page = usePage();
+const user = computed(() => page.props.auth.user);
 
-function deletePiece(id_piece: number) {
-    if (confirm('Voulez-vous vraiment supprimer cette pièce ?')) {
-        router.delete(route('atelier.pieces.destroy', id_piece), {
-            onSuccess: () => {},
-            onError: () => alert('Erreur lors de la suppression')
-        });
+const userContext = computed(() => {
+    const roles = user.value?.roles?.map(r => r.name) || [];
+
+    // Explicit check for admin first
+    if (roles.includes('admin')) {
+        return {
+            type: 'admin' as const,
+            base: 'atelier', // or 'magasin' depending on your admin default
+            title: 'Administrateur'
+        };
     }
+
+    // Then check service roles
+    if (roles.includes('service atelier')) {
+        return {
+            type: 'atelier' as const,
+            base: 'atelier',
+            title: 'Atelier'
+        };
+    }
+
+    if (roles.includes('service magasin')) {
+        return {
+            type: 'magasin' as const,
+            base: 'magasin',
+            title: 'Magasin'
+        };
+    }
+
+    // Fallback (shouldn't happen if auth is properly set up)
+    return {
+        type: 'unknown' as const,
+        base: 'atelier',
+        title: 'Système'
+    };
+});
+
+// Usage in breadcrumbs
+const breadcrumbs = computed<BreadcrumbItem[]>(() => [
+    {
+        title: userContext.value.title,
+        href: route(`${userContext.value.base}.index`)
+    },
+    {
+        title: 'Pièces',
+        href: route(`${userContext.value.base}.pieces.index`)
+    }
+]);
+
+// Usage in template
+function deletePiece(id: number) {
+    router.delete(route(`${userContext.value.base}.pieces.destroy`, id));
 }
+
+
+
 </script>
 
 <template>
-    <Head title="Liste des Pièces" />
+    <Head :title="isServiceAtelier ? 'Liste des Pièces (Atelier)' : 'Liste des Pièces (Magasin)'" />
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex justify-end m-5 mb-0">
             <Link
-                :href="route('atelier.pieces.create')"
+                :href="isServiceAtelier ? route('atelier.pieces.create') : route('magasin.pieces.create')"
                 class="bg-[#042B62] dark:bg-[#F3B21B] dark:text-[#042B62] text-white px-4 py-2 rounded-lg hover:bg-blue-900 dark:hover:bg-yellow-200 transition"
             >
                 Ajouter une Pièce
@@ -70,7 +117,7 @@ function deletePiece(id_piece: number) {
                         <TableCell>{{ piece.ref_piece }}</TableCell>
                         <TableCell class="flex space-x-2">
                             <Link
-                                :href="route('atelier.pieces.edit', piece.id_piece)"
+                                :href="isServiceAtelier ? route('atelier.pieces.edit', piece.id_piece) : route('magasin.pieces.edit', piece.id_piece)"
                                 class="bg-green-600 text-white px-3 py-1 rounded-lg hover:bg-green-400 transition flex items-center gap-1"
                             >
                                 <Pencil class="w-4 h-4" />

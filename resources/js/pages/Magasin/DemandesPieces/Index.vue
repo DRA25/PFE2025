@@ -46,13 +46,13 @@ const isServiceMagasin = computed(() =>
 
 
 const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Atelier', href: '/atelier' },
-    { title: 'Demandes de Pièces', href: route('atelier.demandes-pieces.index') }
+    { title: 'Magasin', href: '/magasin' },
+    { title: 'Demandes de Pièces', href: route('magasin.demandes-pieces.index') }
 ];
 
 function deleteDemande(id_dp: number) {
     if (confirm('Voulez-vous vraiment supprimer cette demande ?')) {
-        router.delete(route('atelier.demandes-pieces.destroy', id_dp), {
+        router.delete(route('magasin.demandes-pieces.destroy', id_dp), {
             onSuccess: () => {},
             onError: () => alert('Erreur lors de la suppression')
         });
@@ -65,7 +65,7 @@ function deleteDemande(id_dp: number) {
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex justify-end m-5 mb-0">
             <Link
-                :href="route('atelier.demandes-pieces.create')"
+                :href="route('magasin.demandes-pieces.create')"
                 class="bg-[#042B62] dark:bg-[#F3B21B] dark:text-[#042B62] text-white px-4 py-2 rounded-lg hover:bg-blue-900 dark:hover:bg-yellow-200 transition"
             >
                 Créer une Demande
@@ -104,7 +104,7 @@ function deleteDemande(id_dp: number) {
                         <TableCell v-if="isServiceAtelier">{{ demande.atelier?.adresse_atelier || 'N/A' }}</TableCell>
                         <TableCell class="flex space-x-2">
                             <Link
-                                :href="route('atelier.demandes-pieces.edit', demande.id_dp)"
+                                :href="route('magasin.demandes-pieces.edit', demande.id_dp)"
                                 class="bg-green-600 text-white px-3 py-1 rounded-lg hover:bg-green-400 transition flex items-center gap-1"
                             >
                                 <Pencil class="w-4 h-4" />
