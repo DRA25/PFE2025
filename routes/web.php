@@ -28,13 +28,13 @@ Route::get('/', function () {
 Route::middleware(['auth', 'role:admin'])->group(function () {
 
 
-        // User CRUD Routes
-        Route::get('/users', [UserController::class, 'index'])->name('users.index');
-        Route::get('/users/create', [UserController::class, 'create'])->name('users.create');
-        Route::post('/users', [UserController::class, 'store'])->name('users.store');
-        Route::get('/users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
-        Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update');
-        Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
+    // User CRUD Routes
+    Route::get('/users', [UserController::class, 'index'])->name('users.index');
+    Route::get('/users/create', [UserController::class, 'create'])->name('users.create');
+    Route::post('/users', [UserController::class, 'store'])->name('users.store');
+    Route::get('/users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
+    Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update');
+    Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
 
     // Role Management Routes
     Route::get('/roles', [RoleUserController::class, 'index'])->name('roles.index');
@@ -47,17 +47,16 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
 //Magasin routes
 Route::middleware(['auth', 'role:service magasin|admin'])->group(function () {
     Route::get('/magasin', [MagasinController::class, 'index'])->name('magasin.index');
-
 });
-
-
-
-
 
 
 Route::middleware(['auth', 'role:service cf|service achat|admin'])->group(function () {
     // Group all achat-related routes under /achat prefix
     Route::prefix('achat')->name('achat.')->group(function () {
+
+        Route::get('/demandes-export-pdf', [AchatDemandePieceController::class, 'exportListPdf'])
+            ->name('demandes-pieces.export-pdf');
+
         // Main dashboard route - name it simply 'index' (will become 'achat.index')
         Route::get('/', [AchatController::class, 'index'])->name('index');
 
@@ -109,30 +108,20 @@ Route::middleware(['auth', 'role:service cf|service achat|admin'])->group(functi
 });
 
 
-
-
-
 //SCF routes
 Route::middleware(['auth', 'role:service cf|admin'])->group(function () {
     Route::get('/scf', [ScfController::class, 'index'])->name('scf.index');
-
 });
 
 //Paiment routes
 Route::middleware(['auth', 'role:service paiment|admin'])->group(function () {
     Route::get('/paiment', [PaimentController::class, 'index'])->name('paiment.index');
-
 });
-
-
-
 
 
 Route::get('dashboard', function () {
     return Inertia::render('Dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
-
-
 
 
 Route::get('/about', [AboutPageController::class, 'show'])->name('about');
@@ -145,8 +134,6 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/about', [AboutPageController::class, 'store'])->name('about.store');
     Route::delete('/about', [AboutPageController::class, 'destroy'])->name('about.destroy');
 });
-
-
 
 
 Route::middleware(['auth', 'verified', 'role:service atelier|admin'])->group(function () {
@@ -163,18 +150,13 @@ Route::middleware(['auth', 'verified', 'role:service atelier|admin'])->group(fun
         Route::delete('/{piece}', [PieceController::class, 'destroy'])->name('atelier.pieces.destroy');
     });
 
-    Route::prefix('atelier')->group(function () {
-        Route::resource('demandes-pieces', DPieceController::class)
-            ->parameters(['demandes-pieces' => 'demande_piece'])
-            ->names([
-                'index' => 'atelier.demandes-pieces.index',
-                'create' => 'atelier.demandes-pieces.create',
-                'store' => 'atelier.demandes-pieces.store',
-                'edit' => 'atelier.demandes-pieces.edit',
-                'update' => 'atelier.demandes-pieces.update',
-                'destroy' => 'atelier.demandes-pieces.destroy',
-            ]);
-    });
+    // Demandes pieces routes for atelier - scoped by centre
+    Route::get('/atelier/demandes-pieces', [DPieceController::class, 'index'])->name('atelier.demandes-pieces.index');
+    Route::get('/atelier/demandes-pieces/create', [DPieceController::class, 'create'])->name('atelier.demandes-pieces.create');
+    Route::post('/atelier/demandes-pieces', [DPieceController::class, 'store'])->name('atelier.demandes-pieces.store');
+    Route::get('/atelier/demandes-pieces/{demande_piece}/edit', [DPieceController::class, 'edit'])->name('atelier.demandes-pieces.edit');
+    Route::put('/atelier/demandes-pieces/{demande_piece}', [DPieceController::class, 'update'])->name('atelier.demandes-pieces.update');
+    Route::delete('/atelier/demandes-pieces/{demande_piece}', [DPieceController::class, 'destroy'])->name('atelier.demandes-pieces.destroy');
 });
 
 //centre routes
@@ -188,7 +170,6 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
 });
 
 
-
 //fournisseur routes
 Route::middleware(['auth', 'role:service achat|admin'])->group(function () {
     Route::get('/fournisseurs', [FournisseurController::class, 'index'])->name('fournisseurs.index');
@@ -198,6 +179,19 @@ Route::middleware(['auth', 'role:service achat|admin'])->group(function () {
     Route::put('/fournisseurs/{fournisseur}', [FournisseurController::class, 'update'])->name('fournisseurs.update');
     Route::delete('/fournisseurs/{fournisseur}', [FournisseurController::class, 'destroy'])->name('fournisseurs.destroy');
 });
+
+
+// Single demande PDF export
+Route::get('/achat/demandes-pieces/{demande_piece}/export-single-pdf', [AchatDemandePieceController::class, 'exportPdf'])
+    ->name('achat.demandes-pieces.export-single-pdf');
+
+// Full list PDF export
+Route::get('/achat/demandes-pieces/export-full-list-pdf',
+    [AchatDemandePieceController::class, 'exportListPdf'])
+    ->name('achat.demandes-pieces.export-full-list-pdf');
+
+
+
 
 
 

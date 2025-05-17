@@ -22,4 +22,10 @@ class Atelier extends Model
     {
         return $this->hasMany(DemandePiece::class, 'id_atelier', 'id_atelier');
     }
+
+    public function centre()
+    {
+        return $this->belongsTo(Centre::class, 'id_centre', 'id_centre');
+    }
+
 }

@@ -14,6 +14,8 @@ return new class extends Migration
         Schema::create('magasins', function (Blueprint $table) {
             $table->integer('id_magasin')->primary();
             $table->string('adresse_magasin');
+            $table->string('id_centre')->nullable();
+            $table->foreign('id_centre')->references('id_centre')->on('centres')->onDelete('set null');
         });
     }
 

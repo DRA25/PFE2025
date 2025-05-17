@@ -22,4 +22,10 @@ class Magasin extends Model
     {
         return $this->hasMany(DemandePiece::class, 'id_magasin', 'id_magasin');
     }
+
+    public function centre()
+    {
+        return $this->belongsTo(Centre::class, 'id_centre', 'id_centre');
+    }
+
 }

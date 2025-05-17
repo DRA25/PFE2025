@@ -1,16 +1,19 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { useForm } from '@inertiajs/vue3';
+import { computed } from 'vue';
+
+const page = usePage();
 
 const form = useForm({
     date_dp: new Date().toISOString().split('T')[0],
     etat_dp: 'En attente',
-    id_piece:'',
+    id_piece: '',
     qte_demandep: 1,
-    id_magasin: '',
-    id_atelier: '',
+    // id_magasin: null, // Removed
+    // id_atelier: null, // Removed
 });
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -20,17 +23,9 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 defineProps<{
-    pieces:{
+    pieces: {
         id_piece: number;
         nom_piece: string;
-    }[];
-    magasins: {
-        id_magasin: number;
-        adresse_magasin: string;
-    }[];
-    ateliers: {
-        id_atelier: number;
-        adresse_atelier: string;
     }[];
 }>();
 </script>
@@ -90,7 +85,6 @@ defineProps<{
                         <select
                             id="id_piece"
                             v-model="form.id_piece"
-                            @change="form.id_magasin = ''"
                             class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-[#042B62] focus:border-[#042B62] dark:bg-gray-700 dark:text-white"
                         >
                             <option value="">Sélectionner une piece</option>
@@ -99,42 +93,6 @@ defineProps<{
                             </option>
                         </select>
                         <p v-if="form.errors.id_piece" class="text-sm text-red-600">{{ form.errors.id_piece }}</p>
-                    </div>
-
-                    <div class="space-y-2">
-                        <label for="id_magasin" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Magasin</label>
-                        <select
-                            id="id_magasin"
-                            v-model="form.id_magasin"
-                            @change="form.id_atelier = ''"
-                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-[#042B62] focus:border-[#042B62] dark:bg-gray-700 dark:text-white"
-                        >
-                            <option value="">Sélectionner un magasin</option>
-                            <option v-for="magasin in magasins" :key="magasin.id_magasin" :value="magasin.id_magasin">
-                                {{ magasin.adresse_magasin }}
-                            </option>
-                        </select>
-                        <p v-if="form.errors.id_magasin" class="text-sm text-red-600">{{ form.errors.id_magasin }}</p>
-                    </div>
-
-                    <div class="space-y-2">
-                        <label for="id_atelier" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Atelier</label>
-                        <select
-                            id="id_atelier"
-                            v-model="form.id_atelier"
-                            @change="form.id_magasin = ''"
-                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-[#042B62] focus:border-[#042B62] dark:bg-gray-700 dark:text-white"
-                        >
-                            <option value="">Sélectionner un atelier</option>
-                            <option v-for="atelier in ateliers" :key="atelier.id_atelier" :value="atelier.id_atelier">
-                                {{ atelier.adresse_atelier }}
-                            </option>
-                        </select>
-                        <p v-if="form.errors.id_atelier" class="text-sm text-red-600">{{ form.errors.id_atelier }}</p>
-                    </div>
-
-                    <div v-if="form.errors.id_magasin && form.errors.id_atelier" class="text-sm text-red-600">
-                        Vous devez sélectionner soit un magasin soit un atelier
                     </div>
                 </div>
 

@@ -32,4 +32,9 @@ class Centre extends Model
         return $this->hasMany(User::class, 'id_centre', 'id_centre');
     }
 
+    public function ateliers()
+    {
+        return $this->hasMany(Atelier::class, 'id_centre', 'id_centre');
+    }
+
 }

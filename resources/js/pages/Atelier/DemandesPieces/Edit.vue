@@ -5,27 +5,27 @@ import { type BreadcrumbItem } from '@/types';
 import { useForm } from '@inertiajs/vue3';
 
 const props = defineProps<{
-    demande_piece: {  // Changed from 'demande' to 'demande_piece'
+    demande_piece: {
         id_dp: number;
         date_dp: string;
         etat_dp: string;
         id_piece: number;
         qte_demandep: number;
-        id_magasin: number;
-        id_atelier: number;
+        id_magasin: number; // Remove this
+        id_atelier: number; // Remove this
     };
     pieces: {
         id_piece: number;
         nom_piece: string;
     }[];
-    magasins: {
-        id_magasin: number;
-        adresse_magasin: string;
-    }[];
-    ateliers: {
-        id_atelier: number;
-        adresse_atelier: string;
-    }[];
+    // magasins: {  // Remove this
+    //     id_magasin: number;
+    //     adresse_magasin: string;
+    // }[];
+    // ateliers: {  // Remove this
+    //     id_atelier: number;
+    //     adresse_atelier: string;
+    // }[];
 }>();
 
 const form = useForm({
@@ -33,8 +33,8 @@ const form = useForm({
     etat_dp: props.demande_piece.etat_dp,
     id_piece: props.demande_piece.id_piece,
     qte_demandep: props.demande_piece.qte_demandep,
-    id_magasin: props.demande_piece.id_magasin,
-    id_atelier: props.demande_piece.id_atelier,
+    // id_magasin: props.demande_piece.id_magasin, // Remove this
+    // id_atelier: props.demande_piece.id_atelier, // Remove this
 });
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -99,7 +99,6 @@ const breadcrumbs: BreadcrumbItem[] = [
                         <select
                             id="id_piece"
                             v-model="form.id_piece"
-                            @change="form.id_magasin = ''"
                             class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-[#042B62] focus:border-[#042B62] dark:bg-gray-700 dark:text-white"
                         >
                             <option value="">Sélectionner une piece</option>
@@ -108,42 +107,6 @@ const breadcrumbs: BreadcrumbItem[] = [
                             </option>
                         </select>
                         <p v-if="form.errors.id_piece" class="text-sm text-red-600">{{ form.errors.id_piece }}</p>
-                    </div>
-
-                    <div class="space-y-2">
-                        <label for="id_magasin" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Magasin</label>
-                        <select
-                            id="id_magasin"
-                            v-model="form.id_magasin"
-                            @change="form.id_atelier = ''"
-                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-[#042B62] focus:border-[#042B62] dark:bg-gray-700 dark:text-white"
-                        >
-                            <option value="">Sélectionner un magasin</option>
-                            <option v-for="magasin in magasins" :key="magasin.id_magasin" :value="magasin.id_magasin">
-                                {{ magasin.adresse_magasin }}
-                            </option>
-                        </select>
-                        <p v-if="form.errors.id_magasin" class="text-sm text-red-600">{{ form.errors.id_magasin }}</p>
-                    </div>
-
-                    <div class="space-y-2">
-                        <label for="id_atelier" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Atelier</label>
-                        <select
-                            id="id_atelier"
-                            v-model="form.id_atelier"
-                            @change="form.id_magasin = ''"
-                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-[#042B62] focus:border-[#042B62] dark:bg-gray-700 dark:text-white"
-                        >
-                            <option value="">Sélectionner un atelier</option>
-                            <option v-for="atelier in ateliers" :key="atelier.id_atelier" :value="atelier.id_atelier">
-                                {{ atelier.adresse_atelier }}
-                            </option>
-                        </select>
-                        <p v-if="form.errors.id_atelier" class="text-sm text-red-600">{{ form.errors.id_atelier }}</p>
-                    </div>
-
-                    <div v-if="form.errors.id_magasin && form.errors.id_atelier" class="text-sm text-red-600">
-                        Vous devez sélectionner soit un magasin soit un atelier
                     </div>
                 </div>
 

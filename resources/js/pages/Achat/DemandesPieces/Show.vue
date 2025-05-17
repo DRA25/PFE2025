@@ -9,8 +9,15 @@ const props = defineProps<{
         date_dp: string;
         etat_dp: string;
         qte_demandep: number;
-        magasin?: { adresse_magasin: string };
-        atelier?: { adresse_atelier: string };
+        piece?: { nom_piece: string };
+        magasin?: {
+            adresse_magasin: string;
+            centre?: { id_centre: number };
+        };
+        atelier?: {
+            adresse_atelier: string;
+            centre?: { id_centre: number };
+        };
     };
 }>();
 
@@ -48,13 +55,36 @@ const breadcrumbs: BreadcrumbItem[] = [
                     <div>
                         <p class="text-sm text-gray-500 dark:text-gray-400">Origine</p>
                         <p class="text-gray-900 dark:text-gray-100">
-                            {{ demande.magasin?.adresse_magasin || demande.atelier?.adresse_atelier || 'N/A' }}
+                            {{
+                                demande.magasin
+                                    ? `Magasin - ${demande.magasin.adresse_magasin}`
+                                    : demande.atelier
+                                        ? `Atelier - ${demande.atelier.adresse_atelier}`
+                                        : 'N/A'
+                            }}
+                        </p>
+                    </div>
+
+
+                    <div>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Centre</p>
+                        <p class="text-gray-900 dark:text-gray-100">
+                            {{
+                                demande.magasin?.centre?.id_centre
+                                || demande.atelier?.centre?.id_centre
+                                || 'N/A'
+                            }}
                         </p>
                     </div>
 
                     <div>
                         <p class="text-sm text-gray-500 dark:text-gray-400">Quantité</p>
                         <p class="text-gray-900 dark:text-gray-100">{{ demande.qte_demandep }}</p>
+                    </div>
+
+                    <div>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Nom de la Pièce</p>
+                        <p class="text-gray-900 dark:text-gray-100">{{ demande.piece?.nom_piece || 'N/A' }}</p>
                     </div>
                 </div>
 
@@ -82,9 +112,20 @@ const breadcrumbs: BreadcrumbItem[] = [
                                     class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
                                 Mettre à jour
                             </button>
+                            <a
+                                :href="route('achat.demandes-pieces.export-single-pdf', { demande_piece: demande.id_dp })"
+                                target="_blank"
+                                class="px-4 py-2 ml-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                            >
+                                Exporter en PDF
+                            </a>
                         </div>
                     </form>
+
                 </div>
+
+
+
             </div>
         </div>
     </AppLayout>

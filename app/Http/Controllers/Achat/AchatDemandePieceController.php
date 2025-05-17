@@ -5,12 +5,18 @@ use App\Http\Controllers\Controller;
 use App\Models\DemandePiece;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Barryvdh\DomPDF\Facade\Pdf;
+
 
 class AchatDemandePieceController extends Controller
 {
     public function index()
     {
-        $demandes = DemandePiece::with(['magasin', 'atelier'])
+        $demandes = DemandePiece::with([
+            'magasin.centre',
+            'atelier.centre',
+            'piece'
+        ])
             ->orderBy('date_dp', 'desc')
             ->get();
 
@@ -19,12 +25,19 @@ class AchatDemandePieceController extends Controller
         ]);
     }
 
+
+
     public function show(DemandePiece $demande_piece)
     {
         return Inertia::render('Achat/DemandesPieces/Show', [
-            'demande' => $demande_piece->load(['magasin', 'atelier'])
+            'demande' => $demande_piece->load([
+                'magasin.centre',
+                'atelier.centre',
+                'piece'
+            ])
         ]);
     }
+
 
     public function update(Request $request, DemandePiece $demande_piece)
     {
@@ -37,4 +50,35 @@ class AchatDemandePieceController extends Controller
         return redirect()->route('achat.demandes-pieces.index', $demande_piece)
             ->with('success', 'État mis à jour avec succès');
     }
+
+
+
+    public function exportPdf(DemandePiece $demande_piece)
+    {
+        $demande_piece->load(['magasin.centre', 'atelier.centre', 'piece']);
+
+        $pdf = Pdf::loadView('achat.demandespieces.pdf', [
+            'demande' => $demande_piece
+        ]);
+
+        return $pdf->download('demande_piece_' . $demande_piece->id_dp . '.pdf');
+    }
+
+    public function exportListPdf()
+    {
+        $demandes = DemandePiece::with(['magasin.centre', 'atelier.centre', 'piece'])
+            ->orderBy('date_dp', 'desc')
+            ->get();
+
+        // Debugging: Check if data exists
+        if ($demandes->isEmpty()) {
+            abort(404, 'No demandes found');
+        }
+
+        return Pdf::loadView('achat.demandespieces.pdf-export', [
+            'demandes' => $demandes
+        ])->download('demandes-list-'.now()->format('Y-m-d').'.pdf');
+    }
+
+
 }
