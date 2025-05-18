@@ -158,6 +158,8 @@ Route::middleware(['auth', 'verified', 'role:service magasin|admin'])->group(fun
         Route::put('/{demande_piece}', [DMPieceController::class, 'update'])->name('magasin.demandes-pieces.update');
         Route::delete('/{demande_piece}', [DMPieceController::class, 'destroy'])->name('magasin.demandes-pieces.destroy');
     });
+
+
 });
 
 

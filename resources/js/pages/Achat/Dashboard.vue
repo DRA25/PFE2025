@@ -42,7 +42,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                         Gestion des Demandes de Pièces
                     </h2>
                     <p class="text-gray-600 dark:text-gray-300">
-                        Gérer les demandes de pièces des ateliers/magasins
+                        Gérer les demandes de pièces des magasins
                     </p>
                 </Link>
             </div>

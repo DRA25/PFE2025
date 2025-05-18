@@ -17,6 +17,14 @@ class AchatDemandePieceController extends Controller
             'atelier.centre',
             'piece'
         ])
+            ->where(function ($query) {
+                $query->whereNotNull('id_magasin')
+                    ->whereNull('id_atelier');
+            })
+            ->orWhere(function ($query) {
+                $query->whereNull('id_magasin')
+                    ->whereNull('id_atelier');
+            })
             ->orderBy('date_dp', 'desc')
             ->get();
 
@@ -24,8 +32,6 @@ class AchatDemandePieceController extends Controller
             'demandes' => $demandes
         ]);
     }
-
-
 
     public function show(DemandePiece $demande_piece)
     {
@@ -52,7 +58,6 @@ class AchatDemandePieceController extends Controller
     }
 
 
-
     public function exportPdf(DemandePiece $demande_piece)
     {
         $demande_piece->load(['magasin.centre', 'atelier.centre', 'piece']);
@@ -67,6 +72,14 @@ class AchatDemandePieceController extends Controller
     public function exportListPdf()
     {
         $demandes = DemandePiece::with(['magasin.centre', 'atelier.centre', 'piece'])
+            ->where(function ($query) {
+                $query->whereNotNull('id_magasin')
+                    ->whereNull('id_atelier');
+            })
+            ->orWhere(function ($query) {
+                $query->whereNull('id_magasin')
+                    ->whereNull('id_atelier');
+            })
             ->orderBy('date_dp', 'desc')
             ->get();
 
@@ -79,6 +92,4 @@ class AchatDemandePieceController extends Controller
             'demandes' => $demandes
         ])->download('demandes-list-'.now()->format('Y-m-d').'.pdf');
     }
-
-
 }

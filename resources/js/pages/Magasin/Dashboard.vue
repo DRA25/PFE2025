@@ -46,6 +46,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                     </p>
                 </Link>
 
+
                 <!-- You can add more magasin-specific cards here -->
                 <!-- For example: -->
                 <!--
