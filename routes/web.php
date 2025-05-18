@@ -14,6 +14,7 @@ use App\Http\Controllers\CentreController;
 use App\Http\Controllers\FournisseurController;
 use App\Http\Controllers\Magasin\MagasinController;
 use App\Http\Controllers\Magasin\DMPieceController;
+use App\Http\Controllers\Magasin\MagasinDemandePieceController;
 use App\Http\Controllers\paimentController;
 use App\Http\Controllers\RoleUserController;
 use App\Http\Controllers\ScfController;
@@ -157,6 +158,20 @@ Route::middleware(['auth', 'verified', 'role:service magasin|admin'])->group(fun
         Route::get('/{demande_piece}/edit', [DMPieceController::class, 'edit'])->name('magasin.demandes-pieces.edit');
         Route::put('/{demande_piece}', [DMPieceController::class, 'update'])->name('magasin.demandes-pieces.update');
         Route::delete('/{demande_piece}', [DMPieceController::class, 'destroy'])->name('magasin.demandes-pieces.destroy');
+    });
+
+
+    // New MagasinDemandePieceController routes (specific to magasin's own demandes)
+    Route::prefix('magasin/mes-demandes')->group(function () {
+        // PDF exports - define specific routes first
+        Route::get('/export/pdf', [MagasinDemandePieceController::class, 'exportListPdf'])->name('magasin.mes-demandes.export-list');
+
+        Route::get('/{demande_piece}/pdf', [MagasinDemandePieceController::class, 'exportPdf'])->name('magasin.mes-demandes.pdf');
+
+        // General routes - define less specific routes last
+        Route::get('/', [MagasinDemandePieceController::class, 'index'])->name('magasin.mes-demandes.index');
+        Route::get('/{demande_piece}', [MagasinDemandePieceController::class, 'show'])->name('magasin.mes-demandes.show');
+        Route::put('/{demande_piece}', [MagasinDemandePieceController::class, 'update'])->name('magasin.mes-demandes.update');
     });
 
 
