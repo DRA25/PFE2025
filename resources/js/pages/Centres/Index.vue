@@ -8,7 +8,13 @@ import {
     TableCell,
     TableHead
 } from '@/components/ui/table'
-import { Pencil, Plus, Trash2 } from 'lucide-vue-next'
+import { Pencil, Plus, Trash2, ArrowUpDown, Search } from 'lucide-vue-next'
+import { ref, computed } from 'vue'
+import { type BreadcrumbItem } from '@/types'
+
+const breadcrumbs: BreadcrumbItem[] = [
+    { title: 'Gestion des Centres', href: '/centres' },
+]
 
 const props = defineProps<{
     centres: Array<{
@@ -18,6 +24,44 @@ const props = defineProps<{
         type_centre: string
     }>
 }>()
+
+const searchQuery = ref('');
+const sortConfig = ref<{ column: string; direction: 'asc' | 'desc' } | null>(null);
+
+const requestSort = (column: string) => {
+    if (!sortConfig.value || sortConfig.value.column !== column) {
+        sortConfig.value = { column, direction: 'asc' };
+    } else {
+        sortConfig.value.direction = sortConfig.value.direction === 'asc' ? 'desc' : 'asc';
+    }
+}
+
+const sortedCentres = computed(() => {
+    let data = [...props.centres];
+
+    if (searchQuery.value) {
+        const query = searchQuery.value.toLowerCase();
+        data = data.filter(centre =>
+            centre.id_centre.toLowerCase().includes(query) ||
+            centre.adresse_centre.toLowerCase().includes(query) ||
+            String(centre.seuil_centre).toLowerCase().includes(query) ||
+            centre.type_centre.toLowerCase().includes(query)
+        );
+    }
+
+    if (sortConfig.value) {
+        const { column, direction } = sortConfig.value;
+        data.sort((a, b) => {
+            const valA = a[column as keyof typeof a] ?? '';
+            const valB = b[column as keyof typeof b] ?? '';
+            return direction === 'asc'
+                ? String(valA).localeCompare(String(valB))
+                : String(valB).localeCompare(String(valA));
+        });
+    }
+
+    return data;
+});
 
 const deleteCentre = (id: string) => {
     if (confirm('Êtes-vous sûr de vouloir supprimer ce centre ?')) {
@@ -35,7 +79,17 @@ const deleteCentre = (id: string) => {
 <template>
     <Head title="Liste des Centres" />
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex justify-end m-5 mb-0">
+        <div class="flex justify-between items-center m-5 mb-0 gap-4 flex-wrap">
+            <div class="flex items-center gap-2 w-full md:w-1/3">
+                <Search class="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                <input
+                    type="text"
+                    v-model="searchQuery"
+                    placeholder="Rechercher par ID, adresse, seuil ou type..."
+                    class="w-full bg-gray-100 px-4 py-2 rounded-md border border-gray-200 dark:border-gray-700 dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+                />
+            </div>
+
             <Link
                 href="/centres/create"
                 as="button"
@@ -56,17 +110,29 @@ const deleteCentre = (id: string) => {
             <Table class="m-3 w-39/40">
                 <TableHeader>
                     <TableRow>
-                        <TableHead class="text-[#042B62FF] dark:text-[#BDBDBDFF]">ID Centre</TableHead>
-                        <TableHead class="text-[#042B62FF] dark:text-[#BDBDBDFF]">Adresse</TableHead>
-                        <TableHead class="text-[#042B62FF] dark:text-[#BDBDBDFF]">Seuil</TableHead>
-                        <TableHead class="text-[#042B62FF] dark:text-[#BDBDBDFF]">Type</TableHead>
-                        <TableHead class="text-[#042B62FF] dark:text-[#BDBDBDFF]">Actions</TableHead>
+                        <TableHead class="cursor-pointer" @click="requestSort('id_centre')">
+                            ID Centre
+                            <ArrowUpDown class="ml-2 h-4 w-4 inline-block" />
+                        </TableHead>
+                        <TableHead class="cursor-pointer" @click="requestSort('adresse_centre')">
+                            Adresse
+                            <ArrowUpDown class="ml-2 h-4 w-4 inline-block" />
+                        </TableHead>
+                        <TableHead class="cursor-pointer" @click="requestSort('seuil_centre')">
+                            Seuil
+                            <ArrowUpDown class="ml-2 h-4 w-4 inline-block" />
+                        </TableHead>
+                        <TableHead class="cursor-pointer" @click="requestSort('type_centre')">
+                            Type
+                            <ArrowUpDown class="ml-2 h-4 w-4 inline-block" />
+                        </TableHead>
+                        <TableHead>Actions</TableHead>
                     </TableRow>
                 </TableHeader>
 
                 <TableBody>
                     <TableRow
-                        v-for="centre in centres"
+                        v-for="centre in sortedCentres"
                         :key="centre.id_centre"
                         class="hover:bg-gray-300 dark:hover:bg-gray-900"
                     >

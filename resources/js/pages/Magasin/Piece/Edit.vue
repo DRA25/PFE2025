@@ -15,9 +15,9 @@ const props = defineProps<{
 
 // Simple static breadcrumbs (no role detection)
 const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Atelier', href: route('atelier.index') },
-    { title: 'Pièces', href: route('atelier.pieces.index') },
-    { title: 'Modifier', href: route('atelier.pieces.edit', props.piece.id_piece) }
+    { title: 'Magasin', href: route('magasin.index') },
+    { title: 'Pièces', href: route('magasin.pieces.index') },
+    { title: 'Modifier', href: route('magasin.pieces.edit', props.piece.id_piece) }
 ];
 
 const form = useForm({

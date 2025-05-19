@@ -4,9 +4,9 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 
 const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Atelier', href: route('atelier.index') },
-    { title: 'Pièces', href: route('atelier.pieces.index') },
-    { title: 'Créer', href: route('atelier.pieces.create') },
+    { title: 'Magasin', href: route('magasin.index') },
+    { title: 'Pièces', href: route('magasin.pieces.index') },
+    { title: 'Créer', href: route('magasin.pieces.create') },
 ];
 
 const form = useForm({

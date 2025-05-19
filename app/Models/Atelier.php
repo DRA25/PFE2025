@@ -16,6 +16,7 @@ class Atelier extends Model
     protected $fillable = [
         'id_atelier',
         'adresse_atelier',
+        'id_centre'
     ];
 
     public function demandePieces()

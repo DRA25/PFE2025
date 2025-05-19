@@ -215,7 +215,7 @@ const requestSort = (column: string) => {
                             <Link
                                 v-if="dra.etat === 'actif'"
                                 :href="route('achat.dras.factures.index', { dra: dra.n_dra })"
-                                class="bg-[#042B62] dark:bg-[#F3B21B] text-white px-3 py-1 rounded-lg hover:bg-indigo-600 dark:hover:bg-yellow-400 transition flex items-center gap-1"
+                                class="bg-[#042B62] dark:bg-indigo-500 text-white px-3 py-1 rounded-lg hover:bg-indigo-600 dark:hover:bg-indigo-200 transition flex items-center gap-1"
                             >
                                 <FileText class="w-4 h-4" />
                                 <span>Factures</span>
@@ -224,7 +224,7 @@ const requestSort = (column: string) => {
                             <Link
                                 v-if="dra.etat === 'actif'"
                                 :href="route('achat.dras.bon-achats.index', { dra: dra.n_dra })"
-                                class="bg-[#042B62] text-white px-3 py-1 rounded-lg hover:bg-indigo-600 dark:bg-[#F3B21B] dark:hover:bg-yellow-400 transition flex items-center gap-1"
+                                class="bg-[#042B62] text-white px-3 py-1 rounded-lg hover:bg-indigo-600 dark:bg-indigo-500 dark:hover:bg-indigo-200 transition flex items-center gap-1"
                             >
                                 <FileText class="w-4 h-4" />
                                 <span>Bons d'Achat</span>

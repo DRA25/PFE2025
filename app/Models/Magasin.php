@@ -16,6 +16,7 @@ class Magasin extends Model
     protected $fillable = [
         'id_magasin',
         'adresse_magasin',
+        'id_centre'
     ];
 
     public function demandePieces()

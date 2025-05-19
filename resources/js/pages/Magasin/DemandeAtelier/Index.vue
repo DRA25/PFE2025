@@ -83,19 +83,19 @@ const requestSort = (column: string) => {
 <template>
     <Head title="Mes Demandes de Pièces" />
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex justify-between m-5">
-            <h1 class="text-lg font-bold text-left text-[#042B62FF] dark:text-[#BDBDBDFF]">
-                Mes Demandes de Pièces
-            </h1>
-            <div class="space-x-4">
-                <a :href="route('magasin.mes-demandes.export-list')"
-                   class="bg-green-700 text-white px-4 py-2 rounded-lg hover:bg-green-500 transition">
-                    Exporter la liste PDF
-                </a>
-            </div>
+        <div class="flex justify-end m-5">
+            <a :href="route('magasin.mes-demandes.export-list')"
+               class="bg-green-700 text-white px-4 py-2 rounded-lg hover:bg-green-500 transition">
+                Exporter la liste PDF
+            </a>
         </div>
-
         <div class="m-5 bg-gray-100 dark:bg-gray-800 rounded-lg">
+            <div class="flex justify-between m-5">
+                <h1 class="text-lg font-bold text-left text-[#042B62FF] dark:text-[#BDBDBDFF]">
+                    Mes Demandes de Pièces
+                </h1>
+            </div>
+
             <Table class="m-3 w-39/40">
                 <TableHeader>
                     <TableRow>
@@ -128,7 +128,7 @@ const requestSort = (column: string) => {
                             <ArrowUpDown class="ml-2 h-4 w-4 inline-block" />
                         </TableHead>
                         <TableHead class="text-[#042B62FF] dark:text-[#BDBDBDFF]">Pièce</TableHead>
-                        <TableHead class="text-[#042B62FF] dark:text-[#BDBDBDFF]">Atelier</TableHead>
+                        <TableHead class="text-[#042B62FF] dark:text-[#BDBDBDFF]">Origine</TableHead>
                         <TableHead class="text-[#042B62FF] dark:text-[#BDBDBDFF]">Centre</TableHead>
                         <TableHead class="text-[#042B62FF] dark:text-[#BDBDBDFF]">Actions</TableHead>
                     </TableRow>
@@ -146,23 +146,33 @@ const requestSort = (column: string) => {
                         <TableCell>{{ demande.qte_demandep }}</TableCell>
                         <TableCell>{{ demande.piece?.nom_piece || 'N/A' }}</TableCell>
                         <TableCell>
-                            {{ demande.atelier?.adresse_atelier || 'N/A' }}
+                            {{
+                                demande.magasin
+                                    ? `Magasin - ${demande.magasin.adresse_magasin}`
+                                    : demande.atelier
+                                        ? `Atelier - ${demande.atelier.adresse_atelier}`
+                                        : 'N/A'
+                            }}
                         </TableCell>
                         <TableCell>
-                            {{ demande.atelier?.centre?.nom_centre || demande.atelier?.centre?.id_centre || 'N/A' }}
+                            {{
+                                demande.magasin?.centre?.nom_centre
+                                || demande.magasin?.centre?.id_centre
+                                || demande.atelier?.centre?.nom_centre
+                                || demande.atelier?.centre?.id_centre
+                                || 'N/A'
+                            }}
                         </TableCell>
                         <TableCell>
-                            <div class="flex space-x-2">
-                                <Link
-                                    :href="route('magasin.mes-demandes.show', { demande_piece: demande.id_dp })"
-                                    class="bg-blue-600 text-white px-3 py-1 rounded-lg hover:bg-blue-400 transition"
-                                >
-                                    <span class="inline-flex items-center space-x-1">
-                                        <span>Voir</span>
-                                        <Eye class="w-4 h-4" />
-                                    </span>
-                                </Link>
-                            </div>
+                            <Link
+                                :href="route('magasin.mes-demandes.show', { demande_piece: demande.id_dp })"
+                                class="bg-blue-600 text-white px-3 py-1 rounded-lg hover:bg-blue-400 transition"
+                            >
+                                <span class="inline-flex items-center space-x-1">
+                                    <span>Voir</span>
+                                    <Eye class="w-4 h-4" />
+                                </span>
+                            </Link>
                         </TableCell>
                     </TableRow>
                 </TableBody>

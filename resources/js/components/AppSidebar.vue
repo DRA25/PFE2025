@@ -2,7 +2,15 @@
 import NavFooter from '@/components/NavFooter.vue';
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
-import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
+import {
+    Sidebar,
+    SidebarContent,
+    SidebarFooter,
+    SidebarHeader,
+    SidebarMenu,
+    SidebarMenuButton,
+    SidebarMenuItem
+} from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/vue3';
 import { BookOpen, Folder, LayoutGrid,Info , Archive, Lock ,Contact,Wrench,Store,ShoppingCart,SearchCheck,Banknote,Building,User} from 'lucide-vue-next';
@@ -38,6 +46,24 @@ if (user.value?.roles?.some((role: any) => role.name === 'admin' )) {
         title: 'Centre',
         href: '/centres',
         icon: Building,
+    });
+}
+
+// Conditionally add "atelier"
+if (user.value?.roles?.some((role: any) => role.name === 'admin' )) {
+    mainNavItems.push({
+        title: 'Gestion des Ateliers',
+        href: '/gestionatelier',
+        icon: Wrench,
+    });
+}
+
+// Conditionally add "magasin"
+if (user.value?.roles?.some((role: any) => role.name === 'admin' )) {
+    mainNavItems.push({
+        title: 'Gestion des Magasins',
+        href: '/gestionmagasin',
+        icon: Store,
     });
 }
 
@@ -131,6 +157,7 @@ if (user.value?.roles?.some((role: any) => role.name === 'admin' || role.name ==
 
 
                     </SidebarMenuButton>
+
                 </SidebarMenuItem>
             </SidebarMenu>
         </SidebarHeader>

@@ -11,6 +11,12 @@ class PieceController extends Controller
 {
     public function index()
     {
+        if (auth()->user()->hasRole('service magasin')) {
+            return Inertia::render('Magasin/Piece/Index', [
+                'pieces' => Piece::all(),
+            ]);
+        }
+
         return Inertia::render('Atelier/Piece/Index', [
             'pieces' => Piece::all(),
         ]);
@@ -18,7 +24,14 @@ class PieceController extends Controller
 
     public function create()
     {
+        if (auth()->user()->hasRole('service magasin')) {
+            // For magasin service, show Magasin Create page (adjust path as needed)
+            return Inertia::render('Magasin/Piece/Create');
+        }
+
+// Otherwise, show Atelier Create page
         return Inertia::render('Atelier/Piece/Create');
+
     }
 
     public function store(Request $request)
@@ -33,14 +46,29 @@ class PieceController extends Controller
 
         Piece::create($validated);
 
-        return redirect()->route('atelier.pieces.index')->with('success', 'Piece created successfully.');
+        if (auth()->user()->hasRole('service magasin')) {
+            return redirect()->route('magasin.pieces.index')
+                ->with('success', 'Pièce créée avec succès.');
+        }
+
+        return redirect()->route('atelier.pieces.index')
+            ->with('success', 'Pièce créée avec succès.');
+
     }
 
     public function edit(Piece $piece)
     {
+
+        if (auth()->user()->hasRole('service magasin')) {
+            return Inertia::render('Magasin/Piece/Edit', [
+                'piece' => $piece,
+            ]);
+        }
+
         return Inertia::render('Atelier/Piece/Edit', [
             'piece' => $piece,
         ]);
+
     }
 
     public function update(Request $request, Piece $piece)
@@ -55,7 +83,12 @@ class PieceController extends Controller
 
         $piece->update($validated);
 
-        return redirect()->route('atelier.pieces.index')->with('success', 'Piece updated successfully.');
+        if (auth()->user()->hasRole('service magasin')) {
+            return redirect()->route('magasin.pieces.index')->with('success', 'Pièce mise à jour avec succès.');
+        }
+
+        return redirect()->route('atelier.pieces.index')->with('success', 'Pièce mise à jour avec succès.');
+
     }
 
     public function destroy($id_piece)
@@ -70,8 +103,14 @@ class PieceController extends Controller
                 ->with('success', 'Pièce supprimée avec succès');
 
         } catch (\Exception $e) {
+            if (auth()->user()->hasRole('service magasin')) {
+                return redirect()->route('magasin.pieces.index')
+                    ->with('error', 'Erreur lors de la suppression de la pièce');
+            }
+
             return redirect()->route('atelier.pieces.index')
                 ->with('error', 'Erreur lors de la suppression de la pièce');
+
         }
     }
 }

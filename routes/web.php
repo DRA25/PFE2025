@@ -9,9 +9,11 @@ use App\Http\Controllers\Achat\DraController;
 use App\Http\Controllers\Achat\FactureController;
 use App\Http\Controllers\Atelier\AtelierController;
 use App\Http\Controllers\Atelier\DPieceController;
+use App\Http\Controllers\Atelier\GestionAtelierController;
 use App\Http\Controllers\Atelier\PieceController;
 use App\Http\Controllers\CentreController;
 use App\Http\Controllers\FournisseurController;
+use App\Http\Controllers\Magasin\GestionMagasinController;
 use App\Http\Controllers\Magasin\MagasinController;
 use App\Http\Controllers\Magasin\DMPieceController;
 use App\Http\Controllers\Magasin\MagasinDemandePieceController;
@@ -221,6 +223,28 @@ Route::middleware(['auth', 'role:service achat|admin'])->group(function () {
     Route::get('/fournisseurs/{fournisseur}/edit', [FournisseurController::class, 'edit'])->name('fournisseurs.edit');
     Route::put('/fournisseurs/{fournisseur}', [FournisseurController::class, 'update'])->name('fournisseurs.update');
     Route::delete('/fournisseurs/{fournisseur}', [FournisseurController::class, 'destroy'])->name('fournisseurs.destroy');
+});
+
+//GestionAtelier and GestionMagasin Routes
+Route::middleware(['auth', 'role:admin'])->group(function () {
+
+    Route::prefix('gestionatelier')->group(function () {
+        Route::get('/', [GestionAtelierController::class, 'index'])->name('gestionatelier.index');
+        Route::get('/create', [GestionAtelierController::class, 'create'])->name('gestionatelier.create');
+        Route::post('/', [GestionAtelierController::class, 'store'])->name('gestionatelier.store');
+        Route::get('/{gestionatelier}/edit', [GestionAtelierController::class, 'edit'])->name('gestionatelier.edit');
+        Route::put('/{gestionatelier}', [GestionAtelierController::class, 'update'])->name('gestionatelier.update');
+        Route::delete('/{gestionatelier}', [GestionAtelierController::class, 'destroy'])->name('gestionatelier.destroy');
+    });
+
+    Route::prefix('gestionmagasin')->controller(GestionMagasinController::class)->name('gestionmagasin.')->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/', 'store')->name('store');
+        Route::get('/{gestionmagasin}/edit', 'edit')->name('edit');
+        Route::put('/{gestionmagasin}', 'update')->name('update');
+        Route::delete('/{gestionmagasin}', 'destroy')->name('destroy');
+    });
 });
 
 
