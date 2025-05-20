@@ -69,25 +69,47 @@ class MagasinDemandePieceController extends Controller
     }
 
     // PDF export for all demandes of the current magasin
-    public function exportListPdf()
+    public function exportListPdf(Request $request)
     {
+        // Start building the query
         $demandes = DemandePiece::with([
             'magasin.centre',
             'atelier.centre',
             'piece'
-        ])
-            ->where(function ($query) {
-                $query->whereNotNull('id_atelier')
-                    ->whereNull('id_magasin');
-            })
-            ->orWhere(function ($query) {
-                $query->whereNull('id_magasin')
-                    ->whereNull('id_atelier');
-            })
-            ->orderBy('date_dp', 'desc')
-            ->get();
+        ]);
 
-        $pdf = Pdf::loadView('magasin.demandespieces.pdf-export', ['demandes' => $demandes]);
+        $etat = $request->input('etat'); // Get the etat from the request
+
+        // Apply the OR WHERE conditions with etat filtering
+        $demandes->where(function ($query) use ($etat) {
+            $query->whereNotNull('id_atelier')
+                ->whereNull('id_magasin')
+                ->when($etat, function ($q) use ($etat) {
+                    $q->where('etat_dp', $etat);
+                });
+        })
+            ->orWhere(function ($query) use ($etat) {
+                $query->whereNull('id_magasin')
+                    ->whereNull('id_atelier')
+                    ->when($etat, function ($q) use ($etat) {
+                        $q->where('etat_dp', $etat);
+                    });
+            });
+
+        // Apply the ordering
+        $demandes->orderBy('date_dp', 'desc');
+
+        // Get the filtered results
+        $filteredDemandes = $demandes->get();
+
+        // Pass etat to the view
+        $pdf = Pdf::loadView('magasin.demandespieces.pdf-export', [
+            'demandes' => $filteredDemandes,
+            'etat'     => $etat,
+        ]);
+
         return $pdf->download('mes-demandes-list-'.now()->format('Y-m-d').'.pdf');
     }
+
+
 }

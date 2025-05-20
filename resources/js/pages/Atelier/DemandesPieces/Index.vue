@@ -2,9 +2,9 @@
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { TableHeader, TableBody, TableRow, TableCell, TableHead } from '@/components/ui/table';
-import { type BreadcrumbItem } from '@/types';
 import { Pencil, Trash2, ArrowUpDown, Search } from 'lucide-vue-next';
-import { computed, ref } from 'vue';
+import { ref, computed } from 'vue';
+import type { BreadcrumbItem } from '@/types';
 
 defineProps<{
     demandes: {
@@ -24,11 +24,10 @@ defineProps<{
         atelier?: {
             adresse_atelier: string;
         };
-    }[]
+    }[];
 }>();
 
 const page = usePage();
-
 const user = computed(() => page.props.auth.user);
 
 const isServiceAtelier = computed(() =>
@@ -44,27 +43,11 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Demandes de Pièces', href: route('atelier.demandes-pieces.index') }
 ];
 
-function deleteDemande(id_dp: number) {
-    if (confirm('Voulez-vous vraiment supprimer cette demande ?')) {
-        router.delete(route('atelier.demandes-pieces.destroy', id_dp), {
-            onSuccess: () => {},
-            onError: () => alert('Erreur lors de la suppression')
-        });
-    }
-}
-
-// 🔍 Search + Sort + Filter
-
 const searchQuery = ref('');
 const sortConfig = ref<{ column: string; direction: 'asc' | 'desc' } | null>(null);
 const selectedEtat = ref<string | null>(null);
 
-const etatOptions = [
-    'En attente',
-    'Livrée',
-    'Validée',
-    'Refusée',
-];
+const etatOptions = ['En attente', 'Livrée', 'Validée', 'Refusée'];
 
 const requestSort = (column: string) => {
     if (!sortConfig.value || sortConfig.value.column !== column) {
@@ -117,8 +100,16 @@ const sortedDemandes = computed(() => {
 
     return data;
 });
-</script>
 
+function deleteDemande(id_dp: number) {
+    if (confirm('Voulez-vous vraiment supprimer cette demande ?')) {
+        router.delete(route('atelier.demandes-pieces.destroy', id_dp), {
+            onSuccess: () => {},
+            onError: () => alert('Erreur lors de la suppression'),
+        });
+    }
+}
+</script>
 <template>
     <Head title="Liste des Demandes de Pièces" />
     <AppLayout :breadcrumbs="breadcrumbs">
@@ -141,35 +132,27 @@ const sortedDemandes = computed(() => {
             </Link>
         </div>
 
-        <!-- État Filter Tags -->
-        <div class="flex gap-2 flex-wrap m-5">
-            <button
-                v-for="etat in etatOptions"
-                :key="etat"
-                @click="selectedEtat = etat"
-                :class="[
-                    'px-3 py-1 rounded-full border text-sm',
-                    selectedEtat === etat
-                        ? 'bg-blue-600 text-white border-blue-700'
-                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100 dark:bg-gray-700 dark:text-white'
-                ]"
-            >
-                {{ etat }}
-            </button>
-            <button
-                v-if="selectedEtat"
-                @click="selectedEtat = null"
-                class="px-3 py-1 rounded-full border bg-red-100 text-red-700 border-red-300 hover:bg-red-200 dark:bg-red-800 dark:text-white"
-            >
-                Réinitialiser le filtre
-            </button>
-        </div>
-
         <div class="m-5 mr-2 bg-gray-100 dark:bg-gray-800 rounded-lg">
             <div class="flex justify-between m-5">
                 <h1 class="text-lg font-bold text-left text-[#042B62FF] dark:text-[#BDBDBDFF]">
                     Liste des Demandes de Pièces
                 </h1>
+            </div>
+
+            <!-- Moved filter tags here below the title -->
+            <div class="flex flex-wrap gap-2 px-5 pb-2">
+                <button
+                    v-for="etat in etatOptions"
+                    :key="etat"
+                    @click="selectedEtat = selectedEtat === etat ? null : etat"
+                    class="px-4 py-1 rounded-full border text-sm font-medium transition"
+                    :class="{
+                        'bg-blue-600 text-white': selectedEtat === etat,
+                        'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200': selectedEtat !== etat
+                    }"
+                >
+                    {{ etat }}
+                </button>
             </div>
 
             <Table class="m-3 w-39/40">
@@ -231,3 +214,4 @@ const sortedDemandes = computed(() => {
         </div>
     </AppLayout>
 </template>
+

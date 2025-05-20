@@ -69,27 +69,46 @@ class AchatDemandePieceController extends Controller
         return $pdf->download('demande_piece_' . $demande_piece->id_dp . '.pdf');
     }
 
-    public function exportListPdf()
+    public function exportListPdf(Request $request)
     {
-        $demandes = DemandePiece::with(['magasin.centre', 'atelier.centre', 'piece'])
-            ->where(function ($query) {
-                $query->whereNotNull('id_magasin')
-                    ->whereNull('id_atelier');
-            })
-            ->orWhere(function ($query) {
+        // Start building the query
+        $demandes = DemandePiece::with([
+            'magasin.centre',
+            'atelier.centre',
+            'piece'
+        ]);
+
+        $etat = $request->input('etat'); // Get the etat from the request
+
+        // Apply the OR WHERE conditions with etat filtering
+        $demandes->where(function ($query) use ($etat) {
+            $query->whereNotNull('id_magasin')
+                ->whereNull('id_atelier')
+                ->when($etat, function ($q) use ($etat) {
+                    $q->where('etat_dp', $etat);
+                });
+        })
+            ->orWhere(function ($query) use ($etat) {
                 $query->whereNull('id_magasin')
-                    ->whereNull('id_atelier');
-            })
-            ->orderBy('date_dp', 'desc')
-            ->get();
+                    ->whereNull('id_atelier')
+                    ->when($etat, function ($q) use ($etat) {
+                        $q->where('etat_dp', $etat);
+                    });
+            });
 
-        // Debugging: Check if data exists
-        if ($demandes->isEmpty()) {
-            abort(404, 'No demandes found');
-        }
+        // Apply the ordering
+        $demandes->orderBy('date_dp', 'desc');
 
-        return Pdf::loadView('achat.demandespieces.pdf-export', [
-            'demandes' => $demandes
-        ])->download('demandes-list-'.now()->format('Y-m-d').'.pdf');
+        // Get the filtered results
+        $filteredDemandes = $demandes->get();
+
+        // Pass etat to the view
+        $pdf = Pdf::loadView('achat.demandespieces.pdf-export', [
+            'demandes' => $filteredDemandes,
+            'etat'     => $etat,
+        ]);
+
+        return $pdf->download('mes-demandes-list-'.now()->format('Y-m-d').'.pdf');
     }
+
 }

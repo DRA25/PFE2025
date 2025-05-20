@@ -82,7 +82,12 @@
 </table>
 
 <p class="text-center">Généré le: {{ now()->format('d/m/Y H:i') }}</p>
+<h1>
 
+    @if($etat)
+        Filtré par État: {{ $etat }}  {{-- Use $etat here --}}
+    @endif
+</h1>
 <table class="t2">
     <thead>
     <tr>

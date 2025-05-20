@@ -47,12 +47,7 @@ const searchQuery = ref('');
 const sortConfig = ref<{ column: string; direction: 'asc' | 'desc' } | null>(null);
 const selectedEtat = ref<string | null>(null);
 
-const etatOptions = [
-    'En attente',
-    'Livrée',
-    'Validée',
-    'Refusée',
-];
+const etatOptions = ['En attente', 'Livrée', 'Validée', 'Refusée'];
 
 const requestSort = (column: string) => {
     if (!sortConfig.value || sortConfig.value.column !== column) {
@@ -138,35 +133,27 @@ function deleteDemande(id_dp: number) {
             </Link>
         </div>
 
-        <!-- État Filter Tags -->
-        <div class="flex gap-2 flex-wrap m-5">
-            <button
-                v-for="etat in etatOptions"
-                :key="etat"
-                @click="selectedEtat = etat"
-                :class="[
-                    'px-3 py-1 rounded-full border text-sm',
-                    selectedEtat === etat
-                        ? 'bg-blue-600 text-white border-blue-700'
-                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100 dark:bg-gray-700 dark:text-white'
-                ]"
-            >
-                {{ etat }}
-            </button>
-            <button
-                v-if="selectedEtat"
-                @click="selectedEtat = null"
-                class="px-3 py-1 rounded-full border bg-red-100 text-red-700 border-red-300 hover:bg-red-200 dark:bg-red-800 dark:text-white"
-            >
-                Réinitialiser le filtre
-            </button>
-        </div>
-
         <div class="m-5 mr-2 bg-gray-100 dark:bg-gray-800 rounded-lg">
-            <div class="flex justify-between m-5">
+            <div class="flex justify-between items-center m-5">
                 <h1 class="text-lg font-bold text-left text-[#042B62FF] dark:text-[#BDBDBDFF]">
                     Liste des Demandes de Pièces
                 </h1>
+            </div>
+
+            <!-- Tag-style filters inside the table container -->
+            <div class="flex flex-wrap gap-2 px-5 pb-2">
+                <button
+                    v-for="etat in etatOptions"
+                    :key="etat"
+                    @click="selectedEtat = selectedEtat === etat ? null : etat"
+                    class="px-4 py-1 rounded-full border text-sm font-medium transition"
+                    :class="{
+            'bg-blue-600 text-white': selectedEtat === etat,
+            'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200': selectedEtat !== etat
+          }"
+                >
+                    {{ etat }}
+                </button>
             </div>
 
             <Table class="m-3 w-39/40">
@@ -204,9 +191,9 @@ function deleteDemande(id_dp: number) {
                         <TableCell>{{ demande.etat_dp }}</TableCell>
                         <TableCell>{{ demande.piece?.nom_piece }}</TableCell>
                         <TableCell>{{ demande.qte_demandep }}</TableCell>
-                        <TableCell v-if="isServiceMagasin">{{ demande.magasin?.adresse_magasin || 'N/A' }}</TableCell>
-                        <TableCell v-if="isServiceAtelier">{{ demande.atelier?.adresse_atelier || 'N/A' }}</TableCell>
-                        <TableCell class="flex flex-wrap gap-2">
+                        <TableCell v-if="isServiceMagasin">{{ demande.magasin?.adresse_magasin || '—' }}</TableCell>
+                        <TableCell v-if="isServiceAtelier">{{ demande.atelier?.adresse_atelier || '—' }}</TableCell>
+                        <TableCell class="flex space-x-2">
                             <Link
                                 :href="route('magasin.demandes-pieces.edit', demande.id_dp)"
                                 class="bg-green-600 text-white px-3 py-1 rounded-lg hover:bg-green-400 transition flex items-center gap-1"
@@ -222,9 +209,11 @@ function deleteDemande(id_dp: number) {
                                 <span>Supprimer</span>
                             </button>
                         </TableCell>
+
                     </TableRow>
                 </TableBody>
             </Table>
         </div>
     </AppLayout>
 </template>
+

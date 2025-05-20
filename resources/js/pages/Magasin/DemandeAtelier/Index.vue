@@ -10,7 +10,7 @@ import {
     TableHead
 } from '@/components/ui/table';
 import { type BreadcrumbItem } from '@/types';
-import { Eye, ArrowUpDown } from 'lucide-vue-next';
+import { Eye, ArrowUpDown, Search } from 'lucide-vue-next';
 import { ref, computed } from 'vue';
 
 const props = defineProps<{
@@ -24,10 +24,10 @@ const props = defineProps<{
             adresse_magasin: string;
             centre?: { id_centre: number; nom_centre?: string };
         };
-        atelier?:{
+        atelier?: {
             adresse_atelier: string;
-            centre?: { id_centre: number; nom_centre?:string };
-        }
+            centre?: { id_centre: number; nom_centre?: string };
+        };
     }>;
 }>();
 
@@ -36,14 +36,36 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Mes Demandes de Pièces', href: route('magasin.mes-demandes.index') }
 ];
 
+const etatOptions = ['En attente', 'Validée', 'Refusée', 'Livrée'];
+const selectedEtat = ref<string | null>(null);
+const searchQuery = ref('');
+
 const sortConfig = ref<{ column: string; direction: 'asc' | 'desc' } | null>(null);
 
-const sortedDemandes = computed(() => {
-    const demandes = [...props.demandes];
+const filteredDemandes = computed(() => {
+    // Filter by selected state first
+    let data = selectedEtat.value
+        ? props.demandes.filter(d => d.etat_dp === selectedEtat.value)
+        : props.demandes;
 
-    if (!sortConfig.value) {
-        return demandes;
+    // Then filter by search query (search multiple fields)
+    if (searchQuery.value) {
+        const query = searchQuery.value.toLowerCase();
+        data = data.filter(d =>
+            d.etat_dp.toLowerCase().includes(query) ||
+            d.piece?.nom_piece?.toLowerCase().includes(query) ||
+            d.qte_demandep.toString().includes(query) ||
+            d.magasin?.adresse_magasin?.toLowerCase().includes(query) ||
+            d.atelier?.adresse_atelier?.toLowerCase().includes(query)
+        );
     }
+    return data;
+});
+
+const sortedDemandes = computed(() => {
+    const demandes = [...filteredDemandes.value];
+
+    if (!sortConfig.value) return demandes;
 
     const { column, direction } = sortConfig.value;
     return demandes.sort((a, b) => {
@@ -58,10 +80,6 @@ const sortedDemandes = computed(() => {
             return direction === 'asc'
                 ? Number(valueA) - Number(valueB)
                 : Number(valueB) - Number(valueA);
-        } else if (column === 'etat_dp') {
-            return direction === 'asc'
-                ? String(valueA).localeCompare(String(valueB))
-                : String(valueB).localeCompare(String(valueA));
         } else {
             const stringA = String(valueA).toLowerCase();
             const stringB = String(valueB).toLowerCase();
@@ -78,17 +96,38 @@ const requestSort = (column: string) => {
             sortConfig.value.direction === 'asc' ? 'desc' : 'asc';
     }
 };
+
+const exportUrl = computed(() => {
+    return selectedEtat.value
+        ? route('magasin.mes-demandes.export-list', { etat: selectedEtat.value })
+        : route('magasin.mes-demandes.export-list');
+});
 </script>
 
 <template>
     <Head title="Mes Demandes de Pièces" />
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex justify-end m-5">
-            <a :href="route('magasin.mes-demandes.export-list')"
-               class="bg-green-700 text-white px-4 py-2 rounded-lg hover:bg-green-500 transition">
+        <div class="flex flex-wrap justify-between items-center m-5 mb-0 gap-4">
+            <!-- Search input with icon -->
+            <div class="flex items-center gap-2 w-full md:w-1/3">
+                <Search class="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                <input
+                    v-model="searchQuery"
+                    type="text"
+                    placeholder="Rechercher par état, pièce, atelier ou magasin..."
+                    class="w-full bg-gray-100 px-4 py-2 rounded-md border border-gray-200 dark:border-gray-700 dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+                />
+            </div>
+
+            <!-- Export button -->
+            <a
+                :href="exportUrl"
+                class="bg-green-700 text-white px-4 py-2 rounded-lg hover:bg-green-500 transition"
+            >
                 Exporter la liste PDF
             </a>
         </div>
+
         <div class="m-5 bg-gray-100 dark:bg-gray-800 rounded-lg">
             <div class="flex justify-between m-5">
                 <h1 class="text-lg font-bold text-left text-[#042B62FF] dark:text-[#BDBDBDFF]">
@@ -96,36 +135,35 @@ const requestSort = (column: string) => {
                 </h1>
             </div>
 
+            <div class="flex flex-wrap gap-2 px-5 pb-2">
+                <button
+                    v-for="etat in etatOptions"
+                    :key="etat"
+                    @click="selectedEtat = selectedEtat === etat ? null : etat"
+                    class="px-4 py-1 rounded-full border text-sm font-medium transition"
+                    :class="{
+                        'bg-blue-600 text-white': selectedEtat === etat,
+                        'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200': selectedEtat !== etat
+                    }"
+                >
+                    {{ etat }}
+                </button>
+            </div>
+
             <Table class="m-3 w-39/40">
                 <TableHeader>
                     <TableRow>
-                        <TableHead
-                            class="text-[#042B62FF] dark:text-[#BDBDBDFF] cursor-pointer"
-                            @click="requestSort('id_dp')"
-                        >
-                            ID
-                            <ArrowUpDown class="ml-2 h-4 w-4 inline-block" />
+                        <TableHead @click="requestSort('id_dp')" class="cursor-pointer text-[#042B62FF] dark:text-[#BDBDBDFF]">
+                            ID <ArrowUpDown class="ml-2 h-4 w-4 inline-block" />
                         </TableHead>
-                        <TableHead
-                            class="text-[#042B62FF] dark:text-[#BDBDBDFF] cursor-pointer"
-                            @click="requestSort('date_dp')"
-                        >
-                            Date
-                            <ArrowUpDown class="ml-2 h-4 w-4 inline-block" />
+                        <TableHead @click="requestSort('date_dp')" class="cursor-pointer text-[#042B62FF] dark:text-[#BDBDBDFF]">
+                            Date <ArrowUpDown class="ml-2 h-4 w-4 inline-block" />
                         </TableHead>
-                        <TableHead
-                            class="text-[#042B62FF] dark:text-[#BDBDBDFF] cursor-pointer"
-                            @click="requestSort('etat_dp')"
-                        >
-                            État
-                            <ArrowUpDown class="ml-2 h-4 w-4 inline-block" />
+                        <TableHead @click="requestSort('etat_dp')" class="cursor-pointer text-[#042B62FF] dark:text-[#BDBDBDFF]">
+                            État <ArrowUpDown class="ml-2 h-4 w-4 inline-block" />
                         </TableHead>
-                        <TableHead
-                            class="text-[#042B62FF] dark:text-[#BDBDBDFF] cursor-pointer"
-                            @click="requestSort('qte_demandep')"
-                        >
-                            Quantité
-                            <ArrowUpDown class="ml-2 h-4 w-4 inline-block" />
+                        <TableHead @click="requestSort('qte_demandep')" class="cursor-pointer text-[#042B62FF] dark:text-[#BDBDBDFF]">
+                            Quantité <ArrowUpDown class="ml-2 h-4 w-4 inline-block" />
                         </TableHead>
                         <TableHead class="text-[#042B62FF] dark:text-[#BDBDBDFF]">Pièce</TableHead>
                         <TableHead class="text-[#042B62FF] dark:text-[#BDBDBDFF]">Origine</TableHead>
