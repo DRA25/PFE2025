@@ -17,7 +17,8 @@ use App\Http\Controllers\Magasin\DMPieceController;
 use App\Http\Controllers\Magasin\GestionMagasinController;
 use App\Http\Controllers\Magasin\MagasinController;
 use App\Http\Controllers\Magasin\MagasinDemandePieceController;
-use App\Http\Controllers\paimentController;
+use App\Http\Controllers\PaimentController;
+use App\Http\Controllers\RemboursementController;
 use App\Http\Controllers\RoleUserController;
 use App\Http\Controllers\Scf\ConsulterDraController;
 use App\Http\Controllers\Scf\ScfController;
@@ -131,7 +132,17 @@ Route::middleware(['auth', 'role:service cf|admin'])
 //Paiment routes
 Route::middleware(['auth', 'role:service paiment|admin'])->group(function () {
     Route::get('/paiment', [PaimentController::class, 'index'])->name('paiment.index');
+
+    Route::prefix('/paiment/remboursements')->name('paiment.remboursements.')->group(function () {
+        Route::get('/', [RemboursementController::class, 'index'])->name('index');
+        Route::get('/create', [RemboursementController::class, 'create'])->name('create');
+        Route::post('/', [RemboursementController::class, 'store'])->name('store');
+        Route::get('/{remboursement}/edit', [RemboursementController::class, 'edit'])->name('edit');
+        Route::put('/{remboursement}', [RemboursementController::class, 'update'])->name('update');
+        Route::delete('/{remboursement}', [RemboursementController::class, 'destroy'])->name('destroy');
+    });
 });
+
 
 
 Route::get('dashboard', function () {
