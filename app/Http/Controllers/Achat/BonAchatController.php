@@ -21,6 +21,16 @@ return Inertia::render('BonAchat/Index', [
 ]);
 }
 
+    public function show(Dra $dra)
+    {
+        $bonAchats = $dra->bonAchats()->with('fournisseur:id_fourn,nom_fourn')->get();
+
+        return Inertia::render('BonAchat/Show', [
+            'dra' => $dra,
+            'bonAchats' => $bonAchats,
+        ]);
+    }
+
 public function create(Dra $dra)
 {
 $fournisseurs = Fournisseur::all(['id_fourn', 'nom_fourn']);

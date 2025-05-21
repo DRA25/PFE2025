@@ -117,6 +117,8 @@ Route::middleware(['auth', 'role:service cf|admin'])
     ->group(function () {
         // Dashboard
         Route::get('/', [ScfController::class, 'index'])->name('index');
+        Route::get('/dras/{dra}/factures', [FactureController::class, 'show'])->name('dras.factures.show');
+        Route::get('/dras/{dra}/bon-achats', [BonAchatController::class, 'show'])->name('dras.bon-achats.show');
 
         // DRA Routes
         Route::prefix('dras')->name('dras.')->group(function () {

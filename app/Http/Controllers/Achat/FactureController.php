@@ -22,6 +22,17 @@ return Inertia::render('Facture/Index', [
 ]);
 }
 
+    public function Show(Dra $dra)
+    {
+// Eager load 'fournisseur' relationship with factures
+        $factures = $dra->factures()->with('fournisseur:id_fourn,nom_fourn')->get();
+
+        return Inertia::render('Facture/Show', [
+            'dra' => $dra,
+            'factures' => $factures,
+        ]);
+    }
+
 public function create(Dra $dra)
 {
 // Fetch all fournisseurs for the select dropdown in create page

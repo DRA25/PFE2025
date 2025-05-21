@@ -30,7 +30,7 @@ const props = defineProps<{
 }>()
 
 const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Coordination Financière', href: '/scf' },
+    { title: 'Service Coordination Financière', href: '/scf' },
     { title: 'Consulter les DRAs', href: '/scf/consulterdra' },
 ]
 

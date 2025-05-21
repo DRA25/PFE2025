@@ -22,8 +22,8 @@ const form = useForm({
 });
 
 const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'SCF', href: route('scf.index') },
-    { title: 'DRAs', href: route('scf.dras.index') },
+    { title: 'Service Coordination Finnanciere', href: route('scf.index') },
+    { title: 'Consulter DRAs', href: route('scf.dras.index') },
     { title: `DRA ${props.dra.n_dra}`, href: route('scf.dras.show', { dra: props.dra.n_dra }) }
 ];
 
@@ -152,7 +152,7 @@ const submit = () => {
 
                     <Link
 
-                        :href="route('achat.dras.factures.index', { dra: dra.n_dra })"
+                        :href="route('scf.dras.factures.show', { dra: dra.n_dra })"
                         class="bg-[#042B62] dark:bg-indigo-500 text-white px-4 py-2 rounded-lg hover:bg-indigo-600 dark:hover:bg-indigo-200 transition flex items-center gap-1"
                     >
                         <FileText class="w-4 h-4" />
@@ -161,7 +161,7 @@ const submit = () => {
 
                     <Link
 
-                        :href="route('achat.dras.bon-achats.index', { dra: dra.n_dra })"
+                        :href="route('scf.dras.bon-achats.show', { dra: dra.n_dra })"
                         class="bg-[#042B62] text-white px-4 py-2 rounded-lg hover:bg-indigo-600 dark:bg-indigo-500 dark:hover:bg-indigo-200 transition flex items-center gap-1"
                     >
                         <FileText class="w-4 h-4" />
