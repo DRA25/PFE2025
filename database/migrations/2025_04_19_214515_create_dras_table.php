@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('id_centre');
             $table->foreign('id_centre')->references('id_centre')->on('centres')->onDelete('cascade');
             $table->date('date_creation');
-            $table->enum('etat', ['actif', 'cloture'])->default('actif');
+            $table->enum('etat', ['actif', 'cloture','refuse','accepte','rembourse'])->default('actif');
             $table->integer('total_dra');
             $table->timestamp('created_at')->nullable();
         });

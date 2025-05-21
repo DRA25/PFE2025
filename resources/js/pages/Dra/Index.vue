@@ -31,20 +31,34 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Liste des DRAs', href: '/achat/dras' },
 ]
 
+const etatOptions = ['actif', 'cloture', 'refuse', 'accepte'];
+const selectedEtat = ref<string | null>(null);
 const sortConfig = ref<{ column: string; direction: 'asc' | 'desc' } | null>(null);
 const searchQuery = ref('');
 
-const sortedDrasComputed = computed(() => {
-    let dras = [...props.dras];
+const filteredDras = computed(() => {
+    // Filter by selected state first
+    let data = selectedEtat.value
+        ? props.dras.filter(dra => dra.etat === selectedEtat.value)
+        : props.dras;
+
+    // Then filter by search query (search multiple fields)
     if (searchQuery.value) {
         const query = searchQuery.value.toLowerCase();
-        dras = dras.filter(dra =>
+        data = data.filter(dra =>
             dra.n_dra.toLowerCase().includes(query) ||
             dra.etat.toLowerCase().includes(query) ||
             new Date(dra.date_creation).toLocaleDateString().includes(query) ||
+            dra.total_dra.toString().includes(query) ||
             dra.centre.seuil_centre.toString().includes(query)
         );
     }
+    return data;
+});
+
+const sortedDrasComputed = computed(() => {
+    let dras = [...filteredDras.value]; // Use filteredDras here
+
     if (!sortConfig.value) {
         return dras;
     }
@@ -58,9 +72,15 @@ const sortedDrasComputed = computed(() => {
             const dateA = new Date(valueA).getTime();
             const dateB = new Date(valueB).getTime();
             return direction === 'asc' ? dateA - dateB : dateB - dateA;
-        } else if (column === 'total_dra' || column === 'id_centre' || column === 'centre.seuil_centre') {
+        } else if (column === 'total_dra' || column === 'id_centre') {
             return direction === 'asc' ? Number(valueA) - Number(valueB) : Number(valueB) - Number(valueA);
-        } else if (column === 'etat') {
+        } else if (column === 'centre.seuil_centre') {
+            // Access nested property for sorting
+            const seuilA = a.centre.seuil_centre;
+            const seuilB = b.centre.seuil_centre;
+            return direction === 'asc' ? seuilA - seuilB : seuilB - seuilA;
+        }
+        else if (column === 'etat') {
             return direction === 'asc'
                 ? String(valueA).localeCompare(String(valueB))
                 : String(valueB).localeCompare(String(valueA));
@@ -88,22 +108,31 @@ watch(
 
 const hasActiveDra = computed(() => localDras.value.some((dra) => dra.etat === 'actif'));
 
-const closeDra = (draId: string) => {
-    if (confirm('Êtes-vous sûr de vouloir clôturer ce DRA ?')) {
-        const updatedDras = localDras.value.map((dra) =>
-            dra.n_dra === draId ? { ...dra, etat: 'cloture' } : dra
-        );
-        localDras.value = updatedDras;
+const closeDra = (draId: string, currentEtat: string) => {
+    // Convert to lowercase for consistent comparison
+    const normalizedEtat = currentEtat.toLowerCase();
 
+    if (normalizedEtat !== 'refuse' && normalizedEtat !== 'actif') {
+        alert('Seuls les DRAs actifs ou refusés peuvent être clôturés');
+        return;
+    }
+
+    if (confirm('Êtes-vous sûr de vouloir clôturer ce DRA ?')) {
         router.put(route('achat.dras.close', { dra: draId }), {
             preserveScroll: true,
-            onSuccess: () => { },
+            onSuccess: () => {
+                localDras.value = localDras.value.map(dra =>
+                    dra.n_dra === draId ? { ...dra, etat: 'cloture' } : dra
+                );
+            },
             onError: (errors) => {
-                localDras.value = [...sortedDras.value];
-                alert('Erreur lors de la clôture du DRA: ' + (errors.message || 'Une erreur est survenue'));
+                alert('Erreur lors de la clôture du DRA: ' +
+                    (errors.message || 'Une erreur est survenue'));
             },
         });
     }
+
+
 };
 
 const confirmDeleteDra = (draId: string, etat: string) => {
@@ -162,6 +191,25 @@ const requestSort = (column: string) => {
                 <h1 class="text-lg font-bold text-left text-[#042B62FF] dark:text-[#BDBDBDFF]">Liste des DRAs</h1>
             </div>
 
+            <div class="flex flex-wrap gap-2 px-5 pb-2">
+                <button
+                    v-for="etat in etatOptions"
+                    :key="etat"
+                    @click="selectedEtat = selectedEtat === etat ? null : etat"
+                    class="px-4 py-1 rounded-full border text-sm font-medium transition"
+                    :class="{
+                        'bg-blue-600 text-white': selectedEtat === etat,
+                        'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200': selectedEtat !== etat
+                    }"
+                >
+                    {{ etat === 'actif' ? 'Actif' :
+                    etat === 'cloture' ? 'Clôturé' :
+                        etat === 'refuse' ? 'Refusé' :
+                            'Accepté'
+                    }}
+                </button>
+            </div>
+
             <Table class="m-3 w-39/40">
                 <TableHeader>
                     <TableRow>
@@ -201,19 +249,24 @@ const requestSort = (column: string) => {
                         <TableCell>{{ (dra.centre.seuil_centre - dra.total_dra).toLocaleString('fr-FR') }} DA</TableCell>
 
                         <TableCell>
-                            <span
-                                class="font-bold"
-                                :class="{
-                                    'text-green-600': dra.etat === 'actif',
-                                    'text-red-600': dra.etat === 'cloture'
-                                }"
-                            >
-                                {{ dra.etat === 'actif' ? 'ACTIF' : 'CLÔTURÉ' }}
-                            </span>
+    <span
+        class="font-bold"
+        :class="{
+            'text-green-600':dra.etat === 'actif' || dra.etat === 'accepte',
+            'text-red-600': dra.etat === 'cloture' || dra.etat === 'refuse'
+                  }"
+    >
+        {{
+            dra.etat === 'actif' ? 'ACTIF' :
+                dra.etat === 'cloture' ? 'CLÔTURÉ' :
+                    dra.etat === 'refuse' ? 'REFUSÉ' :
+                        'ACCEPTÉ'
+        }}
+    </span>
                         </TableCell>
                         <TableCell class="flex flex-wrap gap-2">
                             <Link
-                                v-if="dra.etat === 'actif'"
+                                v-if="dra.etat === 'actif' || dra.etat === 'refuse'"
                                 :href="route('achat.dras.factures.index', { dra: dra.n_dra })"
                                 class="bg-[#042B62] dark:bg-indigo-500 text-white px-3 py-1 rounded-lg hover:bg-indigo-600 dark:hover:bg-indigo-200 transition flex items-center gap-1"
                             >
@@ -222,7 +275,7 @@ const requestSort = (column: string) => {
                             </Link>
 
                             <Link
-                                v-if="dra.etat === 'actif'"
+                                v-if="dra.etat === 'actif' || dra.etat === 'refuse'"
                                 :href="route('achat.dras.bon-achats.index', { dra: dra.n_dra })"
                                 class="bg-[#042B62] text-white px-3 py-1 rounded-lg hover:bg-indigo-600 dark:bg-indigo-500 dark:hover:bg-indigo-200 transition flex items-center gap-1"
                             >
@@ -231,16 +284,17 @@ const requestSort = (column: string) => {
                             </Link>
 
                             <button
-                                v-if="dra.etat === 'actif'"
-                                @click="closeDra(dra.n_dra)"
-                                class="bg-yellow-500 text-white px-3 py-1 rounded-lg hover:bg-yellow-600 transition flex items-center gap-1"
+                                v-if="dra.etat === 'actif' || dra.etat === 'refuse'"
+                                @click="closeDra(dra.n_dra, dra.etat)"
+                                class="bg-orange-500 text-white px-3 py-1 rounded-lg hover:bg-orange-600 transition flex items-center gap-1"
                             >
                                 <Lock class="w-4 h-4" />
                                 <span>Clôturer</span>
                             </button>
 
+
                             <Link
-                                v-if="dra.etat === 'actif'"
+                                v-if="dra.etat === 'actif' || dra.etat === 'refuse'"
                                 :href="route('achat.dras.destroy', { dra: dra.n_dra })"
                                 method="delete"
                                 as="button"

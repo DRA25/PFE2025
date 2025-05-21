@@ -87,24 +87,22 @@ return Inertia::render('Dra/Edit', [
 ]);
 }
 
-public function update(Request $request, Dra $dra)
-{
-$userCentreId = Auth::user()->id_centre;
+    public function update(Request $request, Dra $dra)
+    {
+        // Authorization - ensure DRA belongs to user's center
+        if ($dra->id_centre !== Auth::user()->id_centre) {
+            abort(403, 'Unauthorized action.');
+        }
 
-// Authorization: Ensure the DRA belongs to the user's center
-if ($dra->id_centre !== $userCentreId) {
-abort(403, 'Unauthorized action.');
-}
+        $validated = $request->validate([
+            'etat' => 'required|string|in:cloture,refuse,accepte',
+        ]);
 
-$validated = $request->validate([
-'date_creation' => 'required|date',
-]);
+        $dra->update($validated);
 
-$dra->update($validated);
+        return redirect()->back()->with('success', 'État du DRA mis à jour avec succès.');
+    }
 
-return redirect()->route('achat.dras.index')
-->with('success', 'DRA mis à jour avec succès');
-}
 
 public function destroy($n_dra)
 {
@@ -137,22 +135,27 @@ return back()->withErrors(['error' => 'Erreur lors de la suppression: ' . $e->ge
 }
 }
 
-public function close(Dra $dra)
-{
-$userCentreId = Auth::user()->id_centre;
+    public function close(Dra $dra)
+    {
+        $userCentreId = Auth::user()->id_centre;
 
-// Authorization: Ensure the DRA belongs to the user's center
-if ($dra->id_centre !== $userCentreId) {
-abort(403, 'Unauthorized action.');
-}
+        // Authorization: Ensure the DRA belongs to the user's center
+        if ($dra->id_centre !== $userCentreId) {
+            abort(403, 'Unauthorized action.');
+        }
 
-if ($dra->etat !== 'actif') {
-return back()->withErrors(['etat' => 'Seuls les DRAs actifs peuvent être clôturés']);
-}
+        // Convert to lowercase for consistent comparison
+        $normalizedEtat = strtolower($dra->etat);
 
-$dra->update(['etat' => 'cloture']);
+        if ($normalizedEtat !== 'refuse' && $normalizedEtat !== 'actif') {
+            return back()->withErrors([
+                'etat' => 'Seuls les DRAs actifs ou refusés peuvent être clôturés'
+            ]);
+        }
 
-return redirect()->route('achat.dras.index')
-->with('success', 'DRA clôturé avec succès');
-}
+        $dra->update(['etat' => 'cloture']);
+
+        return redirect()->route('achat.dras.index')
+            ->with('success', 'DRA clôturé avec succès');
+    }
 }

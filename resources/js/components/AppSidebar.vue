@@ -110,7 +110,7 @@ if (user.value?.roles?.some((role: any) => role.name === 'admin' || role.name ==
     });
 }
     // Conditionally add "Achat"
-    if (user.value?.roles?.some((role: any) => role.name === 'admin' || role.name === 'service achat' || role.name === 'service cf')) {
+    if (user.value?.roles?.some((role: any) => role.name === 'admin' || role.name === 'service achat' )) {
         mainNavItems.push({
             title: 'Service Achat',
             href: '/achat',

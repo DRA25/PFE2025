@@ -13,13 +13,14 @@ use App\Http\Controllers\Atelier\GestionAtelierController;
 use App\Http\Controllers\Atelier\PieceController;
 use App\Http\Controllers\CentreController;
 use App\Http\Controllers\FournisseurController;
+use App\Http\Controllers\Magasin\DMPieceController;
 use App\Http\Controllers\Magasin\GestionMagasinController;
 use App\Http\Controllers\Magasin\MagasinController;
-use App\Http\Controllers\Magasin\DMPieceController;
 use App\Http\Controllers\Magasin\MagasinDemandePieceController;
 use App\Http\Controllers\paimentController;
 use App\Http\Controllers\RoleUserController;
-use App\Http\Controllers\ScfController;
+use App\Http\Controllers\Scf\ConsulterDraController;
+use App\Http\Controllers\Scf\ScfController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -51,7 +52,7 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
 
 
 
-Route::middleware(['auth', 'role:service cf|service achat|admin'])->group(function () {
+Route::middleware(['auth', 'role:service achat|admin'])->group(function () {
     // Group all achat-related routes under /achat prefix
     Route::prefix('achat')->name('achat.')->group(function () {
 
@@ -110,9 +111,20 @@ Route::middleware(['auth', 'role:service cf|service achat|admin'])->group(functi
 
 
 //SCF routes
-Route::middleware(['auth', 'role:service cf|admin'])->group(function () {
-    Route::get('/scf', [ScfController::class, 'index'])->name('scf.index');
-});
+Route::middleware(['auth', 'role:service cf|admin'])
+    ->prefix('scf')
+    ->name('scf.')
+    ->group(function () {
+        // Dashboard
+        Route::get('/', [ScfController::class, 'index'])->name('index');
+
+        // DRA Routes
+        Route::prefix('dras')->name('dras.')->group(function () {
+            Route::get('/', [ConsulterDraController::class, 'index'])->name('index');
+            Route::get('/{dra}', [ConsulterDraController::class, 'show'])->name('show');
+            Route::put('/{dra}', [DraController::class, 'update'])->name('update');
+        });
+    });
 
 //Paiment routes
 Route::middleware(['auth', 'role:service paiment|admin'])->group(function () {
