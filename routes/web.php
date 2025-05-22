@@ -13,6 +13,7 @@ use App\Http\Controllers\Atelier\GestionAtelierController;
 use App\Http\Controllers\Atelier\PieceController;
 use App\Http\Controllers\CentreController;
 use App\Http\Controllers\FournisseurController;
+use App\Http\Controllers\ListDraAccepteController;
 use App\Http\Controllers\Magasin\DMPieceController;
 use App\Http\Controllers\Magasin\GestionMagasinController;
 use App\Http\Controllers\Magasin\MagasinController;
@@ -76,7 +77,7 @@ Route::middleware(['auth', 'role:service achat|admin'])->group(function () {
         // DRAs routes - views located in pages/dra/
         Route::resource('dras', DraController::class)->names([
             'index' => 'dras.index',
-            'create' => 'dras.create',
+            'autocreate' => 'dras.auto-create',
             'store' => 'dras.store',
             'show' => 'dras.show',
             'edit' => 'dras.edit',
@@ -133,6 +134,10 @@ Route::middleware(['auth', 'role:service cf|admin'])
 Route::middleware(['auth', 'role:service paiment|admin'])->group(function () {
     Route::get('/paiment', [PaimentController::class, 'index'])->name('paiment.index');
 
+    Route::prefix('/paiment/dras')->name('dras.')->group(function () {
+        Route::get('/', [ListDraAccepteController::class, 'index'])->name('index');
+    });
+
     Route::prefix('/paiment/remboursements')->name('paiment.remboursements.')->group(function () {
         Route::get('/', [RemboursementController::class, 'index'])->name('index');
         Route::get('/create', [RemboursementController::class, 'create'])->name('create');
@@ -153,7 +158,7 @@ Route::get('dashboard', function () {
 Route::get('/about', [AboutPageController::class, 'show'])->name('about');
 
 // Editable routes - now available to any authenticated user
-Route::middleware(['auth'])->group(function () {
+Route::middleware(['auth','verified','role:admin'])->group(function () {
     Route::get('/about/edit', [AboutPageController::class, 'edit'])->name('about.edit');
     Route::put('/about', [AboutPageController::class, 'update'])->name('about.update');
     Route::get('/about/create', [AboutPageController::class, 'create'])->name('about.create');

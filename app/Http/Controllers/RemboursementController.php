@@ -7,6 +7,8 @@ use App\Models\Remboursement;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use App\Models\Centre;
+use Illuminate\Validation\Rule;
+
 
 class RemboursementController extends Controller
 {
@@ -27,7 +29,7 @@ class RemboursementController extends Controller
                 'id_centre' => $centre?->id_centre ?? null, // ← added
                 'seuil_centre' => $seuil_centre,
                 'total_dra' => $total_dra,
-                'montant_rembourse' => $seuil_centre - $total_dra,
+                'montant_rembourse' => $total_dra,
             ];
         });
 
@@ -38,7 +40,9 @@ class RemboursementController extends Controller
 
     public function create()
     {
-        $dras = Dra::where('etat', 'accepte')->get(['n_dra']);
+        $dras = Dra::where('etat', 'accepte')
+            ->doesntHave('remboursement')
+            ->get(['n_dra']);
 
         return Inertia::render('Paiment/Remboursements/Create', [
             'dras' => $dras,
@@ -46,12 +50,17 @@ class RemboursementController extends Controller
     }
 
 
+
     public function store(Request $request)
     {
         $validated = $request->validate([
             'date_remb' => 'required|date',
             'method_remb' => 'required|in:espece,cheque',
-            'n_dra' => 'required|exists:dras,n_dra',
+            'n_dra' => [
+                'required',
+                'exists:dras,n_dra',
+                Rule::unique('remboursements', 'n_dra'), // prevents duplicate remboursement
+            ],
         ]);
 
         Remboursement::create($validated);

@@ -22,7 +22,8 @@ const props = defineProps<{
         total_dra: number;
         created_at: string;
         centre: { seuil_centre: number };
-    }>
+    }>,
+    id_centre: string
 }>()
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -155,6 +156,19 @@ const requestSort = (column: string) => {
             sortConfig.value.direction === 'asc' ? 'desc' : 'asc';
     }
 };
+
+const createDra = () => {
+    if (hasActiveDra.value) return;
+
+    const draCount = props.dras.filter(dra => dra.id_centre === props.id_centre).length;
+    const newNDra = `${props.id_centre}-${String(draCount + 1).padStart(3, '0')}`;
+    const today = new Date().toISOString().slice(0, 10);
+
+    router.post(route('achat.dras.store'), {
+        n_dra: newNDra,
+        date_creation: today,
+    });
+};
 </script>
 
 <template>
@@ -170,20 +184,18 @@ const requestSort = (column: string) => {
                     class="w-full bg-gray-100 px-4 py-2 rounded-md border border-gray-200 dark:border-gray-700  dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
                 />
             </div>
-            <Link
-                :href="route('achat.dras.create')"
-                as="button"
+            <button
+                @click="createDra"
+                :disabled="hasActiveDra"
                 :class="{
                     'bg-[#042B62] dark:bg-[#F3B21B] dark:text-[#042B62] text-white hover:bg-blue-900 dark:hover:bg-yellow-200 cursor-pointer': !hasActiveDra,
                     'bg-gray-400 dark:bg-gray-600 text-gray-700 dark:text-gray-300 cursor-not-allowed': hasActiveDra
                 }"
                 class="px-4 py-2 rounded-lg transition flex items-center gap-1 ml-auto"
-                :disabled="hasActiveDra"
-                @click="(e) => hasActiveDra && e.preventDefault()"
             >
                 <Plus class="w-4 h-4" />
                 <span>Créer un DRA</span>
-            </Link>
+            </button>
         </div>
 
         <div class="m-5 mr-2 bg-gray-100 dark:bg-gray-800 rounded-lg">
@@ -254,7 +266,7 @@ const requestSort = (column: string) => {
         :class="{
             'text-green-600':dra.etat === 'actif' || dra.etat === 'accepte',
             'text-red-600': dra.etat === 'cloture' || dra.etat === 'refuse'
-                  }"
+                }"
     >
         {{
             dra.etat === 'actif' ? 'ACTIF' :

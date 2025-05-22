@@ -37,41 +37,46 @@ return [
 ]);
 }
 
-public function create()
-{
-$userCentreId = Auth::user()->id_centre;
-$centre = Centre::findOrFail($userCentreId);
+    public function autocreate(Request $request)
+    {
+        $user = Auth::user();
+        $centreId = $user->id_centre;
 
-return Inertia::render('Dra/Create', [
-'centre' => $centre, // Only pass the user's center
-]);
-}
+        // Count existing DRA entries for this centre
+        $count = Dra::where('id_centre', $centreId)->count() + 1;
 
-public function store(Request $request)
-{
-$userCentreId = Auth::user()->id_centre;
+        // Create the n_dra format like "CENTREID-0001"
+        $n_dra = $centreId . str_pad($count, 6, '0', STR_PAD_LEFT);
 
-// Check if there's already an active DRA for this center
-if (Dra::where('etat', 'actif')->where('id_centre', $userCentreId)->exists()) {
-return back()->withErrors([
-'etat' => 'Un DRA actif existe déjà pour votre centre. Veuillez le clôturer avant de créer un nouveau.'
-]);
-}
+        // Create the DRA
+        Dra::create([
+            'n_dra' => $n_dra,
+            'id_centre' => $centreId,
+            'date_creation' => now(),
+            'etat' => 'actif',
+            'total_dra' => 0,
+        ]);
 
-$validated = $request->validate([
-'n_dra' => 'required|unique:dras,n_dra',
-'date_creation' => 'required|date',
-]);
+        return redirect()->route('achat.dras.index');
+    }
 
-Dra::create(array_merge($validated, [
-'id_centre' => $userCentreId, // Automatically assign user's center
-'etat' => 'actif',
-'total_dra' => 0,
-'created_at' => now()
-]));
 
-return redirect()->route('achat.dras.index')->with('success', 'DRA créé avec succès');
-}
+    public function store(Request $request)
+    {
+        $centreId = Auth::user()->id_centre;
+        $count = Dra::where('id_centre', $centreId)->count();
+        $n_dra = $centreId . str_pad($count + 1, 3, '0', STR_PAD_LEFT);
+
+        $dra = new Dra();
+        $dra->n_dra = $n_dra;
+        $dra->id_centre = $centreId;
+        $dra->date_creation = now()->toDateString();
+        $dra->etat = 'actif';
+        $dra->total_dra = 0;
+        $dra->save();
+
+        return redirect()->route('achat.dras.index')->with('success', 'DRA créé avec succès.');
+    }
 
 public function edit(Dra $dra)
 {

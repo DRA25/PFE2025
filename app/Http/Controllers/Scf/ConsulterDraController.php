@@ -12,7 +12,6 @@ class ConsulterDraController extends Controller
     public function index()
     {
         $dras = Dra::with('centre')
-            ->where('id_centre', Auth::user()->id_centre)
             ->whereIn('etat', ['cloture', 'refuse', 'accepte']) // Filter by multiple states
             ->orderByDesc('created_at')
             ->get()
@@ -33,10 +32,7 @@ class ConsulterDraController extends Controller
 
     public function show(Dra $dra)
     {
-        // Authorization
-        if ($dra->id_centre !== Auth::user()->id_centre) {
-            abort(403, 'Unauthorized action.');
-        }
+
 
         return Inertia::render('Scf/ConsulterDra/Show', [
             'dra' => [

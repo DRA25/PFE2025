@@ -16,6 +16,7 @@ const props = defineProps<{
 }>()
 
 const breadcrumbs: BreadcrumbItem[] = [
+    { title: 'Service Paiment', href: '/paiment' },
     { title: 'Gestion des Remboursements', href: '/paiment/remboursements' },
     { title: 'Modifier un Remboursement', href: `/paiment/remboursements/${props.remboursement.n_remb}/edit` },
 ]

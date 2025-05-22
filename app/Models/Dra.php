@@ -46,4 +46,11 @@ class Dra extends Model
     {
         return $this->belongsTo(Centre::class, 'id_centre', 'id_centre');
     }
+
+
+    public function remboursement()
+    {
+        return $this->hasOne(Remboursement::class, 'n_dra', 'n_dra');
+    }
+
 }

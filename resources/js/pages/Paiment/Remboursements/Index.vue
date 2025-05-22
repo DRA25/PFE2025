@@ -13,6 +13,7 @@ import { ref, computed } from 'vue'
 import { type BreadcrumbItem } from '@/types'
 
 const breadcrumbs: BreadcrumbItem[] = [
+    { title: 'Service Paiment', href: '/paiment' },
     { title: 'Gestion des Remboursements', href: '/paiment/remboursements' },
 ]
 
@@ -22,7 +23,7 @@ const props = defineProps<{
         date_remb: string,
         method_remb: string,
         n_dra: string,
-        id_centre: number,
+        id_centre: string,
         seuil_centre: number,
         total_dra: number,
         montant_rembourse: number
@@ -49,7 +50,8 @@ const sortedRemboursements = computed(() => {
             String(remb.n_remb).includes(query) ||
             remb.date_remb.toLowerCase().includes(query) ||
             remb.method_remb.toLowerCase().includes(query) ||
-            remb.n_dra.toLowerCase().includes(query)
+            remb.n_dra.toLowerCase().includes(query) ||
+            remb.id_centre.toLowerCase().includes(query)
         );
     }
 
