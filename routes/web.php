@@ -18,6 +18,7 @@ use App\Http\Controllers\Magasin\DMPieceController;
 use App\Http\Controllers\Magasin\GestionMagasinController;
 use App\Http\Controllers\Magasin\MagasinController;
 use App\Http\Controllers\Magasin\MagasinDemandePieceController;
+use App\Http\Controllers\Magasin\QuantiteStockeController;
 use App\Http\Controllers\PaimentController;
 use App\Http\Controllers\RemboursementController;
 use App\Http\Controllers\RoleUserController;
@@ -171,7 +172,7 @@ Route::middleware(['auth','verified','role:admin'])->group(function () {
 Route::middleware(['auth', 'verified', 'role:service magasin|admin'])->group(function () {
     // Main magasin dashboard
     Route::get('/magasin', [MagasinController::class, 'index'])->name('magasin.index');
-
+    Route::get('/magasin/quantites', [QuantiteStockeController::class, 'index'])->name('magasin.quantites.index');
     // Pieces management routes (under /magasin/pieces)
     Route::prefix('magasin/pieces')->group(function () {
         Route::get('/', [PieceController::class, 'index'])->name('magasin.pieces.index');
@@ -286,6 +287,7 @@ Route::get('/achat/demandes-pieces/{demande_piece}/export-single-pdf', [AchatDem
 Route::get('/achat/demandes-pieces/export-full-list-pdf',
     [AchatDemandePieceController::class, 'exportListPdf'])
     ->name('achat.demandes-pieces.export-full-list-pdf');
+
 
 
 

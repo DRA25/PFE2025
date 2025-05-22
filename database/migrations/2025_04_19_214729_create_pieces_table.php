@@ -17,7 +17,13 @@ return new class extends Migration
             $table->integer('prix_piece');
             $table->string('marque_piece');
             $table->string('ref_piece');
+            $table->string('id_centre');
 
+            $table->foreign('id_centre')
+                ->references('id_centre')
+                ->on('centres')
+                ->onUpdate('cascade')
+                ->onDelete('cascade');
         });
     }
 
@@ -26,6 +32,9 @@ return new class extends Migration
      */
     public function down(): void
     {
+        Schema::table('pieces', function (Blueprint $table) {
+            $table->dropForeign(['id_centre']);
+        });
         Schema::dropIfExists('pieces');
     }
 };

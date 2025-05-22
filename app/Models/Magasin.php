@@ -29,4 +29,10 @@ class Magasin extends Model
         return $this->belongsTo(Centre::class, 'id_centre', 'id_centre');
     }
 
+    public function pieces()
+    {
+        return $this->belongsToMany(Piece::class, 'quantite__stockes', 'id_magasin', 'id_piece')
+            ->withPivot('qte_stocke');
+    }
+
 }

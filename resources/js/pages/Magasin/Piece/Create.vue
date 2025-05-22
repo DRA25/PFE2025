@@ -10,7 +10,6 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 const form = useForm({
-    id_piece: null,
     nom_piece: '',
     prix_piece: null,
     marque_piece: '',

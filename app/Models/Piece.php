@@ -17,6 +17,7 @@ class Piece extends Model
         'prix_piece',
         'marque_piece',
         'ref_piece',
+        'id_centre'
 
     ];
 
@@ -24,6 +25,12 @@ class Piece extends Model
     {
         return $this->hasMany(DemandePiece::class, 'id_piece', 'id_piece');
     }
+
+    public function centre()
+    {
+        return $this->belongsTo(Centre::class, 'id_centre');
+    }
+
 
 
 }
