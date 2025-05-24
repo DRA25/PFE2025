@@ -30,7 +30,7 @@ class EncaissementController extends Controller
         $centres = Centre::all();
 
         // Only get remboursements that are not already used in encaissements
-        $remboursements = Remboursement::select('remboursements.n_remb', 'dras.total_dra')
+        $remboursements = Remboursement::select('remboursements.n_remb', 'dras.total_dra','dras.n_dra')
             ->join('dras', 'remboursements.n_dra', '=', 'dras.n_dra')
             ->whereDoesntHave('encaissements')
             ->get();

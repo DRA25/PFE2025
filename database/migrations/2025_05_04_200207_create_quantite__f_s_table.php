@@ -18,7 +18,6 @@ return new class extends Migration
             $table->foreign('n_facture')->references('n_facture')->on('factures')->onDelete('cascade');
             $table->foreign('id_piece')->references('id_piece')->on('pieces')->onDelete('cascade');
             $table->integer('qte_f');
-            $table->integer('prix_unite');
             $table->integer('montant_facture');
         });
     }

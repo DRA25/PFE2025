@@ -15,9 +15,12 @@ class Piece extends Model
         'id_piece',
         'nom_piece',
         'prix_piece',
+        'tva',
         'marque_piece',
         'ref_piece',
-        'id_centre'
+        'id_centre',
+        'compte_general_code',
+        'compte_analytique_code',
 
     ];
 
@@ -29,6 +32,16 @@ class Piece extends Model
     public function centre()
     {
         return $this->belongsTo(Centre::class, 'id_centre');
+    }
+
+    public function compteGeneral()
+    {
+        return $this->belongsTo(CompteGeneral::class, 'compte_general_code', 'code');
+    }
+
+    public function compteAnalytique()
+    {
+        return $this->belongsTo(CompteAnalytique::class, 'compte_analytique_code', 'code');
     }
 
 

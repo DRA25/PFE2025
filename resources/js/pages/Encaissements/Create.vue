@@ -17,6 +17,7 @@ const props = defineProps<{
     }>,
     remboursements: Array<{
         n_remb: string,
+        n_dra: string,
         total_dra: number
     }>,
     userCentre: string
@@ -78,10 +79,15 @@ function submit() {
                         class="w-full border border-gray-300 dark:border-gray-600 p-2 rounded focus:ring-2 focus:ring-[#042B62] dark:focus:ring-[#F3B21B] focus:border-transparent dark:bg-gray-800 dark:text-white"
                     >
                         <option value="">-- Sélectionnez un remboursement --</option>
-                        <option v-for="remb in props.remboursements" :key="remb.n_remb" :value="remb.n_remb">
-                            {{ remb.n_remb }}
+                        <option
+                            v-for="remb in props.remboursements"
+                            :key="remb.n_remb"
+                            :value="remb.n_remb"
+                        >
+                            {{ remb.n_remb }} - {{ remb.n_dra }}
                         </option>
                     </select>
+
                     <div v-if="form.errors.n_remb" class="text-red-500 text-sm">{{ form.errors.n_remb }}</div>
                 </div>
 
