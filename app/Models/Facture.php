@@ -22,6 +22,22 @@ protected $fillable = [
 ];
 
 
+    public function pieces()
+    {
+        return $this->belongsToMany(Piece::class, 'quantite__f_s', 'n_facture', 'id_piece')
+            ->withPivot('qte_f');
+    }
+
+    /**
+     * Calculate the total amount of the facture.
+     */
+    public function getMontantAttribute(): float
+    {
+        return $this->pieces->sum(function($piece) {
+            $subtotal = $piece->prix_piece * $piece->pivot->qte_f;
+            return $subtotal * (1 + ($piece->tva / 100));
+        });
+    }
 
 public function dra()
 {

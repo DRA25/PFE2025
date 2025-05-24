@@ -14,7 +14,25 @@ import { ref, computed } from 'vue'
 
 const props = defineProps({
     dra: Object,
-    factures: Array,
+    factures: Array<{
+        n_facture: string
+        date_facture: string
+        id_fourn: number
+        n_dra: string
+        fournisseur: {
+            id_fourn: number
+            nom_fourn: string
+        }
+        pieces: Array<{
+            id_piece: number
+            nom_piece: string
+            prix_piece: number
+            tva: number
+            pivot: {
+                qte_f: number
+            }
+        }>
+    }>(),
 })
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -34,6 +52,14 @@ const requestSort = (column: string) => {
     }
 }
 
+// Calculate total amount for a facture
+const calculateMontant = (facture: typeof props.factures[0]) => {
+    return facture.pieces.reduce((total, piece) => {
+        const subtotal = piece.prix_piece * piece.pivot.qte_f;
+        return total + (subtotal * (1 + (piece.tva / 100)));
+    }, 0);
+}
+
 const sortedFactures = computed(() => {
     let data = [...props.factures];
 
@@ -41,9 +67,10 @@ const sortedFactures = computed(() => {
         const query = searchQuery.value.toLowerCase();
         data = data.filter(facture =>
             String(facture.n_facture).toLowerCase().includes(query) ||
-            String(facture.montant_facture).toLowerCase().includes(query) ||
+            String(calculateMontant(facture)).toLowerCase().includes(query) ||
             facture.date_facture.toLowerCase().includes(query) ||
-            facture.fournisseur?.nom_fourn?.toLowerCase().includes(query)
+            facture.fournisseur?.nom_fourn?.toLowerCase().includes(query) ||
+            facture.pieces?.some(piece => piece.nom_piece.toLowerCase().includes(query))
         );
     }
 
@@ -51,13 +78,22 @@ const sortedFactures = computed(() => {
         const { column, direction } = sortConfig.value;
         data.sort((a, b) => {
             let valA, valB;
-            if (column === 'fournisseur.nom_fourn') {
+
+            if (column === 'montant') {
+                valA = calculateMontant(a);
+                valB = calculateMontant(b);
+            } else if (column === 'fournisseur.nom_fourn') {
                 valA = a.fournisseur?.nom_fourn ?? '';
                 valB = b.fournisseur?.nom_fourn ?? '';
             } else {
                 valA = a[column as keyof typeof a] ?? '';
                 valB = b[column as keyof typeof b] ?? '';
             }
+
+            if (typeof valA === 'number' && typeof valB === 'number') {
+                return direction === 'asc' ? valA - valB : valB - valA;
+            }
+
             return direction === 'asc'
                 ? String(valA).localeCompare(String(valB))
                 : String(valB).localeCompare(String(valA));
@@ -96,7 +132,6 @@ const sortedFactures = computed(() => {
                 </h1>
             </div>
 
-
             <Table class="m-3 w-39/40">
                 <TableHeader>
                     <TableRow>
@@ -104,8 +139,8 @@ const sortedFactures = computed(() => {
                             ID Facture
                             <ArrowUpDown class="ml-2 h-4 w-4 inline-block" />
                         </TableHead>
-                        <TableHead class="cursor-pointer" @click="requestSort('montant_facture')">
-                            Montant
+                        <TableHead class="cursor-pointer" @click="requestSort('montant')">
+                            Montant (DA)
                             <ArrowUpDown class="ml-2 h-4 w-4 inline-block" />
                         </TableHead>
                         <TableHead class="cursor-pointer" @click="requestSort('date_facture')">
@@ -116,6 +151,7 @@ const sortedFactures = computed(() => {
                             Fournisseur
                             <ArrowUpDown class="ml-2 h-4 w-4 inline-block" />
                         </TableHead>
+                        <TableHead>Libelle</TableHead>
                         <TableHead>Actions</TableHead>
                     </TableRow>
                 </TableHeader>
@@ -127,9 +163,14 @@ const sortedFactures = computed(() => {
                         class="hover:bg-gray-300 dark:hover:bg-gray-900"
                     >
                         <TableCell>{{ facture.n_facture }}</TableCell>
-                        <TableCell>{{ facture.montant_facture }}</TableCell>
-                        <TableCell>{{ facture.date_facture }}</TableCell>
-                        <TableCell>{{ facture.fournisseur.nom_fourn }}</TableCell>
+                        <TableCell>{{ calculateMontant(facture).toFixed(2) }}</TableCell>
+                        <TableCell>{{ new Date(facture.date_facture).toLocaleDateString() }}</TableCell>
+                        <TableCell>{{ facture.fournisseur?.nom_fourn }}</TableCell>
+                        <TableCell>
+                            <div v-for="piece in facture.pieces" :key="piece.id_piece" class="text-sm">
+                                {{ piece.nom_piece }} (x{{ piece.pivot.qte_f }})
+                            </div>
+                        </TableCell>
                         <TableCell>
                             <Link
                                 :href="route('achat.dras.factures.edit', { dra: props.dra.n_dra, facture: facture.n_facture })"
