@@ -24,5 +24,11 @@ class Remboursement extends Model
     {
         return $this->belongsTo(Dra::class, 'n_dra', 'n_dra');
     }
+
+    public function encaissements()
+    {
+        return $this->hasMany(Encaissement::class, 'n_remb', 'n_remb');
+    }
+
 }
 

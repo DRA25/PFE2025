@@ -16,6 +16,7 @@ return new class extends Migration
            $table->string('adresse_centre',200)->nullable();
            $table->integer('seuil_centre')->nullable();
            $table->enum('type_centre',['Aviation','Marine'])->nullable();
+            $table->integer('montant_disponible')->nullable();
         });
     }
 

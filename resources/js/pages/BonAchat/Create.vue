@@ -45,7 +45,14 @@ function submit() {
             </div>
 
             <form @submit.prevent="submit" class="space-y-6 bg-white dark:bg-gray-700 p-6 rounded-lg shadow">
-
+                <div v-if="form.hasErrors" class="mb-4">
+                    <div v-if="form.errors.total_dra" class="text-red-600 text-sm">
+                        {{ form.errors.total_dra }}
+                    </div>
+                    <div v-if="form.errors.error" class="text-red-600 text-sm">
+                        {{ form.errors.error }}
+                    </div>
+                </div>
                 <div class="space-y-2">
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">N° Bon d'achat</label>
                     <input

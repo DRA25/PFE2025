@@ -1,14 +1,13 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Paiment;
 
+use App\Http\Controllers\Controller;
 use App\Models\Dra;
 use App\Models\Remboursement;
 use Illuminate\Http\Request;
-use Inertia\Inertia;
-use App\Models\Centre;
 use Illuminate\Validation\Rule;
-
+use Inertia\Inertia;
 
 class RemboursementController extends Controller
 {
@@ -20,16 +19,18 @@ class RemboursementController extends Controller
 
             $seuil_centre = $centre?->seuil_centre ?? 0;
             $total_dra = $dra?->total_dra ?? 0;
+            $etat = $dra?->etat ?? null;
 
             return [
                 'n_remb' => $remboursement->n_remb,
                 'date_remb' => $remboursement->date_remb,
                 'method_remb' => $remboursement->method_remb,
                 'n_dra' => $dra?->n_dra,
-                'id_centre' => $centre?->id_centre ?? null, // ← added
+                'id_centre' => $centre?->id_centre ?? null,
                 'seuil_centre' => $seuil_centre,
                 'total_dra' => $total_dra,
                 'montant_rembourse' => $total_dra,
+                'etat' => $etat,
             ];
         });
 
@@ -49,8 +50,6 @@ class RemboursementController extends Controller
         ]);
     }
 
-
-
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -59,26 +58,27 @@ class RemboursementController extends Controller
             'n_dra' => [
                 'required',
                 'exists:dras,n_dra',
-                Rule::unique('remboursements', 'n_dra'), // prevents duplicate remboursement
+                Rule::unique('remboursements', 'n_dra'),
             ],
         ]);
 
-        Remboursement::create($validated);
+        $remboursement = Remboursement::create($validated);
+
+        // Update dra's etat to 'rembourse'
+        Dra::where('n_dra', $validated['n_dra'])->update(['etat' => 'rembourse']);
 
         return redirect()->route('paiment.remboursements.index')->with('success', 'Remboursement créé avec succès.');
     }
 
-
     public function edit($id)
     {
         $remboursement = Remboursement::findOrFail($id);
-        $dras = Dra::all(['n_dra']); // Same as in create
+        $dras = Dra::all(['n_dra']);
         return Inertia::render('Paiment/Remboursements/Edit', [
             'remboursement' => $remboursement,
             'dras' => $dras,
         ]);
     }
-
 
     public function update(Request $request, Remboursement $remboursement)
     {
@@ -99,5 +99,4 @@ class RemboursementController extends Controller
 
         return redirect()->route('paiment.remboursements.index')->with('success', 'Remboursement supprimé.');
     }
-
 }

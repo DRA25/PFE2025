@@ -11,31 +11,34 @@ use Inertia\Inertia;
 
 class DraController extends Controller
 {
-public function index()
-{
-$userCentreId = Auth::user()->id_centre;
+    public function index()
+    {
+        $userCentreId = Auth::user()->id_centre;
 
-$dras = Dra::query()
-->where('id_centre', $userCentreId)
-->orderBy('created_at', 'desc')
-->get();
+        $dras = Dra::with('centre') // eager load to prevent N+1
+        ->where('id_centre', $userCentreId)
+            ->orderBy('created_at', 'desc')
+            ->get();
 
-return Inertia::render('Dra/Index', [
-'dras' => $dras->map(function ($dra) {
-return [
-'n_dra' => $dra->n_dra,
-'id_centre' => $dra->id_centre,
-'date_creation' => $dra->date_creation->format('Y-m-d'),
-'etat' => $dra->etat,
-'total_dra' => $dra->total_dra,
-'created_at' => $dra->created_at ? $dra->created_at->toISOString() : now()->toISOString(),
-'centre' => [
-'seuil_centre' => $dra->centre->seuil_centre
-]
-];
-})
-]);
-}
+        return Inertia::render('Dra/Index', [
+            'dras' => $dras->map(function ($dra) {
+                return [
+                    'n_dra' => $dra->n_dra,
+                    'id_centre' => $dra->id_centre,
+                    'date_creation' => $dra->date_creation->format('Y-m-d'),
+                    'etat' => $dra->etat,
+                    'total_dra' => $dra->total_dra,
+                    'created_at' => $dra->created_at ? $dra->created_at->toISOString() : now()->toISOString(),
+                    'centre' => [
+                        'seuil_centre' => $dra->centre->seuil_centre,
+                        'montant_disponible' => $dra->centre->montant_disponible, // 👈 add this line
+                    ]
+                ];
+            }),
+            'id_centre' => $userCentreId
+        ]);
+    }
+
 
     public function autocreate(Request $request)
     {
@@ -64,21 +67,38 @@ return [
     public function store(Request $request)
     {
         $centreId = Auth::user()->id_centre;
+
+        $centre = Centre::findOrFail($centreId);
+
         $count = Dra::where('id_centre', $centreId)->count();
         $n_dra = $centreId . str_pad($count + 1, 3, '0', STR_PAD_LEFT);
+
+        // Default value; could be changed to allow setting total_dra via request
+        $totalDra = 0;
+
+        // Optional: If you want to prevent creating DRA with insufficient funds
+        if ($centre->montant_disponible < $totalDra) {
+            return back()->withErrors(['montant_disponible' => 'Fonds insuffisants pour créer une nouvelle DRA.']);
+        }
 
         $dra = new Dra();
         $dra->n_dra = $n_dra;
         $dra->id_centre = $centreId;
         $dra->date_creation = now()->toDateString();
         $dra->etat = 'actif';
-        $dra->total_dra = 0;
+        $dra->total_dra = $totalDra;
         $dra->save();
+
+        // Update montant_disponible if needed
+        if ($totalDra > 0) {
+            $centre->decrement('montant_disponible', $totalDra);
+        }
 
         return redirect()->route('achat.dras.index')->with('success', 'DRA créé avec succès.');
     }
 
-public function edit(Dra $dra)
+
+    public function edit(Dra $dra)
 {
 $userCentreId = Auth::user()->id_centre;
 

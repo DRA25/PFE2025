@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -22,6 +21,8 @@ class BonAchat extends Model
         'n_dra',
     ];
 
+
+
     public function dra()
     {
         return $this->belongsTo(Dra::class, 'n_dra', 'n_dra');
@@ -32,4 +33,3 @@ class BonAchat extends Model
         return $this->belongsTo(Fournisseur::class, 'id_fourn', 'id_fourn');
     }
 }
-

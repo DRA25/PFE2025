@@ -26,7 +26,8 @@ const props = defineProps<{
         id_centre: string,
         seuil_centre: number,
         total_dra: number,
-        montant_rembourse: number
+        montant_rembourse: number,
+        etat: string
     }>
 }>()
 
@@ -157,22 +158,25 @@ const deleteRemboursement = (id: number) => {
                         <TableCell>{{ remb.id_centre }}</TableCell>
                         <TableCell>{{ remb.montant_rembourse }}</TableCell>
                         <TableCell class="flex flex-wrap gap-2">
-                            <Link
-                                :href="`/paiment/remboursements/${remb.n_remb}/edit`"
-                                class="bg-green-600 text-white px-3 py-1 rounded-lg hover:bg-green-400 transition flex items-center gap-1"
-                            >
-                                <Pencil class="w-4 h-4" />
-                                <span>Modifier</span>
-                            </Link>
+                            <template v-if="remb.etat !== 'rembourse'">
+                                <Link
+                                    :href="`/paiment/remboursements/${remb.n_remb}/edit`"
+                                    class="bg-green-600 text-white px-3 py-1 rounded-lg hover:bg-green-400 transition flex items-center gap-1"
+                                >
+                                    <Pencil class="w-4 h-4" />
+                                    <span>Modifier</span>
+                                </Link>
 
-                            <button
-                                @click="deleteRemboursement(remb.n_remb)"
-                                class="bg-red-800 text-white px-3 py-1 rounded-lg hover:bg-red-600 transition flex items-center gap-1"
-                            >
-                                <Trash2 class="w-4 h-4" />
-                                <span>Supprimer</span>
-                            </button>
+                                <button
+                                    @click="deleteRemboursement(remb.n_remb)"
+                                    class="bg-red-800 text-white px-3 py-1 rounded-lg hover:bg-red-600 transition flex items-center gap-1"
+                                >
+                                    <Trash2 class="w-4 h-4" />
+                                    <span>Supprimer</span>
+                                </button>
+                            </template>
                         </TableCell>
+
                     </TableRow>
                 </TableBody>
             </Table>

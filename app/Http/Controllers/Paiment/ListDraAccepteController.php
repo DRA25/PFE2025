@@ -1,9 +1,9 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Paiment;
 
+use App\Http\Controllers\Controller;
 use App\Models\Dra;
-use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class ListDraAccepteController extends Controller

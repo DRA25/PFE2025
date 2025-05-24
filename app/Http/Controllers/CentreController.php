@@ -18,6 +18,7 @@ class CentreController extends Controller
                     'id_centre' => $centre->id_centre,
                     'adresse_centre' => $centre->adresse_centre,
                     'seuil_centre' => $centre->seuil_centre,
+                    'montant_disponible' => $centre->montant_disponible,
                     'type_centre' => $centre->type_centre,
                 ];
             }),
@@ -27,6 +28,7 @@ class CentreController extends Controller
             ]
         ]);
     }
+
 
     // Show create form
     public function create()
@@ -49,6 +51,9 @@ class CentreController extends Controller
             'seuil_centre' => 'nullable|integer|min:0',
             'type_centre' => 'nullable|in:Aviation,Marine',
         ]);
+
+        // Set montant_disponible to seuil_centre
+        $validated['montant_disponible'] = $validated['seuil_centre'] ?? 0;
 
         Centre::create($validated);
 

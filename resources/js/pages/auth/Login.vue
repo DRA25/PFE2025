@@ -134,10 +134,10 @@ onMounted(() => {
                             </div>
                         </form>
 
-                        <div class="mt-6 text-center text-sm text-gray-500">
+                    <!--    <div class="mt-6 text-center text-sm text-gray-500">
                             Vous n'avez pas de compte?
                             <TextLink :href="route('register')" class="font-medium text-[#042c68] hover:underline transition-colors duration-200" :tabindex="6">S'inscrire</TextLink>
-                        </div>
+                        </div> -->
                     </div>
                 </div>
             </div>

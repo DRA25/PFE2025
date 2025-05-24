@@ -20,6 +20,7 @@ class Centre extends Model
         'adresse_centre',
         'seuil_centre',
         'type_centre',
+        'montant_disponible',
     ];
 
     public function dras()

@@ -6,6 +6,7 @@ use App\Http\Controllers\Achat\AchatController;
 use App\Http\Controllers\Achat\AchatDemandePieceController;
 use App\Http\Controllers\Achat\BonAchatController;
 use App\Http\Controllers\Achat\DraController;
+use App\Http\Controllers\Achat\EncaissementController;
 use App\Http\Controllers\Achat\FactureController;
 use App\Http\Controllers\Atelier\AtelierController;
 use App\Http\Controllers\Atelier\DPieceController;
@@ -13,14 +14,14 @@ use App\Http\Controllers\Atelier\GestionAtelierController;
 use App\Http\Controllers\Atelier\PieceController;
 use App\Http\Controllers\CentreController;
 use App\Http\Controllers\FournisseurController;
-use App\Http\Controllers\ListDraAccepteController;
 use App\Http\Controllers\Magasin\DMPieceController;
 use App\Http\Controllers\Magasin\GestionMagasinController;
 use App\Http\Controllers\Magasin\MagasinController;
 use App\Http\Controllers\Magasin\MagasinDemandePieceController;
 use App\Http\Controllers\Magasin\QuantiteStockeController;
-use App\Http\Controllers\PaimentController;
-use App\Http\Controllers\RemboursementController;
+use App\Http\Controllers\Paiment\ListDraAccepteController;
+use App\Http\Controllers\Paiment\PaimentController;
+use App\Http\Controllers\Paiment\RemboursementController;
 use App\Http\Controllers\RoleUserController;
 use App\Http\Controllers\Scf\ConsulterDraController;
 use App\Http\Controllers\Scf\ScfController;
@@ -291,7 +292,8 @@ Route::get('/achat/demandes-pieces/export-full-list-pdf',
 
 
 
-
+//encaissements routes
+Route::resource('encaissements', EncaissementController::class);
 
 
 

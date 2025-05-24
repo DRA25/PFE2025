@@ -2,12 +2,8 @@
 import { Head, Link, router } from '@inertiajs/vue3'
 import AppLayout from '@/layouts/AppLayout.vue'
 import {
-    Table,
-    TableHeader,
-    TableBody,
-    TableRow,
-    TableCell,
-    TableHead
+    Table, TableHeader, TableBody, TableRow,
+    TableCell, TableHead
 } from '@/components/ui/table'
 import { type BreadcrumbItem } from '@/types'
 import { Plus, Lock, FileText, Trash2, ArrowUpDown, Search } from 'lucide-vue-next'
@@ -21,7 +17,10 @@ const props = defineProps<{
         etat: string;
         total_dra: number;
         created_at: string;
-        centre: { seuil_centre: number };
+        centre: {
+            seuil_centre: number;
+            montant_disponible: number; // Keep this in the type definition as it's passed from the controller
+        };
     }>,
     id_centre: string
 }>()
@@ -32,70 +31,67 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Liste des DRAs', href: '/achat/dras' },
 ]
 
-const etatOptions = ['actif', 'cloture', 'refuse', 'accepte'];
+const etatOptions = ['actif', 'cloture', 'refuse', 'accepte','rembourse'];
 const selectedEtat = ref<string | null>(null);
 const sortConfig = ref<{ column: string; direction: 'asc' | 'desc' } | null>(null);
 const searchQuery = ref('');
 
 const filteredDras = computed(() => {
-    // Filter by selected state first
     let data = selectedEtat.value
         ? props.dras.filter(dra => dra.etat === selectedEtat.value)
         : props.dras;
 
-    // Then filter by search query (search multiple fields)
     if (searchQuery.value) {
         const query = searchQuery.value.toLowerCase();
         data = data.filter(dra =>
-            dra.n_dra.toLowerCase().includes(query) ||
-            dra.etat.toLowerCase().includes(query) ||
-            new Date(dra.date_creation).toLocaleDateString().includes(query) ||
-            dra.total_dra.toString().includes(query) ||
-            dra.centre.seuil_centre.toString().includes(query)
+                dra.n_dra.toLowerCase().includes(query) ||
+                dra.etat.toLowerCase().includes(query) ||
+                new Date(dra.date_creation).toLocaleDateString().includes(query) ||
+                dra.total_dra.toString().includes(query) ||
+                dra.centre.seuil_centre.toString().includes(query)
+            // Removed montant_disponible from individual row search as it's now a global stat
         );
     }
+
     return data;
 });
 
 const sortedDrasComputed = computed(() => {
-    let dras = [...filteredDras.value]; // Use filteredDras here
+    let dras = [...filteredDras.value];
 
-    if (!sortConfig.value) {
-        return dras;
-    }
+    if (!sortConfig.value) return dras;
 
     const { column, direction } = sortConfig.value;
-    return dras.sort((a, b) => {
-        const valueA = a[column as keyof typeof a];
-        const valueB = b[column as keyof typeof b];
 
-        if (column === 'date_creation' || column === 'created_at') {
-            const dateA = new Date(valueA).getTime();
-            const dateB = new Date(valueB).getTime();
-            return direction === 'asc' ? dateA - dateB : dateB - dateA;
-        } else if (column === 'total_dra' || column === 'id_centre') {
-            return direction === 'asc' ? Number(valueA) - Number(valueB) : Number(valueB) - Number(valueA);
-        } else if (column === 'centre.seuil_centre') {
-            // Access nested property for sorting
-            const seuilA = a.centre.seuil_centre;
-            const seuilB = b.centre.seuil_centre;
-            return direction === 'asc' ? seuilA - seuilB : seuilB - seuilA;
+    return dras.sort((a, b) => {
+        const getVal = (item: any, key: string) => {
+            if (key.includes('.')) {
+                const [parent, child] = key.split('.');
+                return item[parent]?.[child];
+            }
+            return item[key];
+        };
+
+        const valA = getVal(a, column);
+        const valB = getVal(b, column);
+
+        if (typeof valA === 'number' && typeof valB === 'number') {
+            return direction === 'asc' ? valA - valB : valB - valA;
         }
-        else if (column === 'etat') {
+
+        if (valA instanceof Date && valB instanceof Date) {
             return direction === 'asc'
-                ? String(valueA).localeCompare(String(valueB))
-                : String(valueB).localeCompare(String(valueA));
+                ? valA.getTime() - valB.getTime()
+                : valB.getTime() - valA.getTime();
         }
-        else {
-            const stringA = String(valueA).toLowerCase();
-            const stringB = String(valueB).toLowerCase();
-            return direction === 'asc' ? stringA.localeCompare(stringB) : stringB.localeCompare(stringA);
-        }
+
+        return direction === 'asc'
+            ? String(valA).localeCompare(String(valB))
+            : String(valB).localeCompare(String(valA));
     });
 });
 
 const localDras = ref([...sortedDrasComputed.value]);
-
 
 watch(
     () => props.dras,
@@ -107,12 +103,21 @@ watch(
     { deep: true }
 );
 
-const hasActiveDra = computed(() => localDras.value.some((dra) => dra.etat === 'actif'));
+const hasActiveDra = computed(() => localDras.value.some(dra => dra.etat === 'actif'));
+
+// Computed property for the total available amount for the current center
+const availableAmountForCenter = computed(() => {
+    // Assuming all DRAs belong to the same center and thus share the same available amount.
+    // We can just take the montant_disponible from the first DRA, or handle if dras is empty.
+    if (props.dras.length > 0) {
+        return props.dras[0].centre.montant_disponible;
+    }
+    return 0; // Default if no DRAs are present
+});
+
 
 const closeDra = (draId: string, currentEtat: string) => {
-    // Convert to lowercase for consistent comparison
     const normalizedEtat = currentEtat.toLowerCase();
-
     if (normalizedEtat !== 'refuse' && normalizedEtat !== 'actif') {
         alert('Seuls les DRAs actifs ou refusés peuvent être clôturés');
         return;
@@ -127,33 +132,28 @@ const closeDra = (draId: string, currentEtat: string) => {
                 );
             },
             onError: (errors) => {
-                alert('Erreur lors de la clôture du DRA: ' +
-                    (errors.message || 'Une erreur est survenue'));
+                alert('Erreur lors de la clôture du DRA: ' + (errors.message || 'Une erreur est survenue'));
             },
         });
     }
-
-
 };
 
 const confirmDeleteDra = (draId: string, etat: string) => {
     if (etat === 'cloture') {
         alert('Vous ne pouvez pas supprimer un DRA clôturé.');
-        return; // Stop the deletion process
+        return;
     }
-    if (confirm('Êtes-vous sûr de vouloir supprimer ce DRA ? Cette action est irréversible et supprimera toutes les factures associées.')) {
+
+    if (confirm('Êtes-vous sûr de vouloir supprimer ce DRA ? Cette action est irréversible.')) {
         router.delete(route('achat.dras.destroy', { dra: draId }));
     }
 };
-
-
 
 const requestSort = (column: string) => {
     if (!sortConfig.value || sortConfig.value.column !== column) {
         sortConfig.value = { column, direction: 'asc' };
     } else {
-        sortConfig.value.direction =
-            sortConfig.value.direction === 'asc' ? 'desc' : 'asc';
+        sortConfig.value.direction = sortConfig.value.direction === 'asc' ? 'desc' : 'asc';
     }
 };
 
@@ -198,9 +198,17 @@ const createDra = () => {
             </button>
         </div>
 
-        <div class="m-5 mr-2 bg-gray-100 dark:bg-gray-800 rounded-lg">
-            <div class="flex justify-between m-5">
-                <h1 class="text-lg font-bold text-left text-[#042B62FF] dark:text-[#BDBDBDFF]">Liste des DRAs</h1>
+        <div class="m-5 mr-2 bg-gray-100 dark:bg-gray-800 rounded-lg p-6 relative">
+
+
+            <div class="flex justify-between mb-3 "> <h1 class="text-lg font-bold text-left text-[#042B62FF] dark:text-[#BDBDBDFF]">Liste des DRAs</h1>
+                <div class="absolute top-4 right-4 bg-white dark:bg-gray-700 p-4 rounded-lg shadow-md text-right">
+                    <h2 class="text-md font-semibold text-[#042B62FF] dark:text-[#BDBDBDFF] mb-2">Statistiques Centre</h2>
+                    <p class="text-sm text-gray-700 dark:text-gray-300">
+                        <span class="font-bold">Montant Disponible:</span>
+                        {{ availableAmountForCenter.toLocaleString('fr-FR') }} DA
+                    </p>
+                </div>
             </div>
 
             <div class="flex flex-wrap gap-2 px-5 pb-2">
@@ -217,7 +225,8 @@ const createDra = () => {
                     {{ etat === 'actif' ? 'Actif' :
                     etat === 'cloture' ? 'Clôturé' :
                         etat === 'refuse' ? 'Refusé' :
-                            'Accepté'
+                            etat === 'accepte' ?'Accepté' :
+                                'Remboursé'
                     }}
                 </button>
             </div>
@@ -237,10 +246,6 @@ const createDra = () => {
                             Total DRA
                             <ArrowUpDown class="ml-2 h-4 w-4 inline-block" />
                         </TableHead>
-                        <TableHead class="cursor-pointer" @click="requestSort('centre.seuil_centre')">
-                            Disponible
-                            <ArrowUpDown class="ml-2 h-4 w-4 inline-block" />
-                        </TableHead>
                         <TableHead class="cursor-pointer" @click="requestSort('etat')">
                             État
                             <ArrowUpDown class="ml-2 h-4 w-4 inline-block" />
@@ -258,23 +263,23 @@ const createDra = () => {
                         <TableCell>{{ dra.n_dra }}</TableCell>
                         <TableCell>{{ new Date(dra.date_creation).toLocaleDateString() }}</TableCell>
                         <TableCell>{{ dra.total_dra.toLocaleString('fr-FR') }} DA</TableCell>
-                        <TableCell>{{ (dra.centre.seuil_centre - dra.total_dra).toLocaleString('fr-FR') }} DA</TableCell>
-
                         <TableCell>
-    <span
-        class="font-bold"
-        :class="{
-            'text-green-600':dra.etat === 'actif' || dra.etat === 'accepte',
-            'text-red-600': dra.etat === 'cloture' || dra.etat === 'refuse'
-                }"
-    >
-        {{
-            dra.etat === 'actif' ? 'ACTIF' :
-                dra.etat === 'cloture' ? 'CLÔTURÉ' :
-                    dra.etat === 'refuse' ? 'REFUSÉ' :
-                        'ACCEPTÉ'
-        }}
-    </span>
+                            <span
+                                class="font-bold"
+                                :class="{
+                                    'text-green-600':dra.etat === 'actif' || dra.etat === 'accepte',
+                                    'text-red-600': dra.etat === 'cloture' || dra.etat === 'refuse',
+                                    'text-blue-600': dra.etat === 'rembourse'
+                                }"
+                            >
+                                {{
+                                    dra.etat === 'actif' ? 'ACTIF' :
+                                        dra.etat === 'cloture' ? 'CLÔTURÉ' :
+                                            dra.etat === 'refuse' ? 'REFUSÉ' :
+                                               dra.etat === 'accepte' ? 'ACCEPTÉ' :
+                                                   'REMBOURSÉ'
+                                }}
+                            </span>
                         </TableCell>
                         <TableCell class="flex flex-wrap gap-2">
                             <Link

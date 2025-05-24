@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Paiment;
 
-use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
 use Inertia\Inertia;
 
 class PaimentController extends Controller

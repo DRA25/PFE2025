@@ -14,16 +14,17 @@ import { ref, computed } from 'vue'
 import { type BreadcrumbItem } from '@/types'
 
 const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Gestion des Centres', href: '/centres' },
+    { title: 'Achat', href: route('achat.index') },
+    { title: 'Gestion des Encaissements', href: '/encaissements' },
 ]
 
 const props = defineProps<{
-    centres: Array<{
-        id_centre: string,
-        adresse_centre: string,
-        seuil_centre: number,
-        montant_disponible: number,
-        type_centre: string
+    encaissements: Array<{
+        id: string,
+        centre: { adresse_centre: string },
+        remboursement: { n_remb: string,dra: { n_dra: string } },
+        montant_enc: number,
+        date_enc: string
     }>
 }>()
 
@@ -38,25 +39,35 @@ const requestSort = (column: string) => {
     }
 }
 
-const sortedCentres = computed(() => {
-    let data = [...props.centres]
-
+const sortedEncaissements = computed(() => {
+    let data = [...props.encaissements]
     if (searchQuery.value) {
         const query = searchQuery.value.toLowerCase()
-        data = data.filter((centre) =>
-            centre.id_centre.toLowerCase().includes(query) ||
-            centre.adresse_centre.toLowerCase().includes(query) ||
-            String(centre.seuil_centre).toLowerCase().includes(query) ||
-            String(centre.montant_disponible).toLowerCase().includes(query) ||
-            centre.type_centre.toLowerCase().includes(query)
+        data = data.filter((enc) =>
+            enc.centre.adresse_centre.toLowerCase().includes(query) ||
+            enc.remboursement.n_remb.toLowerCase().includes(query) ||
+            enc.remboursement.dra.n_dra.toLowerCase().includes(query) ||
+            String(enc.montant_enc).toLowerCase().includes(query) ||
+            enc.date_enc.toLowerCase().includes(query)
         )
     }
+
 
     if (sortConfig.value) {
         const { column, direction } = sortConfig.value
         data.sort((a, b) => {
-            const valA = a[column as keyof typeof a] ?? ''
-            const valB = b[column as keyof typeof b] ?? ''
+            let valA, valB;
+            if (column === 'centre') {
+                valA = a.centre.adresse_centre;
+                valB = b.centre.adresse_centre;
+            } else if (column === 'remboursement') {
+                valA = a.remboursement.n_remb;
+                valB = b.remboursement.n_remb;
+            } else {
+                valA = a[column as keyof typeof a] ?? '';
+                valB = b[column as keyof typeof b] ?? '';
+            }
+
             return direction === 'asc'
                 ? String(valA).localeCompare(String(valB))
                 : String(valB).localeCompare(String(valA))
@@ -66,9 +77,9 @@ const sortedCentres = computed(() => {
     return data
 })
 
-const deleteCentre = (id: string) => {
-    if (confirm('Êtes-vous sûr de vouloir supprimer ce centre ?')) {
-        router.delete(route('centres.destroy', { centre: id }), {
+const deleteEncaissement = (id: string) => {
+    if (confirm('Êtes-vous sûr de vouloir supprimer cet encaissement ?')) {
+        router.delete(route('encaissements.destroy', { encaissement: id }), {
             preserveScroll: true,
             onSuccess: () => {},
             onError: (errors) => {
@@ -80,7 +91,7 @@ const deleteCentre = (id: string) => {
 </script>
 
 <template>
-    <Head title="Liste des Centres" />
+    <Head title="Liste des Encaissements" />
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex justify-between items-center m-5 mb-0 gap-4 flex-wrap">
             <div class="flex items-center gap-2 w-full md:w-1/3">
@@ -88,83 +99,68 @@ const deleteCentre = (id: string) => {
                 <input
                     type="text"
                     v-model="searchQuery"
-                    placeholder="Rechercher par ID, adresse, seuil, montant disponible ou type..."
+                    placeholder="Rechercher par centre, remboursement, montant ou date..."
                     class="w-full bg-gray-100 px-4 py-2 rounded-md border border-gray-200 dark:border-gray-700 dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
                 />
             </div>
 
             <Link
-                href="/centres/create"
+                href="/encaissements/create"
                 as="button"
                 class="px-4 py-2 rounded-lg transition flex items-center gap-1 bg-[#042B62] dark:bg-[#F3B21B] dark:text-[#042B62] text-white hover:bg-blue-900 dark:hover:bg-yellow-200"
             >
                 <Plus class="w-4 h-4" />
-                <span>Créer un Centre</span>
+                <span>Créer un Encaissement</span>
             </Link>
         </div>
 
         <div class="m-5 mr-2 bg-gray-100 dark:bg-gray-800 rounded-lg">
             <div class="flex justify-between m-5">
                 <h1 class="text-lg font-bold text-left text-[#042B62FF] dark:text-[#BDBDBDFF]">
-                    Liste des Centres
+                    Liste des Encaissements
                 </h1>
             </div>
 
             <Table class="m-3 w-39/40">
                 <TableHeader>
                     <TableRow>
-                        <TableHead class="cursor-pointer" @click="requestSort('id_centre')">
-                            ID Centre
+                        <TableHead class="cursor-pointer" @click="requestSort('centre')">
+                            Centre
                             <ArrowUpDown class="ml-2 h-4 w-4 inline-block" />
                         </TableHead>
-                        <TableHead class="cursor-pointer" @click="requestSort('adresse_centre')">
-                            Adresse
+                        <TableHead class="cursor-pointer" @click="requestSort('remboursement')">
+                            Remboursement
                             <ArrowUpDown class="ml-2 h-4 w-4 inline-block" />
                         </TableHead>
-                        <TableHead class="cursor-pointer" @click="requestSort('seuil_centre')">
-                            Seuil
+                        <TableHead class="cursor-pointer" @click="requestSort('montant_enc')">
+                            Montant
                             <ArrowUpDown class="ml-2 h-4 w-4 inline-block" />
                         </TableHead>
-                        <TableHead class="cursor-pointer" @click="requestSort('montant_disponible')">
-                            Montant Disponible
+                        <TableHead class="cursor-pointer" @click="requestSort('date_enc')">
+                            Date
                             <ArrowUpDown class="ml-2 h-4 w-4 inline-block" />
                         </TableHead>
-                        <TableHead class="cursor-pointer" @click="requestSort('type_centre')">
-                            Type
+                        <TableHead class="cursor-pointer" @click="requestSort('n_dra')">
+                            N° DRA
                             <ArrowUpDown class="ml-2 h-4 w-4 inline-block" />
                         </TableHead>
-                        <TableHead>Actions</TableHead>
+
                     </TableRow>
                 </TableHeader>
 
                 <TableBody>
                     <TableRow
-                        v-for="centre in sortedCentres"
-                        :key="centre.id_centre"
+                        v-for="encaissement in sortedEncaissements"
+                        :key="encaissement.id"
                         class="hover:bg-gray-300 dark:hover:bg-gray-900"
                     >
-                        <TableCell>{{ centre.id_centre }}</TableCell>
-                        <TableCell>{{ centre.adresse_centre }}</TableCell>
-                        <TableCell>{{ centre.seuil_centre?.toLocaleString('fr-FR') }} DA</TableCell>
-                        <TableCell>{{ centre.montant_disponible?.toLocaleString('fr-FR') }} DA</TableCell>
-                        <TableCell>{{ centre.type_centre }}</TableCell>
-                        <TableCell class="flex flex-wrap gap-2">
-                            <Link
-                                :href="`/centres/${centre.id_centre}/edit`"
-                                class="bg-green-600 text-white px-3 py-1 rounded-lg hover:bg-green-400 transition flex items-center gap-1"
-                            >
-                                <Pencil class="w-4 h-4" />
-                                <span>Modifier</span>
-                            </Link>
+                        <TableCell>{{ encaissement.centre.adresse_centre }}</TableCell>
+                        <TableCell>{{ encaissement.remboursement.n_remb }}</TableCell>
+                        <TableCell>{{ encaissement.montant_enc?.toLocaleString('fr-FR') }} DA</TableCell>
+                        <TableCell>{{ encaissement.date_enc }}</TableCell>
+                        <TableCell>{{ encaissement.remboursement.dra.n_dra }}</TableCell>
 
-                            <button
-                                @click="deleteCentre(centre.id_centre)"
-                                class="bg-red-800 text-white px-3 py-1 rounded-lg hover:bg-red-600 transition flex items-center gap-1"
-                            >
-                                <Trash2 class="w-4 h-4" />
-                                <span>Supprimer</span>
-                            </button>
-                        </TableCell>
+
                     </TableRow>
                 </TableBody>
             </Table>
