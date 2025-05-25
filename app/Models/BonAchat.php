@@ -15,13 +15,27 @@ class BonAchat extends Model
 
     protected $fillable = [
         'n_ba',
-        'montant_ba',
         'date_ba',
         'id_fourn',
         'n_dra',
     ];
 
+    public function pieces()
+    {
+        return $this->belongsToMany(Piece::class, 'quantite_b_a_s', 'n_ba', 'id_piece')
+            ->withPivot('qte_ba');
+    }
 
+    /**
+     * Calculate the total amount of the bon d'achat.
+     */
+    public function getMontantAttribute(): float
+    {
+        return $this->pieces->sum(function($piece) {
+            $subtotal = $piece->prix_piece * $piece->pivot->qte_ba;
+            return $subtotal * (1 + ($piece->tva / 100));
+        });
+    }
 
     public function dra()
     {

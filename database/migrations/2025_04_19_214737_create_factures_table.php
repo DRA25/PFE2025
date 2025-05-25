@@ -13,7 +13,6 @@ return new class extends Migration
     {
         Schema::create('factures', function (Blueprint $table) {
             $table->integer('n_facture')->primary();
-            $table->integer('montant_facture');
             $table->date('date_facture');
             $table->integer('id_fourn');
             $table->string('n_dra');

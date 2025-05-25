@@ -71,7 +71,6 @@ class FactureController extends Controller
         DB::beginTransaction();
 
         try {
-            // Create the facture
             $facture = new Facture([
                 'n_facture' => $request->n_facture,
                 'date_facture' => $request->date_facture,
@@ -80,34 +79,36 @@ class FactureController extends Controller
             ]);
             $facture->save();
 
-            // Attach pieces with quantities
             $pieceAttachments = [];
             foreach ($request->pieces as $piece) {
                 $pieceAttachments[$piece['id_piece']] = ['qte_f' => $piece['qte_f']];
             }
             $facture->pieces()->attach($pieceAttachments);
 
-            // Calculate total amount
             $totalFacture = $this->calculateMontant($facture);
 
-            // Check DRA total
-            $totalDra = $dra->bonAchats()->sum('montant_ba') + $dra->factures()
-                    ->with('pieces')
-                    ->get()
-                    ->sum(function($f) {
-                        return $this->calculateMontant($f);
-                    });
+            // Calculate total_dra including both bonAchats and factures
+            $dra->load('bonAchats.pieces', 'factures.pieces');
+            $totalDra = '0';
+
+            foreach ($dra->bonAchats as $ba) {
+                $totalDra = bcadd($totalDra, (string)$this->calculateBonAchatMontant($ba), 2);
+            }
+            foreach ($dra->factures as $f) {
+                $totalDra = bcadd($totalDra, (string)$this->calculateMontant($f), 2);
+            }
 
             if ($totalDra > $dra->centre->montant_disponible) {
                 DB::rollBack();
                 return back()->withErrors(['total_dra' => 'Le montant disponible est insuffisant, il faut un remboursement.']);
             }
 
-            // Update DRA and centre
+            // Update total_dra for the Dra
             $dra->update([
-                'total_dra' => $totalDra,
+                'total_dra' => (float)$totalDra,
             ]);
 
+            // Update the Centre's montant_disponible
             $dra->centre->update([
                 'montant_disponible' => $dra->centre->montant_disponible - $totalFacture
             ]);
@@ -122,12 +123,11 @@ class FactureController extends Controller
         }
     }
 
+
     public function edit(Dra $dra, Facture $facture)
     {
         $fournisseurs = Fournisseur::all(['id_fourn', 'nom_fourn']);
         $pieces = Piece::all(['id_piece', 'nom_piece', 'prix_piece', 'tva']);
-
-        // Load facture with pieces
         $facture->load('pieces');
 
         return Inertia::render('Facture/Edit', [
@@ -154,53 +154,55 @@ class FactureController extends Controller
         try {
             $dra = Dra::where('n_dra', $n_dra)->firstOrFail();
             $facture = Facture::where('n_facture', $n_facture)->firstOrFail();
+            $centre = $dra->centre;
 
-            // Calculate old amount before changes
+            // 1. Calculate old amount and restore it to montant_disponible
             $oldMontant = $this->calculateMontant($facture);
+            $centre->montant_disponible += $oldMontant;
+            $centre->save();
 
-            // Update facture details
+            // 2. Update the facture with new data
             $facture->update([
                 'n_facture' => $request->n_facture,
                 'date_facture' => $request->date_facture,
                 'id_fourn' => $request->id_fourn,
             ]);
 
-            // Sync pieces with quantities
+            // 3. Sync pieces
             $pieceAttachments = [];
             foreach ($request->pieces as $piece) {
                 $pieceAttachments[$piece['id_piece']] = ['qte_f' => $piece['qte_f']];
             }
             $facture->pieces()->sync($pieceAttachments);
 
-            // Calculate new amount
+            // 4. Refresh relationships and calculate new amount
+            $facture->refresh(); // Important to get updated relationships
             $newMontant = $this->calculateMontant($facture);
 
-            // Restore old montant to centre first
-            $dra->centre->update([
-                'montant_disponible' => $dra->centre->montant_disponible + $oldMontant
-            ]);
+            // 5. Recalculate total_dra from scratch
+            $totalDra = 0;
+            $dra->load(['bonAchats.pieces', 'factures.pieces']);
 
-            // Calculate new DRA total
-            $totalDra = $dra->bonAchats()->sum('montant_ba') +
-                $dra->factures()
-                    ->with('pieces')
-                    ->get()
-                    ->sum(function($f) {
-                        return $this->calculateMontant($f);
-                    });
+            foreach ($dra->bonAchats as $ba) {
+                $totalDra += $this->calculateBonAchatMontant($ba);
+            }
+            foreach ($dra->factures as $f) {
+                $totalDra += $this->calculateMontant($f);
+            }
 
-            if ($totalDra > $dra->centre->montant_disponible) {
+            // 6. Check available balance
+            if ($totalDra > $centre->montant_disponible) {
                 DB::rollBack();
                 return back()->withErrors(['total_dra' => 'Le total du DRA dépasse le seuil autorisé du centre.']);
             }
 
-            $dra->update([
-                'total_dra' => $totalDra
-            ]);
+            // 7. Update DRA total
+            $dra->total_dra = $totalDra;
+            $dra->save();
 
-            $dra->centre->update([
-                'montant_disponible' => $dra->centre->montant_disponible - $newMontant
-            ]);
+            // 8. Update centre's available amount
+            $centre->montant_disponible -= $newMontant;
+            $centre->save();
 
             DB::commit();
 
@@ -217,25 +219,31 @@ class FactureController extends Controller
         DB::beginTransaction();
 
         try {
-            // Calculate amount to restore
             $montantToRestore = $this->calculateMontant($facture);
 
+            // Delete facture and detach related pieces
+            $facture->pieces()->detach();
             $facture->delete();
 
-            // Restore montant to centre
+            // Restore montant_disponible in centre
             $dra->centre->update([
                 'montant_disponible' => $dra->centre->montant_disponible + $montantToRestore
             ]);
 
-            // Update total_dra
+            // Reload relationships
+            $dra->load('bonAchats.pieces', 'factures.pieces');
+
+            // Recalculate total_dra using bcadd for precision
+            $totalDra = '0';
+            foreach ($dra->bonAchats as $ba) {
+                $totalDra = bcadd($totalDra, (string)$this->calculateBonAchatMontant($ba), 2);
+            }
+            foreach ($dra->factures as $f) {
+                $totalDra = bcadd($totalDra, (string)$this->calculateMontant($f), 2);
+            }
+
             $dra->update([
-                'total_dra' => $dra->bonAchats()->sum('montant_ba') +
-                    $dra->factures()
-                        ->with('pieces')
-                        ->get()
-                        ->sum(function($f) {
-                            return $this->calculateMontant($f);
-                        })
+                'total_dra' => (float)$totalDra,
             ]);
 
             DB::commit();
@@ -248,10 +256,19 @@ class FactureController extends Controller
         }
     }
 
+
     protected function calculateMontant(Facture $facture): float
     {
-        return $facture->pieces->sum(function($piece) {
+        return $facture->pieces->sum(function ($piece) {
             $subtotal = $piece->prix_piece * $piece->pivot->qte_f;
+            return $subtotal * (1 + ($piece->tva / 100));
+        });
+    }
+
+    protected function calculateBonAchatMontant($bonAchat): float
+    {
+        return $bonAchat->pieces->sum(function ($piece) {
+            $subtotal = $piece->prix_piece * $piece->pivot->qte_ba;
             return $subtotal * (1 + ($piece->tva / 100));
         });
     }

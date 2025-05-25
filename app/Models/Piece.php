@@ -36,6 +36,11 @@ class Piece extends Model
             ->withPivot('qte_f');
     }
 
+    public function bonachats()
+    {
+        return $this->belongsToMany(Facture::class, 'quantite_b_a_s', 'id_piece', 'n_ba')
+            ->withPivot('qte_ba');
+    }
     public function centre()
     {
         return $this->belongsTo(Centre::class, 'id_centre');

@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('bon_achats', function (Blueprint $table) {
             $table->integer('n_ba')->primary();
-            $table->integer('montant_ba');
+
             $table->date('date_ba');
             $table->integer('id_fourn');
             $table->string('n_dra');

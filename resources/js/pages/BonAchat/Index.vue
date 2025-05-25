@@ -6,7 +6,8 @@ import {
     TableBody,
     TableRow,
     TableCell,
-    TableHead
+    TableHead,
+    Table
 } from '@/components/ui/table'
 import { type BreadcrumbItem } from '@/types'
 import { Pencil, ArrowLeft, ArrowUpDown, Search } from 'lucide-vue-next'
@@ -14,12 +15,32 @@ import { ref, computed } from 'vue'
 
 const props = defineProps({
     dra: Object,
-    bonAchats: Array,
+    bonAchats: Array<{
+        n_ba: string
+        montant_ba: number
+        date_ba: string
+        id_fourn: number
+        n_dra: string
+        fournisseur: {
+            id_fourn: number
+            nom_fourn: string
+        }
+        pieces: Array<{
+            id_piece: number
+            nom_piece: string
+            prix_piece: number
+            tva: number
+            pivot: {
+                qte_ba: number
+            }
+        }>
+    }>(),
 })
 
 const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Gestion des DRAs', href: '/achat/dras' },
-    { title: `Bons d'achat pour DRA ${props.dra.n_dra}`, href: `/achat/dras/${props.dra.n_dra}/bon-achats` },
+    { title: 'Achat', href: '/achat' },
+    { title: 'Gestion des DRAs', href: route('achat.dras.index') },
+    { title: `Bons d'achat pour DRA ${props.dra.n_dra}`, href: route('achat.dras.bon-achats.index', { dra: props.dra.n_dra }) },
 ]
 
 const searchQuery = ref('');
@@ -33,6 +54,13 @@ const requestSort = (column: string) => {
     }
 }
 
+const calculateMontant = (bonAchat: typeof props.bonAchats[0]) => {
+    return bonAchat.pieces.reduce((total, piece) => {
+        const subtotal = piece.prix_piece * piece.pivot.qte_ba;
+        return total + subtotal * (1 + (piece.tva / 100));
+    }, 0);
+}
+
 const sortedBonAchats = computed(() => {
     let data = [...props.bonAchats];
 
@@ -40,9 +68,10 @@ const sortedBonAchats = computed(() => {
         const query = searchQuery.value.toLowerCase();
         data = data.filter(bonAchat =>
             String(bonAchat.n_ba).toLowerCase().includes(query) ||
-            String(bonAchat.montant_ba).toLowerCase().includes(query) ||
+            String(calculateMontant(bonAchat)).toLowerCase().includes(query) ||
             bonAchat.date_ba.toLowerCase().includes(query) ||
-            bonAchat.fournisseur?.nom_fourn?.toLowerCase().includes(query)
+            bonAchat.fournisseur?.nom_fourn?.toLowerCase().includes(query) ||
+            bonAchat.pieces?.some(piece => piece.nom_piece.toLowerCase().includes(query))
         );
     }
 
@@ -50,13 +79,22 @@ const sortedBonAchats = computed(() => {
         const { column, direction } = sortConfig.value;
         data.sort((a, b) => {
             let valA, valB;
-            if (column === 'fournisseur.nom_fourn') {
+
+            if (column === 'montant') {
+                valA = calculateMontant(a);
+                valB = calculateMontant(b);
+            } else if (column === 'fournisseur.nom_fourn') {
                 valA = a.fournisseur?.nom_fourn ?? '';
                 valB = b.fournisseur?.nom_fourn ?? '';
             } else {
                 valA = a[column as keyof typeof a] ?? '';
                 valB = b[column as keyof typeof b] ?? '';
             }
+
+            if (typeof valA === 'number' && typeof valB === 'number') {
+                return direction === 'asc' ? valA - valB : valB - valA;
+            }
+
             return direction === 'asc'
                 ? String(valA).localeCompare(String(valB))
                 : String(valB).localeCompare(String(valA));
@@ -81,7 +119,7 @@ const sortedBonAchats = computed(() => {
                 />
             </div>
             <Link
-                :href="`/achat/dras/${props.dra.n_dra}/bon-achats/create`"
+                :href="route('achat.dras.bon-achats.create', { dra: props.dra.n_dra })"
                 class="bg-[#042B62] dark:bg-[#F3B21B] dark:text-[#042B62] text-white px-4 py-2 rounded-lg hover:bg-blue-900 dark:hover:bg-yellow-200 transition"
             >
                 Ajouter un Bon d'achat
@@ -102,8 +140,8 @@ const sortedBonAchats = computed(() => {
                             ID Bon Achat
                             <ArrowUpDown class="ml-2 h-4 w-4 inline-block" />
                         </TableHead>
-                        <TableHead class="cursor-pointer" @click="requestSort('montant_ba')">
-                            Montant
+                        <TableHead class="cursor-pointer" @click="requestSort('montant')">
+                            Montant (DA)
                             <ArrowUpDown class="ml-2 h-4 w-4 inline-block" />
                         </TableHead>
                         <TableHead class="cursor-pointer" @click="requestSort('date_ba')">
@@ -114,6 +152,7 @@ const sortedBonAchats = computed(() => {
                             Fournisseur
                             <ArrowUpDown class="ml-2 h-4 w-4 inline-block" />
                         </TableHead>
+                        <TableHead>Libellé</TableHead>
                         <TableHead>Actions</TableHead>
                     </TableRow>
                 </TableHeader>
@@ -125,12 +164,17 @@ const sortedBonAchats = computed(() => {
                         class="hover:bg-gray-300 dark:hover:bg-gray-900"
                     >
                         <TableCell>{{ bonAchat.n_ba }}</TableCell>
-                        <TableCell>{{ bonAchat.montant_ba }}</TableCell>
-                        <TableCell>{{ bonAchat.date_ba }}</TableCell>
-                        <TableCell>{{ bonAchat.fournisseur.nom_fourn }}</TableCell>
+                        <TableCell>{{ calculateMontant(bonAchat).toFixed(2) }}</TableCell>
+                        <TableCell>{{ new Date(bonAchat.date_ba).toLocaleDateString() }}</TableCell>
+                        <TableCell>{{ bonAchat.fournisseur?.nom_fourn }}</TableCell>
+                        <TableCell>
+                            <div v-for="piece in bonAchat.pieces" :key="piece.id_piece" class="text-sm">
+                                {{ piece.nom_piece }} (x{{ piece.pivot.qte_ba }})
+                            </div>
+                        </TableCell>
                         <TableCell>
                             <Link
-                                :href="`/achat/dras/${props.dra.n_dra}/bon-achats/${bonAchat.n_ba}/edit`"
+                                :href="route('achat.dras.bon-achats.edit', { dra: props.dra.n_dra, bonAchat: bonAchat.n_ba })"
                                 class="bg-green-600 text-white px-3 py-1 rounded-lg hover:bg-green-400 transition"
                             >
                                 <span class="inline-flex items-center space-x-1">
@@ -141,17 +185,17 @@ const sortedBonAchats = computed(() => {
                         </TableCell>
                     </TableRow>
                 </TableBody>
-
-                <div class="m-5">
-                    <Link
-                        href="/achat/dras"
-                        class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-400 transition inline-flex items-center space-x-1"
-                    >
-                        <ArrowLeft class="w-4 h-4" />
-                        <span>Retourner à la liste des DRAs</span>
-                    </Link>
-                </div>
             </Table>
+
+            <div class="m-5">
+                <Link
+                    :href="route('achat.dras.index')"
+                    class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-400 transition inline-flex items-center space-x-1"
+                >
+                    <ArrowLeft class="w-4 h-4" />
+                    <span>Retourner à la liste des DRAs</span>
+                </Link>
+            </div>
         </div>
     </AppLayout>
 </template>

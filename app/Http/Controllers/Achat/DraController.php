@@ -31,7 +31,7 @@ class DraController extends Controller
                     'created_at' => $dra->created_at ? $dra->created_at->toISOString() : now()->toISOString(),
                     'centre' => [
                         'seuil_centre' => $dra->centre->seuil_centre,
-                        'montant_disponible' => $dra->centre->montant_disponible, // 👈 add this line
+                        'montant_disponible' => $dra->centre->montant_disponible,
                     ]
                 ];
             }),
