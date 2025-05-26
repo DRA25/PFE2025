@@ -4,12 +4,19 @@ import AppLayout from '@/layouts/AppLayout.vue'
 import { type BreadcrumbItem } from '@/types'
 import { Plus, Trash2 } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
+import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+
+import { usePage } from '@inertiajs/vue3'
+
+
 
 const props = defineProps({
     dra: Object,
     fournisseurs: Array,
     pieces: Array, // Add pieces to props
 })
+
+
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title:'Achat', href: '/achat'},
@@ -22,6 +29,7 @@ const form = useForm({
     n_facture: '',
     date_facture: '',
     id_fourn: '',
+    droit_timbre: 0,
     pieces: [] as Array<{ id_piece: string, qte_f: number }>,
 })
 
@@ -31,7 +39,7 @@ const quantity = ref(1)
 
 // Calculate total amount
 const totalAmount = computed(() => {
-    return form.pieces.reduce((total, item) => {
+    const piecesTotal = form.pieces.reduce((total, item) => {
         const piece = props.pieces.find(p => p.id_piece == item.id_piece)
         if (!piece) return total
 
@@ -39,7 +47,10 @@ const totalAmount = computed(() => {
         const totalWithTva = subtotal * (1 + (piece.tva / 100))
         return total + totalWithTva
     }, 0)
+
+    return piecesTotal + Number(form.droit_timbre || 0)
 })
+
 
 // Add a piece to the invoice
 function addPiece() {
@@ -85,6 +96,7 @@ function submit() {
 <template>
     <Head :title="`Créer une Facture pour DRA ${props.dra.n_dra}`" />
     <AppLayout :breadcrumbs="breadcrumbs">
+
         <div class="m-5 mr-2 bg-gray-100 dark:bg-gray-800 rounded-lg p-6">
             <div class="flex justify-between mb-6">
                 <h1 class="text-lg font-bold text-left text-[#042B62FF] dark:text-[#BDBDBDFF]">
@@ -93,13 +105,10 @@ function submit() {
             </div>
 
             <form @submit.prevent="submit" class="space-y-6 bg-white dark:bg-gray-700 p-6 rounded-lg shadow">
-                <div v-if="form.hasErrors" class="mb-4">
-                    <div v-if="form.errors.total_dra" class="text-red-600 text-sm">
-                        {{ form.errors.total_dra }}
-                    </div>
-                    <div v-if="form.errors.error" class="text-red-600 text-sm">
-                        {{ form.errors.error }}
-                    </div>
+                <div v-if="Object.keys(form.errors).length" class="mb-4 p-4 bg-red-100 text-red-800 rounded">
+                    <ul class="list-disc pl-5">
+                        <li v-for="(error, key) in form.errors" :key="key">{{ error }}</li>
+                    </ul>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -149,6 +158,7 @@ function submit() {
                         </Link>
                     </div>
                     <div v-if="form.errors.id_fourn" class="text-red-500 text-sm">{{ form.errors.id_fourn }}</div>
+
                 </div>
 
                 <!-- Piece Selection Section -->
@@ -194,60 +204,79 @@ function submit() {
                         </button>
                     </div>
 
-                    <!-- Selected Pieces Table -->
-                    <div v-if="form.pieces.length > 0" class="overflow-x-auto">
-                        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-600">
-                            <thead class="bg-gray-50 dark:bg-gray-600">
-                            <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Pièce</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Prix Unitaire</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">TVA</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Quantité</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Total</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Actions</th>
-                            </tr>
-                            </thead>
-                            <tbody class="bg-white dark:bg-gray-700 divide-y divide-gray-200 dark:divide-gray-600">
-                            <tr v-for="(item, index) in form.pieces" :key="index">
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
-                                    {{ props.pieces.find(p => p.id_piece == item.id_piece)?.nom_piece }}
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
-                                    {{ props.pieces.find(p => p.id_piece == item.id_piece)?.prix_piece }} DA
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
-                                    {{ props.pieces.find(p => p.id_piece == item.id_piece)?.tva }}%
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
-                                    <input
-                                        v-model.number="item.qte_f"
-                                        type="number"
-                                        min="1"
-                                        class="w-20 border border-gray-300 dark:border-gray-600 p-1 rounded focus:ring-2 focus:ring-[#042B62] dark:focus:ring-[#F3B21B] focus:border-transparent dark:bg-gray-800 dark:text-white"
-                                    />
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
-                                    {{
-                                        (props.pieces.find(p => p.id_piece == item.id_piece)?.prix_piece * item.qte_f *
-                                            (1 + (props.pieces.find(p => p.id_piece == item.id_piece)?.tva / 100)))
-                                    }} DA
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
-                                    <button
-                                        type="button"
-                                        @click="removePiece(index)"
-                                        class="text-red-600 hover:text-red-900 dark:hover:text-red-400"
-                                    >
-                                        <Trash2 class="w-5 h-5" />
-                                    </button>
-                                </td>
-                            </tr>
-                            </tbody>
-                        </table>
+                    <div v-if="form.pieces.length > 0" class="overflow-x-auto bg-gray-100 dark:bg-gray-800 rounded-lg m-5">
+                        <Table class="w-full">
+                            <TableHeader>
+                                <TableRow class="bg-gray-50 dark:bg-gray-700">
+                                    <TableHead>Pièce</TableHead>
+                                    <TableHead>Prix Unitaire</TableHead>
+                                    <TableHead>TVA</TableHead>
+                                    <TableHead>Quantité</TableHead>
+                                    <TableHead>Total</TableHead>
+                                    <TableHead>Actions</TableHead>
+                                </TableRow>
+                            </TableHeader>
+
+                            <TableBody>
+                                <TableRow
+                                    v-for="(item, index) in form.pieces"
+                                    :key="index"
+                                    class="hover:bg-gray-300 dark:hover:bg-gray-900"
+                                >
+                                    <TableCell>
+                                        {{ props.pieces.find(p => p.id_piece === item.id_piece)?.nom_piece }}
+                                    </TableCell>
+                                    <TableCell>
+                                        {{ props.pieces.find(p => p.id_piece === item.id_piece)?.prix_piece }} DA
+                                    </TableCell>
+                                    <TableCell>
+                                        {{ props.pieces.find(p => p.id_piece === item.id_piece)?.tva }}%
+                                    </TableCell>
+                                    <TableCell>
+                                        <input
+                                            v-model.number="item.qte_f"
+                                            type="number"
+                                            min="1"
+                                            class="w-20 border border-gray-300 dark:border-gray-600 p-1 rounded focus:ring-2 focus:ring-[#042B62] dark:focus:ring-[#F3B21B] focus:border-transparent dark:bg-gray-800 dark:text-white"
+                                        />
+                                    </TableCell>
+                                    <TableCell>
+                                        {{
+                                            (
+                                                props.pieces.find(p => p.id_piece === item.id_piece)?.prix_piece *
+                                                item.qte_f *
+                                                (1 + (props.pieces.find(p => p.id_piece === item.id_piece)?.tva / 100))
+                                            ).toFixed(2)
+                                        }} DA
+                                    </TableCell>
+                                    <TableCell>
+                                        <button
+                                            type="button"
+                                            @click="removePiece(index)"
+                                            class="text-red-600 hover:text-red-900 dark:hover:text-red-400"
+                                            aria-label="Supprimer pièce"
+                                        >
+                                            <Trash2 class="w-5 h-5" />
+                                        </button>
+                                    </TableCell>
+                                </TableRow>
+                            </TableBody>
+                        </Table>
                     </div>
 
                     <div v-else class="text-center py-4 text-gray-500 dark:text-gray-400">
                         Aucune pièce sélectionnée
+                    </div>
+
+                    <!-- Droit Timbre Input -->
+                    <div class="flex justify-end items-center space-x-2">
+                        <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Droit Timbre (DA):</label>
+                        <input
+                            v-model.number="form.droit_timbre"
+                            type="number"
+                            min="0"
+                            class="w-32 border border-gray-300 dark:border-gray-600 p-2 rounded focus:ring-2 focus:ring-[#042B62] dark:focus:ring-[#F3B21B] focus:border-transparent dark:bg-gray-800 dark:text-white"
+                        />
                     </div>
 
                     <!-- Total Amount -->

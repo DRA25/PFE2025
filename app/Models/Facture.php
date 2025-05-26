@@ -19,6 +19,7 @@ protected $fillable = [
 'date_facture',
 'id_fourn',
 'n_dra',
+    'droit_timbre',
 ];
 
 

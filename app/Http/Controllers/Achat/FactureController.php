@@ -63,6 +63,7 @@ class FactureController extends Controller
             'n_facture' => 'required|unique:factures,n_facture',
             'date_facture' => 'required|date',
             'id_fourn' => 'required|exists:fournisseurs,id_fourn',
+            'droit_timbre' => 'nullable|numeric',
             'pieces' => 'required|array|min:1',
             'pieces.*.id_piece' => 'required|exists:pieces,id_piece',
             'pieces.*.qte_f' => 'required|integer|min:1',
@@ -76,6 +77,7 @@ class FactureController extends Controller
                 'date_facture' => $request->date_facture,
                 'id_fourn' => $request->id_fourn,
                 'n_dra' => $dra->n_dra,
+                'droit_timbre' => $request->droit_timbre ?? 0,
             ]);
             $facture->save();
 
@@ -86,6 +88,12 @@ class FactureController extends Controller
             $facture->pieces()->attach($pieceAttachments);
 
             $totalFacture = $this->calculateMontant($facture);
+
+            // Check maximum facture limit
+            if ($totalFacture > 20000) {
+                DB::rollBack();
+                return back()->withErrors(['facture_total' => 'Le montant total de la facture ne peut pas dépasser 20 000 DA.']);
+            }
 
             // Calculate total_dra including both bonAchats and factures
             $dra->load('bonAchats.pieces', 'factures.pieces');
@@ -98,17 +106,15 @@ class FactureController extends Controller
                 $totalDra = bcadd($totalDra, (string)$this->calculateMontant($f), 2);
             }
 
-            if ($totalDra > $dra->centre->montant_disponible) {
+            if ($dra->centre->montant_disponible < $totalFacture) {
                 DB::rollBack();
                 return back()->withErrors(['total_dra' => 'Le montant disponible est insuffisant, il faut un remboursement.']);
             }
 
-            // Update total_dra for the Dra
             $dra->update([
                 'total_dra' => (float)$totalDra,
             ]);
 
-            // Update the Centre's montant_disponible
             $dra->centre->update([
                 'montant_disponible' => $dra->centre->montant_disponible - $totalFacture
             ]);
@@ -122,7 +128,6 @@ class FactureController extends Controller
             return back()->withErrors(['error' => 'Une erreur est survenue : ' . $e->getMessage()]);
         }
     }
-
 
     public function edit(Dra $dra, Facture $facture)
     {
@@ -144,6 +149,7 @@ class FactureController extends Controller
             'n_facture' => 'required|unique:factures,n_facture,' . $n_facture . ',n_facture',
             'date_facture' => 'required|date',
             'id_fourn' => 'required|exists:fournisseurs,id_fourn',
+            'droit_timbre' => 'nullable|numeric',
             'pieces' => 'required|array|min:1',
             'pieces.*.id_piece' => 'required|exists:pieces,id_piece',
             'pieces.*.qte_f' => 'required|integer|min:1',
@@ -156,30 +162,32 @@ class FactureController extends Controller
             $facture = Facture::where('n_facture', $n_facture)->firstOrFail();
             $centre = $dra->centre;
 
-            // 1. Calculate old amount and restore it to montant_disponible
             $oldMontant = $this->calculateMontant($facture);
             $centre->montant_disponible += $oldMontant;
             $centre->save();
 
-            // 2. Update the facture with new data
             $facture->update([
                 'n_facture' => $request->n_facture,
                 'date_facture' => $request->date_facture,
                 'id_fourn' => $request->id_fourn,
+                'droit_timbre' => $request->droit_timbre ?? 0,
             ]);
 
-            // 3. Sync pieces
             $pieceAttachments = [];
             foreach ($request->pieces as $piece) {
                 $pieceAttachments[$piece['id_piece']] = ['qte_f' => $piece['qte_f']];
             }
             $facture->pieces()->sync($pieceAttachments);
 
-            // 4. Refresh relationships and calculate new amount
-            $facture->refresh(); // Important to get updated relationships
+            $facture->refresh();
             $newMontant = $this->calculateMontant($facture);
 
-            // 5. Recalculate total_dra from scratch
+            // Check maximum facture limit
+            if ($newMontant > 20000) {
+                DB::rollBack();
+                return back()->withErrors(['facture_total' => 'Le montant total de la facture ne peut pas dépasser 20 000 DA.']);
+            }
+
             $totalDra = 0;
             $dra->load(['bonAchats.pieces', 'factures.pieces']);
 
@@ -190,17 +198,14 @@ class FactureController extends Controller
                 $totalDra += $this->calculateMontant($f);
             }
 
-            // 6. Check available balance
-            if ($totalDra > $centre->montant_disponible) {
+            if ($dra->centre->montant_disponible < $newMontant) {
                 DB::rollBack();
                 return back()->withErrors(['total_dra' => 'Le total du DRA dépasse le seuil autorisé du centre.']);
             }
 
-            // 7. Update DRA total
             $dra->total_dra = $totalDra;
             $dra->save();
 
-            // 8. Update centre's available amount
             $centre->montant_disponible -= $newMontant;
             $centre->save();
 
@@ -221,19 +226,15 @@ class FactureController extends Controller
         try {
             $montantToRestore = $this->calculateMontant($facture);
 
-            // Delete facture and detach related pieces
             $facture->pieces()->detach();
             $facture->delete();
 
-            // Restore montant_disponible in centre
             $dra->centre->update([
                 'montant_disponible' => $dra->centre->montant_disponible + $montantToRestore
             ]);
 
-            // Reload relationships
             $dra->load('bonAchats.pieces', 'factures.pieces');
 
-            // Recalculate total_dra using bcadd for precision
             $totalDra = '0';
             foreach ($dra->bonAchats as $ba) {
                 $totalDra = bcadd($totalDra, (string)$this->calculateBonAchatMontant($ba), 2);
@@ -256,13 +257,14 @@ class FactureController extends Controller
         }
     }
 
-
     protected function calculateMontant(Facture $facture): float
     {
-        return $facture->pieces->sum(function ($piece) {
+        $piecesTotal = $facture->pieces->sum(function ($piece) {
             $subtotal = $piece->prix_piece * $piece->pivot->qte_f;
             return $subtotal * (1 + ($piece->tva / 100));
         });
+
+        return $piecesTotal + ($facture->droit_timbre ?? 0);
     }
 
     protected function calculateBonAchatMontant($bonAchat): float

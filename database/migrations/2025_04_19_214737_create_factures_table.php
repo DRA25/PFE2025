@@ -16,6 +16,7 @@ return new class extends Migration
             $table->date('date_facture');
             $table->integer('id_fourn');
             $table->string('n_dra');
+            $table->float('droit_timbre')->default(0);
             $table->foreign('id_fourn')->references('id_fourn')->on('fournisseurs')->onDelete('cascade');
             $table->foreign('n_dra')->references('n_dra')->on('dras')->onDelete('cascade');
         });

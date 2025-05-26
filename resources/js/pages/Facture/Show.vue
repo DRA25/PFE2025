@@ -99,7 +99,9 @@ const filteredFactures = computed(() => {
                         <TableHead>N° Facture</TableHead>
                         <TableHead>Date</TableHead>
                         <TableHead>Fournisseur</TableHead>
+                        <TableHead>Libelle</TableHead>
                         <TableHead>Montant Total</TableHead>
+
                     </TableRow>
                 </TableHeader>
 
@@ -112,49 +114,14 @@ const filteredFactures = computed(() => {
                             <TableCell>{{ facture.n_facture }}</TableCell>
                             <TableCell>{{ facture.date_facture }}</TableCell>
                             <TableCell>{{ facture.fournisseur.nom_fourn }}</TableCell>
-                            <TableCell>{{ facture.montant.toLocaleString('fr-FR') }} DA</TableCell>
-                        </TableRow>
-                        <TableRow v-if="expandedFacture === facture.n_facture">
-                            <TableCell colspan="4" class="px-6 py-4 bg-gray-50 dark:bg-gray-800">
-                                <div class="space-y-4">
-                                    <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300">Détails des pièces</h3>
-                                    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-600">
-                                        <thead>
-                                        <tr>
-                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Pièce</th>
-                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Prix Unitaire</th>
-                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">TVA</th>
-                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Quantité</th>
-                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Sous-total</th>
-                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Total avec TVA</th>
-                                        </tr>
-                                        </thead>
-                                        <tbody>
-                                        <tr v-for="(piece, index) in facture.pieces" :key="index">
-                                            <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
-                                                {{ piece.nom_piece }}
-                                            </td>
-                                            <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
-                                                {{ piece.prix_piece.toFixed(2) }} DA
-                                            </td>
-                                            <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
-                                                {{ piece.tva }}%
-                                            </td>
-                                            <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
-                                                {{ piece.pivot.qte_f }}
-                                            </td>
-                                            <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
-                                                {{ (piece.prix_piece * piece.pivot.qte_f).toFixed(2) }} DA
-                                            </td>
-                                            <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
-                                                {{ calculatePieceTotal(piece).toFixed(2) }} DA
-                                            </td>
-                                        </tr>
-                                        </tbody>
-                                    </table>
+                            <TableCell>
+                                <div v-for="piece in facture.pieces" :key="piece.id_piece" class="text-sm">
+                                    {{ piece.nom_piece }} (x{{ piece.pivot.qte_f }})
                                 </div>
                             </TableCell>
+                            <TableCell>{{ facture.montant.toLocaleString('fr-FR') }} DA</TableCell>
                         </TableRow>
+
                     </template>
                 </TableBody>
             </Table>

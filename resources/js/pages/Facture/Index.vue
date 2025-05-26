@@ -19,6 +19,7 @@ const props = defineProps({
         date_facture: string
         id_fourn: number
         n_dra: string
+        droit_timbre?: number
         fournisseur: {
             id_fourn: number
             nom_fourn: string
@@ -52,12 +53,14 @@ const requestSort = (column: string) => {
     }
 }
 
-// Calculate total amount for a facture
+// Calculate total amount for a facture including droit_timbre
 const calculateMontant = (facture: typeof props.factures[0]) => {
-    return facture.pieces.reduce((total, piece) => {
+    const totalPieces = facture.pieces.reduce((total, piece) => {
         const subtotal = piece.prix_piece * piece.pivot.qte_f;
         return total + (subtotal * (1 + (piece.tva / 100)));
     }, 0);
+    const timbre = facture.droit_timbre ?? 0;
+    return totalPieces + timbre;
 }
 
 const sortedFactures = computed(() => {

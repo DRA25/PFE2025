@@ -105,6 +105,12 @@ function submit() {
             </div>
 
             <form @submit.prevent="submit" class="space-y-6 bg-white dark:bg-gray-700 p-6 rounded-lg shadow" novalidate>
+                <div v-if="Object.keys(form.errors).length" class="mb-4 p-4 bg-red-100 text-red-800 rounded">
+                    <ul class="list-disc pl-5">
+                        <li v-for="(error, key) in form.errors" :key="key">{{ error }}</li>
+                    </ul>
+                </div>
+
                 <div v-if="form.hasErrors" class="mb-4 space-y-1">
                     <div v-if="form.errors.total_dra" class="text-red-600 text-sm">{{ form.errors.total_dra }}</div>
                     <div v-if="form.errors.error" class="text-red-600 text-sm">{{ form.errors.error }}</div>

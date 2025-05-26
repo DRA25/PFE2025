@@ -88,6 +88,11 @@ class BonAchatController extends Controller
 
             $totalBonAchat = $this->calculateMontant($bonAchat);
 
+            if ($totalBonAchat > 10000) {
+                DB::rollBack();
+                return back()->withErrors(['bonAchat_total' => 'Le montant total du Bon Achat ne peut pas dépasser 10 000 DA.']);
+            }
+
             $dra->load('bonAchats.pieces', 'factures.pieces');
             $totalDra = '0';
 
@@ -98,7 +103,7 @@ class BonAchatController extends Controller
                 $totalDra = bcadd($totalDra, (string)$this->calculateFactureMontant($f), 2);
             }
 
-            if ($totalDra > $dra->centre->montant_disponible) {
+            if ($dra->centre->montant_disponible < $totalBonAchat) {
                 DB::rollBack();
                 return back()->withErrors(['total_dra' => 'Le montant disponible est insuffisant, il faut un remboursement.']);
             }
@@ -176,6 +181,12 @@ class BonAchatController extends Controller
             $bonAchat->refresh(); // Important to get updated relationships
             $newMontant = $this->calculateMontant($bonAchat);
 
+            if ($newMontant > 10000) {
+                DB::rollBack();
+                return back()->withErrors(['bonAchat_total' => 'Le montant total du Bon Achat ne peut pas dépasser 10 000 DA.']);
+            }
+
+
             // 5. Recalculate total_dra from scratch
             $totalDra = 0;
             $dra->load(['bonAchats.pieces', 'factures.pieces']);
@@ -188,7 +199,7 @@ class BonAchatController extends Controller
             }
 
             // 6. Check available balance
-            if ($totalDra > $centre->montant_disponible) {
+            if ($dra->centre->montant_disponible < $newMontant) {
                 DB::rollBack();
                 return back()->withErrors(['total_dra' => 'Le total du DRA dépasse le seuil autorisé du centre.']);
             }

@@ -133,6 +133,12 @@ function destroyBonAchat() {
             </div>
 
             <form @submit.prevent="submit" class="space-y-6 bg-white dark:bg-gray-700 p-6 rounded-lg shadow">
+                <div v-if="Object.keys(form.errors).length" class="mb-4 p-4 bg-red-100 text-red-800 rounded">
+                    <ul class="list-disc pl-5">
+                        <li v-for="(error, key) in form.errors" :key="key">{{ error }}</li>
+                    </ul>
+                </div>
+
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div class="space-y-2">
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">N° Bon d'achat</label>
