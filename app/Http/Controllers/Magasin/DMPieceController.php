@@ -74,7 +74,7 @@ class DMPieceController extends Controller
             $magasin = Magasin::where('id_centre', $user->id_centre)->firstOrFail();
             $validated['id_magasin'] = $magasin->id_magasin;
         } elseif ($user->hasRole('service atelier') && !isset($validated['id_atelier'])) {
-            $atelier = Magasin::where('id_centre', $user->id_centre)->firstOrFail();
+            $atelier = Atelier::where('id_centre', $user->id_centre)->firstOrFail();
             $validated['id_atelier'] = $atelier->id_atelier;
         }
 
