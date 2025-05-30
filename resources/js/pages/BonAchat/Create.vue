@@ -32,6 +32,7 @@ const props = defineProps({
 const breadcrumbs: BreadcrumbItem[] = [
     { title:'Achat', href: '/achat'},
     { title: 'Gestion des DRAs', href: route('achat.dras.index') },
+    { title: `Details de DRA ${props.dra.n_dra}`, href: route('achat.dras.show', { dra: props.dra.n_dra }) },
     { title: `Bons d'achat pour DRA ${props.dra.n_dra}`, href: route('achat.dras.bon-achats.index', { dra: props.dra.n_dra }) },
     { title: `Créer un Bon d'achat pour DRA ${props.dra.n_dra}`, href: route('achat.dras.bon-achats.create', { dra: props.dra.n_dra }) },
 ]

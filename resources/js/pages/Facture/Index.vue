@@ -39,6 +39,7 @@ const props = defineProps({
 const breadcrumbs: BreadcrumbItem[] = [
     { title:'Achat', href: '/achat'},
     { title: 'Gestion des DRAs', href: route('achat.dras.index') },
+    { title: `Details de DRA ${props.dra.n_dra}`, href: route('achat.dras.show', { dra: props.dra.n_dra }) },
     { title: `Factures pour DRA ${props.dra.n_dra}`, href: route('achat.dras.factures.index', { dra: props.dra.n_dra }) },
 ]
 
@@ -191,11 +192,11 @@ const sortedFactures = computed(() => {
 
             <div class="m-5">
                 <Link
-                    :href="route('achat.dras.index')"
+                    :href="route('achat.dras.show', { dra: props.dra.n_dra })"
                     class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-400 transition inline-flex items-center space-x-1"
                 >
                     <ArrowLeft class="w-4 h-4" />
-                    <span>Retourner à la liste des DRAs</span>
+                    <span>Retourner à la DRA</span>
                 </Link>
             </div>
         </div>

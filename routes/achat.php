@@ -32,6 +32,7 @@ Route::resource('demandes-pieces', AchatDemandePieceController::class)
 'update' => 'demandes-pieces.update'
 ]);
 
+Route::get('/dras/{dra}', [DraController::class, 'show'])->name('dras.show');
 
 // DRAs routes - views located in pages/dra/
 Route::resource('dras', DraController::class)->names([

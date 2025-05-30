@@ -40,6 +40,54 @@ class DraController extends Controller
     }
 
 
+    public function show($n_dra)
+    {
+        $userCentreId = Auth::user()->id_centre;
+
+        $dra = Dra::with('centre')->where('n_dra', $n_dra)->firstOrFail();
+
+        if ($dra->id_centre !== $userCentreId) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        // Load factures with related data
+        $factures = $dra->factures()
+            ->with(['fournisseur:id_fourn,nom_fourn', 'pieces:id_piece,nom_piece,prix_piece,tva'])
+            ->get()
+            ->map(function ($facture) {
+                $facture->montant = $this->calculateMontant($facture);
+                return $facture;
+            });
+
+        // Load bonAchats with related data
+        $bonAchats = $dra->bonAchats()
+            ->with(['fournisseur:id_fourn,nom_fourn', 'pieces:id_piece,nom_piece,prix_piece,tva'])
+            ->get()
+            ->map(function ($bonAchat) {
+                $bonAchat->montant = $this->calculateMontant($bonAchat);
+                return $bonAchat;
+            });
+
+        return Inertia::render('Dra/Show', [
+            'dra' => [
+                'n_dra' => $dra->n_dra,
+                'id_centre' => $dra->id_centre,
+                'date_creation' => $dra->date_creation->format('Y-m-d'),
+                'etat' => $dra->etat,
+                'total_dra' => $dra->total_dra,
+                'created_at' => $dra->created_at?->toISOString(),
+                'centre' => [
+                    'seuil_centre' => $dra->centre->seuil_centre,
+                    'montant_disponible' => $dra->centre->montant_disponible,
+                ]
+            ],
+            'factures' => $factures,
+            'bonAchats' => $bonAchats,
+        ]);
+    }
+
+
+
     public function autocreate(Request $request)
     {
         $user = Auth::user();
@@ -129,36 +177,55 @@ return Inertia::render('Dra/Edit', [
     }
 
 
-public function destroy($n_dra)
-{
-DB::beginTransaction();
+    public function destroy($n_dra)
+    {
+        DB::beginTransaction();
 
-try {
-$userCentreId = Auth::user()->id_centre;
-$dra = Dra::where('n_dra', $n_dra)->firstOrFail();
+        try {
+            $userCentreId = Auth::user()->id_centre;
+            $dra = Dra::with(['bonAchats.pieces', 'factures.pieces', 'centre'])->where('n_dra', $n_dra)->firstOrFail();
 
-// Authorization: Ensure the DRA belongs to the user's center
-if ($dra->id_centre !== $userCentreId) {
-abort(403, 'Unauthorized action.');
-}
+            // Authorization: Ensure the DRA belongs to the user's center
+            if ($dra->id_centre !== $userCentreId) {
+                abort(403, 'Unauthorized action.');
+            }
 
-if ($dra->etat !== 'actif') {
-return back()->withErrors(['error' => 'Seuls les DRAs actifs peuvent être supprimés']);
-}
+            if ($dra->etat !== 'actif') {
+                return back()->withErrors(['error' => 'Seuls les DRAs actifs peuvent être supprimés']);
+            }
 
-$dra->factures()->delete();
-$dra->delete();
+            // Calculate the total montant to restore
+            $montantToRestore = '0';
 
-DB::commit();
+            foreach ($dra->bonAchats as $bonAchat) {
+                $montantToRestore = bcadd($montantToRestore, (string)$this->calculateMontant($bonAchat), 2);
+            }
 
-return redirect()->route('achat.dras.index')
-->with('success', 'DRA supprimé avec succès');
+            foreach ($dra->factures as $facture) {
+                $montantToRestore = bcadd($montantToRestore, (string)$this->calculateMontant($facture), 2);
+            }
 
-} catch (\Exception $e) {
-DB::rollBack();
-return back()->withErrors(['error' => 'Erreur lors de la suppression: ' . $e->getMessage()]);
-}
-}
+            // Delete related factures and bonAchats
+            $dra->factures()->delete();
+            $dra->bonAchats()->delete();
+
+            // Delete the DRA itself
+            $dra->delete();
+
+            // Update the centre's montant_disponible
+            $dra->centre->increment('montant_disponible', $montantToRestore);
+
+            DB::commit();
+
+            return redirect()->route('achat.dras.index')
+                ->with('success', 'DRA supprimé avec succès');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withErrors(['error' => 'Erreur lors de la suppression: ' . $e->getMessage()]);
+        }
+    }
+
 
     public function close(Dra $dra)
     {
@@ -183,4 +250,23 @@ return back()->withErrors(['error' => 'Erreur lors de la suppression: ' . $e->ge
         return redirect()->route('achat.dras.index')
             ->with('success', 'DRA clôturé avec succès');
     }
+
+    protected function calculateMontant($model)
+    {
+        // Sum of pieces (HT + TVA)
+        $total = $model->pieces->sum(function ($piece) {
+            $ht = $piece->prix_piece;
+            $tva = $piece->tva ?? 0;
+            return $ht * (1 + $tva / 100);
+        });
+
+        // If it's a Facture, add droit_timbre
+        if ($model instanceof \App\Models\Facture) {
+            $total += $model->droit_timbre ?? 0;
+        }
+
+        return $total;
+    }
+
+
 }

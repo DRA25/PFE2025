@@ -270,10 +270,13 @@ class BonAchatController extends Controller
 
     protected function calculateFactureMontant(Facture $facture): float
     {
-        return $facture->pieces->sum(function ($piece) {
+        $piecesTotal = $facture->pieces->sum(function ($piece) {
             $subtotal = $piece->prix_piece * $piece->pivot->qte_f;
             return $subtotal * (1 + ($piece->tva / 100));
         });
+
+        return $piecesTotal + ($facture->droit_timbre ?? 0);
     }
+
 }
 

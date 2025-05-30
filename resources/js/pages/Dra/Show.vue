@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link, router,useForm, } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -15,48 +15,35 @@ const props = defineProps<{
             seuil_centre: number;
             montant_disponible: number;
         };
-        errors?: {
-            etat?: string;
-        };
     };
     factures: Array<any>;
     bonAchats: Array<any>;
 }>();
 
-
-
-const form = useForm({
-    etat: props.dra.etat.toLowerCase() // Ensure lowercase to match validation
-});
-
-
 const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Service Coordination Finnanciere', href: route('scf.index') },
-    { title: 'Consulter DRAs', href: route('scf.dras.index') },
-    { title: `DRA ${props.dra.n_dra}`, href: route('scf.dras.show', { dra: props.dra.n_dra }) }
+    { title: 'Achat', href: route('achat.dras.index') },
+    { title: 'Gestion des DRAs', href: '/achat/dras' },
+    { title: `Details de DRA ${props.dra.n_dra}`, href: route('achat.dras.show', { dra: props.dra.n_dra }) },
 
 ];
 
-// Ensure these values exactly match your Laravel validation
-const etatOptions = [
-    { value: 'cloture', label: 'Clôturé' },
-    { value: 'refuse', label: 'Refusé' },
-    { value: 'accepte', label: 'Accepté' }
-];
+const closeDra = (draId: string, currentEtat: string) => {
+    const normalizedEtat = currentEtat.toLowerCase();
+    if (normalizedEtat !== 'refuse' && normalizedEtat !== 'actif') {
+        alert('Seuls les DRAs actifs ou refusés peuvent être clôturés');
+        return;
+    }
 
-const submit = () => {
-    form.put(route('scf.dras.update', { dra: props.dra.n_dra }), {
-        preserveScroll: true,
-        onSuccess: () => {
-            router.visit(route('scf.dras.index'), {
-                preserveScroll: true,
-                preserveState: true
-            });
-        },
-        onError: () => {
-            // Errors will be automatically available in props.errors
-        }
-    });
+    if (confirm('Êtes-vous sûr de vouloir clôturer ce DRA ?')) {
+        router.put(route('achat.dras.close', { dra: draId }), {
+            preserveScroll: true,
+            // After successful update, Inertia will typically refresh the page with updated props.
+            // No explicit local state update is needed here unless you're handling partial reloads.
+            onError: (errors) => {
+                alert('Erreur lors de la clôture du DRA: ' + (errors.message || 'Une erreur est survenue'));
+            },
+        });
+    }
 };
 
 
@@ -92,65 +79,53 @@ const submit = () => {
                         <p class="text-gray-900 dark:text-gray-100">{{ dra.total_dra }}</p>
                     </div>
 
+
+
+
                 </div>
+                <!-- Action Buttons -->
+                <div class="mt-20 flex flex-wrap gap-4 justify-center md:justify-end h-fit">
+                    <Link
+                        v-if="dra.etat === 'actif' || dra.etat === 'refuse'"
+                        :href="route('achat.dras.factures.index', { dra: dra.n_dra })"
+                        class="bg-[#042B62] dark:bg-indigo-500 text-white px-4 py-2 rounded-lg hover:bg-indigo-600 dark:hover:bg-indigo-400 transition flex items-center gap-2"
+                    >
+                        <FileText class="w-4 h-4" />
+                        <span>Factures</span>
+                    </Link>
 
-                <!-- Right Column - State Update Form -->
-                <div>
-                    <h2 class="text-xl font-semibold text-primary-600 dark:text-yellow-400 mb-4">
-                        Mettre à jour l'état
-                    </h2>
+                    <Link
+                        v-if="dra.etat === 'actif' || dra.etat === 'refuse'"
+                        :href="route('achat.dras.bon-achats.index', { dra: dra.n_dra })"
+                        class="bg-[#042B62] text-white px-4 py-2 rounded-lg hover:bg-indigo-600 dark:bg-indigo-500 dark:hover:bg-indigo-400 transition flex items-center gap-2"
+                    >
+                        <FileText class="w-4 h-4" />
+                        <span>Bons d'Achat</span>
+                    </Link>
 
-                    <form @submit.prevent="submit">
-                        <div class="mb-4">
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                État
-                            </label>
-                            <select
-                                v-model="form.etat"
-                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
-                                :class="{ 'border-red-500': errors?.etat }"
-                                :disabled="form.processing"
-                            >
-                                <option
-                                    v-for="option in etatOptions"
-                                    :key="option.value"
-                                    :value="option.value"
-                                >
-                                    {{ option.label }}
-                                </option>
-                            </select>
-                            <p v-if="errors?.etat" class="mt-2 text-sm text-red-600">
-                                {{ errors.etat }}
-                            </p>
+                    <button
+                        v-if="dra.etat === 'actif' || dra.etat === 'refuse'"
+                        @click="closeDra(dra.n_dra, dra.etat)"
+                        class="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition flex items-center gap-2"
+                    >
+                        <Lock class="w-4 h-4" />
+                        <span>Clôturer</span>
+                    </button>
 
-
-                        </div>
-
-                        <div class="flex justify-end gap-2">
-                            <button
-                                type="submit"
-                                class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                :disabled="form.processing"
-                            >
-                                <span v-if="form.processing">Enregistrement...</span>
-                                <span v-else>Mettre à jour</span>
-                            </button>
-
-                                <Link
-                                    :href="route('scf.dras.index')"
-                                    class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-400 transition inline-flex items-center space-x-1"
-                                >
-                                    <ArrowLeft class="w-4 h-4" />
-                                    <span>Retour</span>
-                                </Link>
-
-                        </div>
-                    </form>
+                    <Link
+                        v-if="dra.etat === 'actif'"
+                        :href="route('achat.dras.destroy', { dra: dra.n_dra })"
+                        method="delete"
+                        as="button"
+                        @click.prevent="confirmDeleteDra(dra.n_dra, dra.etat)"
+                        class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-400 transition flex items-center gap-2"
+                    >
+                        <Trash2 class="w-4 h-4" />
+                        <span>Supprimer</span>
+                    </Link>
                 </div>
 
             </div>
-
-
 
             <!-- FACTURES -->
             <div class="mt-10">
@@ -184,7 +159,7 @@ const submit = () => {
                                 <TableCell>{{ Number(facture.montant).toFixed(2) }} DA</TableCell>
                                 <TableCell>
                                     <div v-for="piece in facture.pieces" :key="piece.id_piece" class="text-sm">
-                                        {{ piece.tva }}%
+                                    {{ piece.tva }}%
                                     </div>
                                 </TableCell>
                                 <TableCell>{{ facture.droit_timbre }} DA</TableCell>
@@ -244,7 +219,15 @@ const submit = () => {
                 <p v-else class="text-gray-600 dark:text-gray-400">Aucun bon d'achat lié à ce DRA.</p>
             </div>
 
-
+            <div class="mt-10">
+                <Link
+                    :href="route('achat.dras.index')"
+                    class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-400 transition inline-flex items-center space-x-1"
+                >
+                    <ArrowLeft class="w-4 h-4" />
+                    <span>Retourner à la liste des DRAs</span>
+                </Link>
+            </div>
         </div>
     </AppLayout>
 </template>

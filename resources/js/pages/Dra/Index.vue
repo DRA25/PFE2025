@@ -28,7 +28,7 @@ const props = defineProps<{
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Achat', href: '/achat' },
     { title: 'Gestion des DRAs', href: '/achat/dras' },
-    { title: 'Liste des DRAs', href: '/achat/dras' },
+
 ]
 
 const etatOptions = ['actif', 'cloture', 'refuse', 'accepte','rembourse'];
@@ -282,44 +282,14 @@ const createDra = () => {
                             </span>
                         </TableCell>
                         <TableCell class="flex flex-wrap gap-2">
+
+
                             <Link
-                                v-if="dra.etat === 'actif' || dra.etat === 'refuse'"
-                                :href="route('achat.dras.factures.index', { dra: dra.n_dra })"
-                                class="bg-[#042B62] dark:bg-indigo-500 text-white px-3 py-1 rounded-lg hover:bg-indigo-600 dark:hover:bg-indigo-200 transition flex items-center gap-1"
+                                :href="route('achat.dras.show', dra.n_dra)"
+                                class="bg-[#042B62] text-white px-4 py-2 rounded-lg hover:bg-indigo-600 dark:bg-indigo-500 dark:hover:bg-indigo-400 transition flex items-center gap-2"
                             >
                                 <FileText class="w-4 h-4" />
-                                <span>Factures</span>
-                            </Link>
-
-                            <Link
-                                v-if="dra.etat === 'actif' || dra.etat === 'refuse'"
-                                :href="route('achat.dras.bon-achats.index', { dra: dra.n_dra })"
-                                class="bg-[#042B62] text-white px-3 py-1 rounded-lg hover:bg-indigo-600 dark:bg-indigo-500 dark:hover:bg-indigo-200 transition flex items-center gap-1"
-                            >
-                                <FileText class="w-4 h-4" />
-                                <span>Bons d'Achat</span>
-                            </Link>
-
-                            <button
-                                v-if="dra.etat === 'actif' || dra.etat === 'refuse'"
-                                @click="closeDra(dra.n_dra, dra.etat)"
-                                class="bg-orange-500 text-white px-3 py-1 rounded-lg hover:bg-orange-600 transition flex items-center gap-1"
-                            >
-                                <Lock class="w-4 h-4" />
-                                <span>Clôturer</span>
-                            </button>
-
-
-                            <Link
-                                v-if="dra.etat === 'actif' || dra.etat === 'refuse'"
-                                :href="route('achat.dras.destroy', { dra: dra.n_dra })"
-                                method="delete"
-                                as="button"
-                                @click.prevent="confirmDeleteDra(dra.n_dra, dra.etat)"
-                                class="bg-red-600 text-white px-3 py-1 rounded-lg hover:bg-red-400 transition flex items-center gap-1"
-                            >
-                                <Trash2 class="w-4 h-4" />
-                                <span>Supprimer</span>
+                                <span>Afficher</span>
                             </Link>
                         </TableCell>
                     </TableRow>
