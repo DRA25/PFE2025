@@ -17,8 +17,8 @@ class PieceController extends Controller
         // Assuming your Piece model has relationships or you can do a join query
 
         // Example if Piece has relationships (adjust relation names as needed):
-        $pieces = Piece::where('id_centre', auth()->user()->id_centre)
-            ->with(['compteGeneral:code,libelle', 'compteAnalytique:code,libelle'])
+        $pieces = Piece::
+            with(['compteGeneral:code,libelle', 'compteAnalytique:code,libelle'])
             ->get()
             ->map(function ($piece) {
                 return [
