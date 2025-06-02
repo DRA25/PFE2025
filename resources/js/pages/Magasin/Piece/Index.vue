@@ -25,6 +25,10 @@ const props = defineProps<{
         prix_piece: number,
         marque_piece: string,
         ref_piece: string,
+        // Added properties from the Atelier index page
+        tva?: number | null,
+        compte_general?: string | null,
+        compte_analytique?: string | null,
         created_at: string,
         updated_at: string,
     }>,
@@ -52,16 +56,24 @@ const sortedPieces = computed(() => {
             piece.nom_piece.toLowerCase().includes(query) ||
             String(piece.prix_piece).toLowerCase().includes(query) ||
             piece.marque_piece.toLowerCase().includes(query) ||
-            piece.ref_piece.toLowerCase().includes(query)
+            piece.ref_piece.toLowerCase().includes(query) ||
+            // Include search for new fields if they exist
+            (piece.tva !== null && String(piece.tva).toLowerCase().includes(query)) ||
+            (piece.compte_general?.toLowerCase().includes(query) ?? false) ||
+            (piece.compte_analytique?.toLowerCase().includes(query) ?? false)
         );
     }
 
     if (sortConfig.value) {
         const { column, direction } = sortConfig.value;
         data.sort((a, b) => {
-            let valA, valB;
-            valA = a[column as keyof typeof a] ?? '';
-            valB = b[column as keyof typeof b] ?? '';
+            let valA: any = a[column as keyof typeof a] ?? '';
+            let valB: any = b[column as keyof typeof b] ?? '';
+
+            // Handle numeric comparison for 'id_piece', 'prix_piece', 'tva'
+            if (['id_piece', 'prix_piece', 'tva'].includes(column) && typeof valA === 'number' && typeof valB === 'number') {
+                return direction === 'asc' ? valA - valB : valB - valA;
+            }
 
             return direction === 'asc'
                 ? String(valA).localeCompare(String(valB))
@@ -72,17 +84,7 @@ const sortedPieces = computed(() => {
     return data;
 });
 
-const deletePiece = (id_piece: number) => {
-    if (confirm('Êtes-vous sûr de vouloir supprimer cette pièce ?')) {
-        router.delete(route('atelier.pieces.destroy', id_piece), {
-            preserveScroll: true,
-            onSuccess: () => {},
-            onError: (errors) => {
-                alert('Erreur lors de la suppression de la pièce : ' + (errors.message || 'Une erreur s’est produite'));
-            }
-        });
-    }
-}
+
 </script>
 
 <template>
@@ -94,7 +96,7 @@ const deletePiece = (id_piece: number) => {
                 <input
                     type="text"
                     v-model="searchQuery"
-                    placeholder="Rechercher par ID, nom, prix, marque ou référence..."
+                    placeholder="Rechercher par ID, nom, prix, marque, référence, TVA, compte général ou analytique..."
                     class="w-full bg-gray-100 px-4 py-2 rounded-md border border-gray-200 dark:border-gray-700 dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
                 />
             </div>
@@ -143,6 +145,18 @@ const deletePiece = (id_piece: number) => {
                             Référence
                             <ArrowUpDown class="ml-2 h-4 w-4 inline-block" />
                         </TableHead>
+                        <TableHead class="cursor-pointer" @click="requestSort('tva')">
+                            TVA
+                            <ArrowUpDown class="ml-2 h-4 w-4 inline-block" />
+                        </TableHead>
+                        <TableHead class="cursor-pointer" @click="requestSort('compte_general')">
+                            Compte Général
+                            <ArrowUpDown class="ml-2 h-4 w-4 inline-block" />
+                        </TableHead>
+                        <TableHead class="cursor-pointer" @click="requestSort('compte_analytique')">
+                            Compte Analytique
+                            <ArrowUpDown class="ml-2 h-4 w-4 inline-block" />
+                        </TableHead>
                         <TableHead>Actions</TableHead>
                     </TableRow>
                 </TableHeader>
@@ -158,22 +172,25 @@ const deletePiece = (id_piece: number) => {
                         <TableCell>{{ piece.prix_piece }}</TableCell>
                         <TableCell>{{ piece.marque_piece }}</TableCell>
                         <TableCell>{{ piece.ref_piece }}</TableCell>
+                        <TableCell>
+                            {{
+                                typeof piece.tva === 'number'
+                                    ? piece.tva.toFixed(2) + '%'
+                                    : '-'
+                            }}
+                        </TableCell>
+                        <TableCell>{{ piece.compte_general ?? '-' }}</TableCell>
+                        <TableCell>{{ piece.compte_analytique ?? '-' }}</TableCell>
                         <TableCell class="flex flex-wrap gap-2">
                             <Link
-                                :href="route('magasin.pieces.edit', piece)"
+                                :href="route('magasin.pieces.edit', piece.id_piece)"
                                 class="bg-green-600 text-white px-3 py-1 rounded-lg hover:bg-green-400 transition flex items-center gap-1"
                             >
                                 <Pencil class="w-4 h-4" />
                                 <span>Modifier</span>
                             </Link>
 
-                            <button
-                                @click="deletePiece(piece.id_piece)"
-                                class="bg-red-800 text-white px-3 py-1 rounded-lg hover:bg-red-600 transition flex items-center gap-1"
-                            >
-                                <Trash2 class="w-4 h-4" />
-                                <span>Supprimer</span>
-                            </button>
+
                         </TableCell>
                     </TableRow>
                 </TableBody>
