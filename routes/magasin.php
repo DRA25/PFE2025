@@ -15,9 +15,23 @@ use Inertia\Inertia;
 
 // Magasin routes
 Route::middleware(['auth', 'verified', 'role:service magasin|admin'])->group(function () {
+
+    Route::prefix('magasin/quantites')->name('magasin.quantites.')->middleware(['auth', 'verified', 'role:service magasin|admin'])->group(function () {
+        Route::get('/', [QuantiteStockeController::class, 'index'])->name('index');
+        Route::get('/create', [QuantiteStockeController::class, 'create'])->name('create');
+        Route::post('/', [QuantiteStockeController::class, 'store'])->name('store');
+
+        Route::get('/{id_magasin}/{id_piece}/edit', [QuantiteStockeController::class, 'edit'])->name('edit');
+        Route::put('/{id_magasin}/{id_piece}', [QuantiteStockeController::class, 'update'])->name('update');
+
+        Route::delete('/{id_magasin}/{id_piece}', [QuantiteStockeController::class, 'destroy'])->name('destroy');
+    });
+
+
 // Main magasin dashboard
 Route::get('/magasin', [MagasinController::class, 'index'])->name('magasin.index');
-Route::get('/magasin/quantites', [QuantiteStockeController::class, 'index'])->name('magasin.quantites.index');
+
+
 // Pieces management routes (under /magasin/pieces)
 Route::prefix('magasin/pieces')->group(function () {
 Route::get('/', [PieceController::class, 'index'])->name('magasin.pieces.index');
@@ -50,6 +64,11 @@ Route::get('/{demande_piece}/pdf', [MagasinDemandePieceController::class, 'expor
 Route::get('/', [MagasinDemandePieceController::class, 'index'])->name('magasin.mes-demandes.index');
 Route::get('/{demande_piece}', [MagasinDemandePieceController::class, 'show'])->name('magasin.mes-demandes.show');
 Route::put('/{demande_piece}', [MagasinDemandePieceController::class, 'update'])->name('magasin.mes-demandes.update');
+
+
+
+    Route::post('/{demande_piece}/livrer', [MagasinDemandePieceController::class, 'livrerPiece'])->name('magasin.mes-demandes.livrer');
+
 });
 
 

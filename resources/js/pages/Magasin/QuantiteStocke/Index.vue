@@ -9,13 +9,13 @@ import {
     TableCell,
     TableHead,
     Table
-} from '@/components/ui/table'; // Assuming Table is also exported from here
+} from '@/components/ui/table';
 import { ref, computed } from 'vue';
 import { type BreadcrumbItem } from '@/types';
 
 const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Magasin', href: '/magasin' },
-    { title: 'Quantités Stockées', href: '/quantites' },
+    { title: 'Magasin', href: route('magasin.index') },
+    { title: 'Quantités Stockées', href: route('magasin.quantites.index') },
 ];
 
 const props = defineProps<{
@@ -24,9 +24,11 @@ const props = defineProps<{
         id_piece: number,
         qte_stocke: number,
         magasin?: {
+            id_magasin: number,
             adresse_magasin: string,
         },
         piece?: {
+            id_piece: number,
             nom_piece: string,
         },
     }>,
@@ -80,9 +82,20 @@ const sortedQuantities = computed(() => {
     return data;
 });
 
-// No delete function for quantities as per the original page.
-// If you need to add this functionality, you would uncomment and adapt the deletePiece logic.
-
+const deleteQuantite = (id_magasin: number, id_piece: number) => {
+    if (confirm('Êtes-vous sûr de vouloir supprimer cette quantité stockée ?')) {
+        router.delete(route('magasin.quantites.destroy', {
+            id_magasin: id_magasin,
+            id_piece: id_piece
+        }), {
+            preserveScroll: true,
+            onSuccess: () => {},
+            onError: (errors) => {
+                alert('Erreur lors de la suppression: ' + (errors.message || 'Une erreur est survenue'));
+            }
+        });
+    }
+};
 </script>
 
 <template>
@@ -99,10 +112,18 @@ const sortedQuantities = computed(() => {
                 />
             </div>
 
+            <Link
+                :href="route('magasin.quantites.create')"
+                as="button"
+                class="px-4 py-2 rounded-lg transition flex items-center gap-1 bg-[#042B62] dark:bg-[#F3B21B] dark:text-[#042B62] text-white hover:bg-blue-900 dark:hover:bg-yellow-200"
+            >
+                <Plus class="w-4 h-4" />
+                <span>Ajouter une quantité</span>
+            </Link>
         </div>
 
-        <div v-if="success" class="mx-5 mt-2 p-3 bg-green-100 text-green-800 rounded-lg">
-            {{ success }}
+        <div v-if="props.success" class="mx-5 mt-4 p-3 bg-green-100 text-green-800 rounded-lg dark:bg-green-900 dark:text-green-200">
+            {{ props.success }}
         </div>
 
         <div class="m-5 mr-2 bg-gray-100 dark:bg-gray-800 rounded-lg">
@@ -127,6 +148,7 @@ const sortedQuantities = computed(() => {
                             Quantité
                             <ArrowUpDown class="ml-2 h-4 w-4 inline-block" />
                         </TableHead>
+                        <TableHead>Actions</TableHead>
                     </TableRow>
                 </TableHeader>
 
@@ -139,6 +161,25 @@ const sortedQuantities = computed(() => {
                         <TableCell>{{ q.magasin?.adresse_magasin ?? '—' }}</TableCell>
                         <TableCell>{{ q.piece?.nom_piece ?? '—' }}</TableCell>
                         <TableCell>{{ q.qte_stocke }}</TableCell>
+                        <TableCell class="flex flex-wrap gap-2">
+                            <Link
+                                :href="route('magasin.quantites.edit', {
+                                    id_magasin: q.id_magasin,
+                                    id_piece: q.id_piece
+                                })"
+                                class="bg-green-600 text-white px-3 py-1 rounded-lg hover:bg-green-400 transition flex items-center gap-1"
+                            >
+                                <Pencil class="w-4 h-4" />
+                                <span>Modifier</span>
+                            </Link>
+                            <button
+                                @click="deleteQuantite(q.id_magasin, q.id_piece)"
+                                class="bg-red-800 text-white px-3 py-1 rounded-lg hover:bg-red-600 transition flex items-center gap-1"
+                            >
+                                <Trash2 class="w-4 h-4" />
+                                <span>Supprimer</span>
+                            </button>
+                        </TableCell>
                     </TableRow>
                 </TableBody>
             </Table>

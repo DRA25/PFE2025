@@ -38,4 +38,9 @@ class Centre extends Model
         return $this->hasMany(Atelier::class, 'id_centre', 'id_centre');
     }
 
+    public function magasins()
+    {
+        return $this->hasMany(Atelier::class, 'id_centre', 'id_centre');
+    }
+
 }

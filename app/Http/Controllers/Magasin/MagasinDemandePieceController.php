@@ -3,7 +3,9 @@ namespace App\Http\Controllers\Magasin;
 
 use App\Http\Controllers\Controller;
 use App\Models\DemandePiece;
+use App\Models\QuantiteStocke;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Barryvdh\DomPDF\Facade\Pdf;
 
@@ -34,12 +36,40 @@ class MagasinDemandePieceController extends Controller
     }
 
     // Show details of a specific demande
+//    public function show(DemandePiece $demande_piece)
+//    {
+//
+//
+//        return Inertia::render('Magasin/DemandeAtelier/Show', [
+//            'demande' => $demande_piece->load([ 'atelier.centre', 'piece'])
+//        ]);
+//    }
+
+
     public function show(DemandePiece $demande_piece)
     {
+        // Get the authenticated magasin user's magasin ID
+        //$id_magasin = auth()->user()->magasin->id_magasin;
 
+        // Initialize stock quantity
+        $qte_stocke = 0;
+
+        // Check if the demande has a piece associated
+        if ($demande_piece->id_piece) {
+            // Get the stock quantity for this piece in the current magasin
+            $stock = QuantiteStocke::where('id_piece', $demande_piece->id_piece)
+
+                ->first();
+
+            $qte_stocke = $stock ? $stock->qte_stocke : 0;
+        }
+
+        // Load relationships and add the stock quantity
+        $demande_piece->load(['piece', 'atelier.centre']);
+        $demande_piece->qte_stocke = $qte_stocke;
 
         return Inertia::render('Magasin/DemandeAtelier/Show', [
-            'demande' => $demande_piece->load([ 'atelier.centre', 'piece'])
+            'demande' => $demande_piece
         ]);
     }
 
@@ -110,6 +140,55 @@ class MagasinDemandePieceController extends Controller
 
         return $pdf->download('mes-demandes-list-'.now()->format('Y-m-d').'.pdf');
     }
+
+    public function livrerPiece(Request $request, $demande_piece_id)
+    {
+        DB::beginTransaction();
+        try {
+
+
+            $demande = DemandePiece::with(['piece', 'atelier.centre'])
+                ->findOrFail($demande_piece_id);
+
+            // 1. Check if already delivered
+            if ($demande->etat_dp === 'Livrée') {
+                return back()->with('error', 'Cette demande a déjà été livrée');
+            }
+
+            // 2. Find the stock - ensure we're checking the right magasin
+            $stock = QuantiteStocke::where('id_piece', $demande->id_piece )
+                ->first();
+
+            if (!$stock) {
+                return back()->with('error', 'Pièce non trouvée dans votre stock');
+            }
+
+            // 3. Check quantity
+            if ($stock->qte_stocke < $demande->qte_demandep) {
+                return back()->with('error', 'Stock insuffisant');
+            }
+
+            // 4. Update stock using direct SQL to avoid model issues
+            QuantiteStocke::where('id_piece', $demande->id_piece)
+                ->decrement('qte_stocke', $demande->qte_demandep);
+
+            // 5. Update demande status
+            $demande->etat_dp = 'Livrée';
+            $demande->save();
+
+            DB::commit();
+
+            return redirect()
+                ->route('magasin.mes-demandes.index')
+                ->with('success', 'Pièce livrée avec succès');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', 'Erreur lors de la livraison: ' . $e->getMessage());
+        }
+    }
+
+
 
 
 }
