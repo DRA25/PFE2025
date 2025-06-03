@@ -135,7 +135,7 @@ const createDra = () => {
     const newNDra = `${props.id_centre}-${String(draCount + 1).padStart(3, '0')}`;
     const today = new Date().toISOString().slice(0, 10);
 
-    router.post(route('achat.dras.store'), {
+    router.post(route('scentre.dras.store'), {
         n_dra: newNDra,
         date_creation: today,
     });
