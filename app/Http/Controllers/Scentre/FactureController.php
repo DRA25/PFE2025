@@ -122,7 +122,7 @@ class FactureController extends Controller
 
             DB::commit();
 
-            return redirect()->route('achat.dras.factures.index', $dra->n_dra)
+            return redirect()->route('scentre.dras.factures.index', $dra->n_dra)
                 ->with('success', 'Facture créée avec succès.');
         } catch (\Exception $e) {
             DB::rollBack();
@@ -212,7 +212,7 @@ class FactureController extends Controller
 
             DB::commit();
 
-            return redirect()->route('achat.dras.factures.index', $dra->n_dra)
+            return redirect()->route('scentre.dras.factures.index', $dra->n_dra)
                 ->with('success', 'Facture mise à jour avec succès.');
         } catch (\Exception $e) {
             DB::rollBack();
@@ -250,7 +250,7 @@ class FactureController extends Controller
 
             DB::commit();
 
-            return redirect()->route('achat.dras.factures.index', $dra->n_dra)
+            return redirect()->route('scentre.dras.factures.index', $dra->n_dra)
                 ->with('success', 'Facture supprimée avec succès.');
         } catch (\Exception $e) {
             DB::rollBack();

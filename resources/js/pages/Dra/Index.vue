@@ -258,7 +258,7 @@ const createDra = () => {
 
 
                             <Link
-                                :href="route('achat.dras.show', dra.n_dra)"
+                                :href="route('scentre.dras.show', dra.n_dra)"
                                 class="bg-[#042B62] text-white px-4 py-2 rounded-lg hover:bg-indigo-600 dark:bg-indigo-500 dark:hover:bg-indigo-400 transition flex items-center gap-2"
                             >
                                 <FileText class="w-4 h-4" />

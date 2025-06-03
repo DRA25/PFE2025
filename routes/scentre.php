@@ -59,9 +59,9 @@ Route::middleware(['auth', 'role:service centre|admin'])->group(function () {
             Route::get('/', [BonAchatController::class, 'index'])->name('index');
             Route::get('/create', [BonAchatController::class, 'create'])->name('create');
             Route::post('/', [BonAchatController::class, 'store'])->name('store');
-            Route::get('/{bon-achats}/edit', [BonAchatController::class, 'edit'])->name('edit');
-            Route::put('/{bon-achats}', [BonAchatController::class, 'update'])->name('update');
-            Route::delete('/{bon-achats}', [BonAchatController::class, 'destroy'])->name('destroy');
+            Route::get('/{bonAchat}/edit', [BonAchatController::class, 'edit'])->name('edit');
+            Route::put('/{bonAchat}', [BonAchatController::class, 'update'])->name('update');
+            Route::delete('/{bonAchat}', [BonAchatController::class, 'destroy'])->name('destroy');
         });
     });
 });

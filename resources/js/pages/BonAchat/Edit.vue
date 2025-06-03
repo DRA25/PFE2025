@@ -108,7 +108,7 @@ function submit() {
 
 function destroyBonAchat() {
     if (confirm("Êtes-vous sûr de vouloir supprimer ce bon d'achat ?")) {
-        form.delete(route('achat.dras.bon-achats.destroy', {
+        form.delete(route('scentre.dras.bon-achats.destroy', {
             dra: props.dra.n_dra,
             bonAchat: props.bonAchat.n_ba
         }), {

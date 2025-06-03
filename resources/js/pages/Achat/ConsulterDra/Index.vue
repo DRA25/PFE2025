@@ -30,12 +30,12 @@ const props = defineProps<{
 }>()
 
 const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Service Coordination Financière', href: '/scf' },
-    { title: 'Consulter les DRAs', href: '/scf/consulterdra' },
+    { title: 'Achat', href: '/achat' },
+    { title: 'Consulter les DRAs', href: '/achat/consulterdra' },
 ]
 
 // State filter options
-const etatOptions = ['cloture', 'refuse', 'accepte'];
+const etatOptions = ['cloture', 'refuse', 'accepte','rembourse'];
 const selectedEtat = ref<string | null>(null);
 const searchQuery = ref('');
 const sortConfig = ref<{ column: string; direction: 'asc' | 'desc' } | null>(null);
@@ -52,7 +52,7 @@ const filteredDras = computed(() => {
     // Apply default filter for only certain states if no state is selected
     if (!selectedEtat.value) {
         data = data.filter(d =>
-            ['cloture', 'refuse', 'accepte'].includes(d.etat.toLowerCase()))
+            ['cloture', 'refuse', 'accepte' ,'rembourse'].includes(d.etat.toLowerCase()))
     }
 
     return data;
@@ -102,15 +102,7 @@ const sortedDras = computed(() => {
     return dras;
 });
 
-const confirmDeleteDra = (draId: string, etat: string) => {
-    if (etat === 'cloture') {
-        alert('Vous ne pouvez pas supprimer un DRA clôturé.');
-        return;
-    }
-    if (confirm('Êtes-vous sûr de vouloir supprimer ce DRA ? Cette action est irréversible et supprimera toutes les factures associées.')) {
-        router.delete(route('achat.dras.destroy', { dra: draId }));
-    }
-};
+
 
 const requestSort = (column: string) => {
     if (!sortConfig.value || sortConfig.value.column !== column) {
@@ -158,6 +150,7 @@ const requestSort = (column: string) => {
 
                             etat === 'cloture' ? 'Clôturé' :
                                 etat === 'refuse' ? 'Refusé' :
+                                    etat === 'rembourse' ? 'Remboursé' :
                                     'Accepté'
                     }}
                 </button>
@@ -199,20 +192,22 @@ const requestSort = (column: string) => {
                         <TableCell>{{ dra.id_centre }}</TableCell>
                         <TableCell>{{ dra.n_dra }}</TableCell>
                         <TableCell>{{ new Date(dra.date_creation).toLocaleDateString() }}</TableCell>
-                        <TableCell>{{ dra.total_dra.toLocaleString('fr-FR') }} DA</TableCell>
+                        <TableCell>{{ Number(parseFloat(dra.total_dra).toFixed(2)).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }} DA</TableCell>
                         <TableCell>
                             <span
                                 class="font-bold"
                                 :class="{
                                     'text-green-600': dra.etat === 'accepte',
                                     'text-blue-600': dra.etat === 'cloture',
-                                    'text-red-600': dra.etat === 'refuse'
+                                    'text-red-600': dra.etat === 'refuse',
+                                     'text-blue-500': dra.etat === 'rembourse'
 
                                 }"
                             >
                                 {{
                                     dra.etat === 'accepte' ? 'ACCEPTÉ' :
                                         dra.etat === 'cloture' ? 'CLÔTURÉ' :
+                                            dra.etat === 'rembourse' ? 'REMBOURSÉ' :
                                              'REFUSÉ'
 
                                 }}
@@ -220,7 +215,7 @@ const requestSort = (column: string) => {
                         </TableCell>
                         <TableCell class="flex flex-wrap gap-2">
                             <Link
-                                :href="route('scf.dras.show', { dra: dra.n_dra })"
+                                :href="route('achat.dras.show', { dra: dra.n_dra })"
                                 class="bg-blue-500 text-white px-3 py-1 rounded-lg hover:bg-blue-600 transition flex items-center gap-1"
                             >
                                 <FileText class="w-4 h-4" />

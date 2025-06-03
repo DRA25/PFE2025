@@ -118,7 +118,7 @@ class BonAchatController extends Controller
 
             DB::commit();
 
-            return redirect()->route('achat.dras.bon-achats.index', $dra->n_dra)
+            return redirect()->route('scentre.dras.bon-achats.index', $dra->n_dra)
                 ->with('success', 'Bon d\'achat créé avec succès.');
         } catch (\Exception $e) {
             DB::rollBack();
@@ -214,7 +214,7 @@ class BonAchatController extends Controller
 
             DB::commit();
 
-            return redirect()->route('achat.dras.bon-achats.index', $dra->n_dra)
+            return redirect()->route('scentre.dras.bon-achats.index', $dra->n_dra)
                 ->with('success', 'Bon d\'achat mis à jour avec succès.');
         } catch (\Exception $e) {
             DB::rollBack();
@@ -252,7 +252,7 @@ class BonAchatController extends Controller
 
             DB::commit();
 
-            return redirect()->route('achat.dras.bon-achats.index', $dra->n_dra)
+            return redirect()->route('scentre.dras.bon-achats.index', $dra->n_dra)
                 ->with('success', 'Bon d\'achat supprimé avec succès.');
         } catch (\Exception $e) {
             DB::rollBack();

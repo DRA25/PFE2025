@@ -1,16 +1,3 @@
-I will correct your Vue component with the improvements mentioned:
-
-- Use consistent `qte_ba` instead of `qte_f` for quantity in pieces array to match backend and other naming.
-- Reset `selectedPiece` and `quantity` on successful submit.
-- Display validation errors clearly.
-- Add `min="1"` and input validation for quantity inputs.
-- Add missing `aria-label` attributes for accessibility.
-- Minor code cleanup and consistent naming.
-
-Now, I will provide the full corrected code including these fixes and improvements.
-
-`BonAchatCreate.vue`
-```vue
 <script setup lang="ts">
 import { Head, Link, useForm } from '@inertiajs/vue3'
 import AppLayout from '@/layouts/AppLayout.vue'

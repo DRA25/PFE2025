@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, Link, router,useForm, } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -15,35 +15,48 @@ const props = defineProps<{
             seuil_centre: number;
             montant_disponible: number;
         };
+        errors?: {
+            etat?: string;
+        };
     };
     factures: Array<any>;
     bonAchats: Array<any>;
 }>();
 
+
+
+const form = useForm({
+    etat: props.dra.etat.toLowerCase() // Ensure lowercase to match validation
+});
+
+
 const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Centre', href: route('scentre.dras.index') },
-    { title: 'Gestion des DRAs', href: '/scentre/dras' },
-    { title: `Details de DRA ${props.dra.n_dra}`, href: route('scentre.dras.show', { dra: props.dra.n_dra }) },
+    { title: 'Achat', href: route('achat.index') },
+    { title: 'Consulter DRAs', href: route('achat.dras.index') },
+    { title: `DRA ${props.dra.n_dra}`, href: route('achat.dras.show', { dra: props.dra.n_dra }) }
 
 ];
 
-const closeDra = (draId: string, currentEtat: string) => {
-    const normalizedEtat = currentEtat.toLowerCase();
-    if (normalizedEtat !== 'refuse' && normalizedEtat !== 'actif') {
-        alert('Seuls les DRAs actifs ou refusés peuvent être clôturés');
-        return;
-    }
+// Ensure these values exactly match your Laravel validation
+const etatOptions = [
+    { value: 'cloture', label: 'Clôturé' },
+    { value: 'refuse', label: 'Refusé' },
+    { value: 'accepte', label: 'Accepté' }
+];
 
-    if (confirm('Êtes-vous sûr de vouloir clôturer ce DRA ?')) {
-        router.put(route('achat.dras.close', { dra: draId }), {
-            preserveScroll: true,
-            // After successful update, Inertia will typically refresh the page with updated props.
-            // No explicit local state update is needed here unless you're handling partial reloads.
-            onError: (errors) => {
-                alert('Erreur lors de la clôture du DRA: ' + (errors.message || 'Une erreur est survenue'));
-            },
-        });
-    }
+const submit = () => {
+    form.put(route('achat.dras.update', { dra: props.dra.n_dra }), {
+        preserveScroll: true,
+        onSuccess: () => {
+            router.visit(route('scf.dras.index'), {
+                preserveScroll: true,
+                preserveState: true
+            });
+        },
+        onError: () => {
+            // Errors will be automatically available in props.errors
+        }
+    });
 };
 
 
@@ -76,56 +89,15 @@ const closeDra = (draId: string, currentEtat: string) => {
 
                     <div>
                         <p class="text-sm text-gray-500 dark:text-gray-400">Total DRA</p>
-                        <p class="text-gray-900 dark:text-gray-100">{{ Number(dra.total_dra).toFixed(2) }}</p>
+                        <p class="text-gray-900 dark:text-gray-100">{{ dra.total_dra }}</p>
                     </div>
 
-
-
-
                 </div>
-                <!-- Action Buttons -->
-                <div class="mt-20 flex flex-wrap gap-4 justify-center md:justify-end h-fit">
-                    <Link
-                        v-if="dra.etat === 'actif' || dra.etat === 'refuse'"
-                        :href="route('scentre.dras.factures.index', { dra: dra.n_dra })"
-                        class="bg-[#042B62] dark:bg-indigo-500 text-white px-4 py-2 rounded-lg hover:bg-indigo-600 dark:hover:bg-indigo-400 transition flex items-center gap-2"
-                    >
-                        <FileText class="w-4 h-4" />
-                        <span>Factures</span>
-                    </Link>
 
-                    <Link
-                        v-if="dra.etat === 'actif' || dra.etat === 'refuse'"
-                        :href="route('scentre.dras.bon-achats.index', { dra: dra.n_dra })"
-                        class="bg-[#042B62] text-white px-4 py-2 rounded-lg hover:bg-indigo-600 dark:bg-indigo-500 dark:hover:bg-indigo-400 transition flex items-center gap-2"
-                    >
-                        <FileText class="w-4 h-4" />
-                        <span>Bons d'Achat</span>
-                    </Link>
-
-                    <button
-                        v-if="dra.etat === 'actif' || dra.etat === 'refuse'"
-                        @click="closeDra(dra.n_dra, dra.etat)"
-                        class="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition flex items-center gap-2"
-                    >
-                        <Lock class="w-4 h-4" />
-                        <span>Clôturer</span>
-                    </button>
-
-                    <Link
-                        v-if="dra.etat === 'actif'"
-                        :href="route('scentre.dras.destroy', { dra: dra.n_dra })"
-                        method="delete"
-                        as="button"
-                        @click.prevent="confirmDeleteDra(dra.n_dra, dra.etat)"
-                        class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-400 transition flex items-center gap-2"
-                    >
-                        <Trash2 class="w-4 h-4" />
-                        <span>Supprimer</span>
-                    </Link>
-                </div>
 
             </div>
+
+
 
             <!-- FACTURES -->
             <div class="mt-10">
@@ -159,7 +131,7 @@ const closeDra = (draId: string, currentEtat: string) => {
                                 <TableCell>{{ Number(facture.montant).toFixed(2) }} DA</TableCell>
                                 <TableCell>
                                     <div v-for="piece in facture.pieces" :key="piece.id_piece" class="text-sm">
-                                    {{ piece.tva }}%
+                                        {{ piece.tva }}%
                                     </div>
                                 </TableCell>
                                 <TableCell>{{ facture.droit_timbre }} DA</TableCell>
@@ -219,15 +191,7 @@ const closeDra = (draId: string, currentEtat: string) => {
                 <p v-else class="text-gray-600 dark:text-gray-400">Aucun bon d'achat lié à ce DRA.</p>
             </div>
 
-            <div class="mt-10">
-                <Link
-                    :href="route('scentre.dras.index')"
-                    class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-400 transition inline-flex items-center space-x-1"
-                >
-                    <ArrowLeft class="w-4 h-4" />
-                    <span>Retourner à la liste des DRAs</span>
-                </Link>
-            </div>
+
         </div>
     </AppLayout>
 </template>

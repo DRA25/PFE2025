@@ -192,7 +192,7 @@ const sortedFactures = computed(() => {
 
             <div class="m-5">
                 <Link
-                    :href="route('achat.dras.show', { dra: props.dra.n_dra })"
+                    :href="route('scentre.dras.show', { dra: props.dra.n_dra })"
                     class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-400 transition inline-flex items-center space-x-1"
                 >
                     <ArrowLeft class="w-4 h-4" />

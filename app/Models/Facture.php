@@ -15,7 +15,6 @@ protected $keyType = 'int';
 
 protected $fillable = [
 'n_facture',
-'montant_facture',
 'date_facture',
 'id_fourn',
 'n_dra',
