@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Achat;
+namespace App\Http\Controllers\Scentre;
 
 use App\Http\Controllers\Controller;
 use App\Models\Centre;

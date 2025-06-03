@@ -32,8 +32,8 @@ const props = defineProps<{
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Achat', href: route('achat.index') },
-    { title: 'Demandes de Pièces', href: route('achat.demandes-pieces.index') }
+    { title: 'Centre', href: route('scentre.index') },
+    { title: 'Demandes de Pièces', href: route('scentre.demandes-pieces.index') }
 ];
 
 const etatOptions = ['En attente', 'Validée', 'Refusée', 'Livrée'];
@@ -99,8 +99,8 @@ const requestSort = (column: string) => {
 
 const exportUrl = computed(() => {
     return selectedEtat.value
-        ? route('achat.demandes-pieces.export-pdf', { etat: selectedEtat.value })
-        : route('achat.demandes-pieces.export-pdf');
+        ? route('scentre.demandes-pieces.export-pdf', { etat: selectedEtat.value })
+        : route('scentre.demandes-pieces.export-pdf');
 });
 </script>
 
@@ -203,7 +203,7 @@ const exportUrl = computed(() => {
                         </TableCell>
                         <TableCell>
                             <Link
-                                :href="route('achat.demandes-pieces.show', { demande_piece: demande.id_dp })"
+                                :href="route('scentre.demandes-pieces.show', { demande_piece: demande.id_dp })"
                                 class="bg-blue-600 text-white px-3 py-1 rounded-lg hover:bg-blue-400 transition"
                             >
                                 <span class="inline-flex items-center space-x-1">

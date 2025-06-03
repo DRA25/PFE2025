@@ -24,6 +24,7 @@ class DatabaseSeeder extends Seeder
         $achatRole = Role::create(['name' => 'service achat']);
         $coordinationRole = Role::create(['name' => 'service cf']);
         $paimentRole = Role::create(['name' => 'service paiment']);
+        $centreRole = Role::create(['name' => 'service centre']);
 
         $editPostPermission = Permission::create(['name' => 'edit-post']);
 

@@ -3,14 +3,11 @@
 
 use App\Http\Controllers\Achat\AchatController;
 use App\Http\Controllers\Achat\AchatDemandePieceController;
-use App\Http\Controllers\Achat\BonAchatController;
-use App\Http\Controllers\Achat\DraController;
-use App\Http\Controllers\Achat\EncaissementController;
-use App\Http\Controllers\Achat\FactureController;
+use App\Http\Controllers\Scentre\BonAchatController;
+use App\Http\Controllers\Scentre\DraController;
+use App\Http\Controllers\Scentre\EncaissementController;
+use App\Http\Controllers\Scentre\FactureController;
 use Illuminate\Support\Facades\Route;
-use Inertia\Inertia;
-
-
 
 
 Route::middleware(['auth', 'role:service achat|admin'])->group(function () {

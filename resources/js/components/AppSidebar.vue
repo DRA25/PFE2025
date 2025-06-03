@@ -40,10 +40,12 @@ const mainNavItems: NavItem[] = [
 
 ];
 
+
+
 // Conditionally add "centre"
 if (user.value?.roles?.some((role: any) => role.name === 'admin' )) {
     mainNavItems.push({
-        title: 'Centre',
+        title: 'Gestion des Centres',
         href: '/centres',
         icon: Building,
     });
@@ -117,6 +119,15 @@ if (user.value?.roles?.some((role: any) => role.name === 'admin' || role.name ==
             icon: ShoppingCart,
         });
     }
+
+// Conditionally add "Achat"
+if (user.value?.roles?.some((role: any) => role.name === 'admin' || role.name === 'service centre' )) {
+    mainNavItems.push({
+        title: 'Centre',
+        href: '/scentre',
+        icon: ShoppingCart,
+    });
+}
 
 // Conditionally add "coordination finnanciere"
 if (user.value?.roles?.some((role: any) => role.name === 'admin' || role.name === 'service cf')) {

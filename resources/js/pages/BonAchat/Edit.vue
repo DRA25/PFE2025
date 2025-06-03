@@ -34,11 +34,11 @@ const props = defineProps<{
 }>()
 
 const breadcrumbs: BreadcrumbItem[] = [
-    { title:'Achat', href: '/achat'},
-    { title: 'Gestion des DRAs', href: route('achat.dras.index') },
-    { title: `Details de DRA ${props.dra.n_dra}`, href: route('achat.dras.show', { dra: props.dra.n_dra }) },
-    { title: `Bons d'achat de ${props.dra.n_dra}`, href: route('achat.dras.bon-achats.index', { dra: props.dra.n_dra }) },
-    { title: `Modifier Bon d'achat ${props.bonAchat.n_ba}`, href: route('achat.dras.bon-achats.edit', { dra: props.dra.n_dra, bonAchat: props.bonAchat.n_ba }) },
+    { title:'Centre', href: '/scentre'},
+    { title: 'Gestion des DRAs', href: route('scentre.dras.index') },
+    { title: `Details de DRA ${props.dra.n_dra}`, href: route('scentre.dras.show', { dra: props.dra.n_dra }) },
+    { title: `Bons d'achat de ${props.dra.n_dra}`, href: route('scentre.dras.bon-achats.index', { dra: props.dra.n_dra }) },
+    { title: `Modifier Bon d'achat ${props.bonAchat.n_ba}`, href: route('scentre.dras.bon-achats.edit', { dra: props.dra.n_dra, bonAchat: props.bonAchat.n_ba }) },
 ]
 
 const form = useForm({
@@ -96,9 +96,9 @@ function removePiece(index: number) {
 }
 
 function submit() {
-    form.put(route('achat.dras.bon-achats.update', { dra: props.dra.n_dra, bonAchat: props.bonAchat.n_ba }), {
+    form.put(route('scentre.dras.bon-achats.update', { dra: props.dra.n_dra, bonAchat: props.bonAchat.n_ba }), {
         onSuccess: () => {
-            window.location.href = route('achat.dras.bon-achats.index', { dra: props.dra.n_dra })
+            window.location.href = route('scentre.dras.bon-achats.index', { dra: props.dra.n_dra })
         },
         onError: () => {
             console.log('Validation errors:', form.errors)
@@ -113,7 +113,7 @@ function destroyBonAchat() {
             bonAchat: props.bonAchat.n_ba
         }), {
             onSuccess: () => {
-                window.location.href = route('achat.dras.bon-achats.index', { dra: props.dra.n_dra });
+                window.location.href = route('scentre.dras.bon-achats.index', { dra: props.dra.n_dra });
             },
             onError: () => {
                 console.log("Erreur lors de la suppression.");
@@ -308,7 +308,7 @@ function destroyBonAchat() {
                     </button>
                     <div class="flex gap-4">
                         <Link
-                            :href="route('achat.dras.bon-achats.index', { dra: props.dra.n_dra })"
+                            :href="route('scentre.dras.bon-achats.index', { dra: props.dra.n_dra })"
                             class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition"
                         >
                             Annuler

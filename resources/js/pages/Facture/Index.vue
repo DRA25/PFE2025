@@ -37,10 +37,10 @@ const props = defineProps({
 })
 
 const breadcrumbs: BreadcrumbItem[] = [
-    { title:'Achat', href: '/achat'},
-    { title: 'Gestion des DRAs', href: route('achat.dras.index') },
-    { title: `Details de DRA ${props.dra.n_dra}`, href: route('achat.dras.show', { dra: props.dra.n_dra }) },
-    { title: `Factures pour DRA ${props.dra.n_dra}`, href: route('achat.dras.factures.index', { dra: props.dra.n_dra }) },
+    { title:'Centre', href: '/scentre'},
+    { title: 'Gestion des DRAs', href: route('scentre.dras.index') },
+    { title: `Details de DRA ${props.dra.n_dra}`, href: route('scentre.dras.show', { dra: props.dra.n_dra }) },
+    { title: `Factures pour DRA ${props.dra.n_dra}`, href: route('scentre.dras.factures.index', { dra: props.dra.n_dra }) },
 ]
 
 const searchQuery = ref('');
@@ -122,7 +122,7 @@ const sortedFactures = computed(() => {
                 />
             </div>
             <Link
-                :href="route('achat.dras.factures.create', { dra: props.dra.n_dra })"
+                :href="route('scentre.dras.factures.create', { dra: props.dra.n_dra })"
                 class="bg-[#042B62] dark:bg-[#F3B21B] dark:text-[#042B62] text-white px-4 py-2 rounded-lg hover:bg-blue-900 dark:hover:bg-yellow-200 transition"
             >
                 Ajouter une Facture
@@ -177,7 +177,7 @@ const sortedFactures = computed(() => {
                         </TableCell>
                         <TableCell>
                             <Link
-                                :href="route('achat.dras.factures.edit', { dra: props.dra.n_dra, facture: facture.n_facture })"
+                                :href="route('scentre.dras.factures.edit', { dra: props.dra.n_dra, facture: facture.n_facture })"
                                 class="bg-green-600 text-white px-3 py-1 rounded-lg hover:bg-green-400 transition"
                             >
                                 <span class="inline-flex items-center space-x-1">

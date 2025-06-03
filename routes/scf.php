@@ -1,14 +1,12 @@
 <?php
 
 
-use App\Http\Controllers\Achat\BonAchatController;
-use App\Http\Controllers\Achat\DraController;
-use App\Http\Controllers\Achat\FactureController;
+use App\Http\Controllers\Scentre\BonAchatController;
+use App\Http\Controllers\Scentre\DraController;
+use App\Http\Controllers\Scentre\FactureController;
 use App\Http\Controllers\Scf\ConsulterDraController;
 use App\Http\Controllers\Scf\ScfController;
 use Illuminate\Support\Facades\Route;
-use Inertia\Inertia;
-
 
 
 //SCF routes

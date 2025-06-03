@@ -5,7 +5,7 @@ import AppLayout from '@/layouts/AppLayout.vue'
 import { type BreadcrumbItem } from '@/types'
 
 const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Achat', href: route('achat.index') },
+    { title: 'Centre', href: route('scentre.index') },
     { title: 'Gestion des Encaissements', href: '/encaissements' },
     { title: 'Créer un Encaissement', href: '/encaissements/create' },
 ]

@@ -30,11 +30,11 @@ const props = defineProps({
 })
 
 const breadcrumbs: BreadcrumbItem[] = [
-    { title:'Achat', href: '/achat'},
-    { title: 'Gestion des DRAs', href: route('achat.dras.index') },
-    { title: `Details de DRA ${props.dra.n_dra}`, href: route('achat.dras.show', { dra: props.dra.n_dra }) },
-    { title: `Bons d'achat pour DRA ${props.dra.n_dra}`, href: route('achat.dras.bon-achats.index', { dra: props.dra.n_dra }) },
-    { title: `Créer un Bon d'achat pour DRA ${props.dra.n_dra}`, href: route('achat.dras.bon-achats.create', { dra: props.dra.n_dra }) },
+    { title:'Centre', href: '/scentre'},
+    { title: 'Gestion des DRAs', href: route('scentre.dras.index') },
+    { title: `Details de DRA ${props.dra.n_dra}`, href: route('scentre.dras.show', { dra: props.dra.n_dra }) },
+    { title: `Bons d'achat pour DRA ${props.dra.n_dra}`, href: route('scentre.dras.bon-achats.index', { dra: props.dra.n_dra }) },
+    { title: `Créer un Bon d'achat pour DRA ${props.dra.n_dra}`, href: route('scentre.dras.bon-achats.create', { dra: props.dra.n_dra }) },
 ]
 
 const form = useForm({
@@ -81,12 +81,12 @@ function removePiece(index: number) {
 }
 
 function submit() {
-    form.post(route('achat.dras.bon-achats.store', { dra: props.dra.n_dra }), {
+    form.post(route('scentre.dras.bon-achats.store', { dra: props.dra.n_dra }), {
         onSuccess: () => {
             form.reset()
             selectedPiece.value = ''
             quantity.value = 1
-            window.location.href = route('achat.dras.bon-achats.index', { dra: props.dra.n_dra })
+            window.location.href = route('scentre.dras.bon-achats.index', { dra: props.dra.n_dra })
         },
         onError: () => {
             // Errors displayed via form.errors
@@ -290,7 +290,7 @@ function submit() {
 
                 <div class="flex justify-end space-x-4 pt-4">
                     <Link
-                        :href="route('achat.dras.bon-achats.index', { dra: props.dra.n_dra })"
+                        :href="route('scentre.dras.bon-achats.index', { dra: props.dra.n_dra })"
                         class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition"
                     >
                         Annuler

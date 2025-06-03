@@ -1,8 +1,9 @@
 <?php
 
-namespace App\Http\Controllers\Achat;
+namespace App\Http\Controllers\Scentre;
 
 use App\Http\Controllers\Controller;
+use App\Models\BonAchat;
 use App\Models\Dra;
 use App\Models\Facture;
 use App\Models\Fournisseur;
@@ -11,37 +12,37 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
-class FactureController extends Controller
+class BonAchatController extends Controller
 {
     public function index(Dra $dra)
     {
-        $factures = $dra->factures()
+        $bonAchats = $dra->bonAchats()
             ->with(['fournisseur:id_fourn,nom_fourn', 'pieces:id_piece,nom_piece,prix_piece,tva'])
             ->get()
-            ->map(function ($facture) {
-                $facture->montant = $this->calculateMontant($facture);
-                return $facture;
+            ->map(function ($bonAchat) {
+                $bonAchat->montant = $this->calculateMontant($bonAchat);
+                return $bonAchat;
             });
 
-        return Inertia::render('Facture/Index', [
+        return Inertia::render('BonAchat/Index', [
             'dra' => $dra,
-            'factures' => $factures,
+            'bonAchats' => $bonAchats,
         ]);
     }
 
     public function show(Dra $dra)
     {
-        $factures = $dra->factures()
+        $bonAchats = $dra->bonAchats()
             ->with(['fournisseur:id_fourn,nom_fourn', 'pieces:id_piece,nom_piece,prix_piece,tva'])
             ->get()
-            ->map(function ($facture) {
-                $facture->montant = $this->calculateMontant($facture);
-                return $facture;
+            ->map(function ($bonAchat) {
+                $bonAchat->montant = $this->calculateMontant($bonAchat);
+                return $bonAchat;
             });
 
-        return Inertia::render('Facture/Show', [
+        return Inertia::render('BonAchat/Show', [
             'dra' => $dra,
-            'factures' => $factures,
+            'bonAchats' => $bonAchats,
         ]);
     }
 
@@ -50,7 +51,7 @@ class FactureController extends Controller
         $fournisseurs = Fournisseur::all(['id_fourn', 'nom_fourn']);
         $pieces = Piece::all(['id_piece', 'nom_piece', 'prix_piece', 'tva']);
 
-        return inertia('Facture/Create', [
+        return Inertia::render('BonAchat/Create', [
             'dra' => $dra,
             'fournisseurs' => $fournisseurs,
             'pieces' => $pieces,
@@ -60,53 +61,49 @@ class FactureController extends Controller
     public function store(Request $request, Dra $dra)
     {
         $request->validate([
-            'n_facture' => 'required|unique:factures,n_facture',
-            'date_facture' => 'required|date',
+            'n_ba' => 'required|unique:bon_achats,n_ba',
+            'date_ba' => 'required|date',
             'id_fourn' => 'required|exists:fournisseurs,id_fourn',
-            'droit_timbre' => 'nullable|numeric',
             'pieces' => 'required|array|min:1',
             'pieces.*.id_piece' => 'required|exists:pieces,id_piece',
-            'pieces.*.qte_f' => 'required|integer|min:1',
+            'pieces.*.qte_ba' => 'required|integer|min:1',
         ]);
 
         DB::beginTransaction();
 
         try {
-            $facture = new Facture([
-                'n_facture' => $request->n_facture,
-                'date_facture' => $request->date_facture,
+            $bonAchat = new BonAchat([
+                'n_ba' => $request->n_ba,
+                'date_ba' => $request->date_ba,
                 'id_fourn' => $request->id_fourn,
                 'n_dra' => $dra->n_dra,
-                'droit_timbre' => $request->droit_timbre ?? 0,
             ]);
-            $facture->save();
+            $bonAchat->save();
 
             $pieceAttachments = [];
             foreach ($request->pieces as $piece) {
-                $pieceAttachments[$piece['id_piece']] = ['qte_f' => $piece['qte_f']];
+                $pieceAttachments[$piece['id_piece']] = ['qte_ba' => $piece['qte_ba']];
             }
-            $facture->pieces()->attach($pieceAttachments);
+            $bonAchat->pieces()->attach($pieceAttachments);
 
-            $totalFacture = $this->calculateMontant($facture);
+            $totalBonAchat = $this->calculateMontant($bonAchat);
 
-            // Check maximum facture limit
-            if ($totalFacture > 20000) {
+            if ($totalBonAchat > 10000) {
                 DB::rollBack();
-                return back()->withErrors(['facture_total' => 'Le montant total de la facture ne peut pas dépasser 20 000 DA.']);
+                return back()->withErrors(['bonAchat_total' => 'Le montant total du Bon Achat ne peut pas dépasser 10 000 DA.']);
             }
 
-            // Calculate total_dra including both bonAchats and factures
             $dra->load('bonAchats.pieces', 'factures.pieces');
             $totalDra = '0';
 
             foreach ($dra->bonAchats as $ba) {
-                $totalDra = bcadd($totalDra, (string)$this->calculateBonAchatMontant($ba),2);
+                $totalDra = bcadd($totalDra, (string)$this->calculateMontant($ba), 2);
             }
             foreach ($dra->factures as $f) {
-                $totalDra = bcadd($totalDra, (string)$this->calculateMontant($f),2);
+                $totalDra = bcadd($totalDra, (string)$this->calculateFactureMontant($f), 2);
             }
 
-            if ($dra->centre->montant_disponible < $totalFacture) {
+            if ($dra->centre->montant_disponible < $totalBonAchat) {
                 DB::rollBack();
                 return back()->withErrors(['total_dra' => 'Le montant disponible est insuffisant, il faut un remboursement.']);
             }
@@ -115,120 +112,125 @@ class FactureController extends Controller
                 'total_dra' => round($totalDra, 2),
             ]);
 
-
             $dra->centre->update([
-                'montant_disponible' => $dra->centre->montant_disponible - $totalFacture
+                'montant_disponible' => $dra->centre->montant_disponible - $totalBonAchat
             ]);
 
             DB::commit();
 
-            return redirect()->route('achat.dras.factures.index', $dra->n_dra)
-                ->with('success', 'Facture créée avec succès.');
+            return redirect()->route('achat.dras.bon-achats.index', $dra->n_dra)
+                ->with('success', 'Bon d\'achat créé avec succès.');
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->withErrors(['error' => 'Une erreur est survenue : ' . $e->getMessage()]);
         }
     }
 
-    public function edit(Dra $dra, Facture $facture)
+    public function edit(Dra $dra, BonAchat $bonAchat)
     {
         $fournisseurs = Fournisseur::all(['id_fourn', 'nom_fourn']);
         $pieces = Piece::all(['id_piece', 'nom_piece', 'prix_piece', 'tva']);
-        $facture->load('pieces');
+        $bonAchat->load('pieces');
 
-        return Inertia::render('Facture/Edit', [
+        return Inertia::render('BonAchat/Edit', [
             'dra' => $dra,
-            'facture' => $facture,
+            'bonAchat' => $bonAchat,
             'fournisseurs' => $fournisseurs,
             'allPieces' => $pieces,
         ]);
     }
 
-    public function update(Request $request, $n_dra, $n_facture)
+    public function update(Request $request, $n_dra, $n_ba)
     {
         $request->validate([
-            'n_facture' => 'required|unique:factures,n_facture,' . $n_facture . ',n_facture',
-            'date_facture' => 'required|date',
+            'n_ba' => 'required|unique:bon_achats,n_ba,' . $n_ba . ',n_ba',
+            'date_ba' => 'required|date',
             'id_fourn' => 'required|exists:fournisseurs,id_fourn',
-            'droit_timbre' => 'nullable|numeric',
             'pieces' => 'required|array|min:1',
             'pieces.*.id_piece' => 'required|exists:pieces,id_piece',
-            'pieces.*.qte_f' => 'required|integer|min:1',
+            'pieces.*.qte_ba' => 'required|integer|min:1',
         ]);
 
         DB::beginTransaction();
 
         try {
             $dra = Dra::where('n_dra', $n_dra)->firstOrFail();
-            $facture = Facture::where('n_facture', $n_facture)->firstOrFail();
+            $bonAchat = BonAchat::where('n_ba', $n_ba)->firstOrFail();
             $centre = $dra->centre;
 
-            $oldMontant = $this->calculateMontant($facture);
+            // 1. Calculate old amount and restore it to montant_disponible
+            $oldMontant = $this->calculateMontant($bonAchat);
             $centre->montant_disponible += $oldMontant;
             $centre->save();
 
-            $facture->update([
-                'n_facture' => $request->n_facture,
-                'date_facture' => $request->date_facture,
+            // 2. Update the bonAchat with new data
+            $bonAchat->update([
+                'n_ba' => $request->n_ba,
+                'date_ba' => $request->date_ba,
                 'id_fourn' => $request->id_fourn,
-                'droit_timbre' => $request->droit_timbre ?? 0,
             ]);
 
+            // 3. Sync pieces
             $pieceAttachments = [];
             foreach ($request->pieces as $piece) {
-                $pieceAttachments[$piece['id_piece']] = ['qte_f' => $piece['qte_f']];
+                $pieceAttachments[$piece['id_piece']] = ['qte_ba' => $piece['qte_ba']];
             }
-            $facture->pieces()->sync($pieceAttachments);
+            $bonAchat->pieces()->sync($pieceAttachments);
 
-            $facture->refresh();
-            $newMontant = $this->calculateMontant($facture);
+            // 4. Refresh relationships and calculate new amount
+            $bonAchat->refresh(); // Important to get updated relationships
+            $newMontant = $this->calculateMontant($bonAchat);
 
-            // Check maximum facture limit
-            if ($newMontant > 20000) {
+            if ($newMontant > 10000) {
                 DB::rollBack();
-                return back()->withErrors(['facture_total' => 'Le montant total de la facture ne peut pas dépasser 20 000 DA.']);
+                return back()->withErrors(['bonAchat_total' => 'Le montant total du Bon Achat ne peut pas dépasser 10 000 DA.']);
             }
 
+
+            // 5. Recalculate total_dra from scratch
             $totalDra = 0;
             $dra->load(['bonAchats.pieces', 'factures.pieces']);
 
             foreach ($dra->bonAchats as $ba) {
-                $totalDra += $this->calculateBonAchatMontant($ba);
+                $totalDra += $this->calculateMontant($ba);
             }
             foreach ($dra->factures as $f) {
-                $totalDra += $this->calculateMontant($f);
+                $totalDra += $this->calculateFactureMontant($f);
             }
 
+            // 6. Check available balance
             if ($dra->centre->montant_disponible < $newMontant) {
                 DB::rollBack();
                 return back()->withErrors(['total_dra' => 'Le total du DRA dépasse le seuil autorisé du centre.']);
             }
 
+            // 7. Update DRA total
             $dra->total_dra = $totalDra;
             $dra->save();
 
+            // 8. Update centre's available amount
             $centre->montant_disponible -= $newMontant;
             $centre->save();
 
             DB::commit();
 
-            return redirect()->route('achat.dras.factures.index', $dra->n_dra)
-                ->with('success', 'Facture mise à jour avec succès.');
+            return redirect()->route('achat.dras.bon-achats.index', $dra->n_dra)
+                ->with('success', 'Bon d\'achat mis à jour avec succès.');
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->withErrors(['error' => 'Erreur lors de la mise à jour : ' . $e->getMessage()]);
         }
     }
 
-    public function destroy(Dra $dra, Facture $facture)
+    public function destroy(Dra $dra, BonAchat $bonAchat)
     {
         DB::beginTransaction();
 
         try {
-            $montantToRestore = $this->calculateMontant($facture);
+            $montantToRestore = $this->calculateMontant($bonAchat);
 
-            $facture->pieces()->detach();
-            $facture->delete();
+            $bonAchat->pieces()->detach();
+            $bonAchat->delete();
 
             $dra->centre->update([
                 'montant_disponible' => $dra->centre->montant_disponible + $montantToRestore
@@ -238,10 +240,10 @@ class FactureController extends Controller
 
             $totalDra = '0';
             foreach ($dra->bonAchats as $ba) {
-                $totalDra = bcadd($totalDra, (string)$this->calculateBonAchatMontant($ba), 2);
+                $totalDra = bcadd($totalDra, (string)$this->calculateMontant($ba), 2);
             }
             foreach ($dra->factures as $f) {
-                $totalDra = bcadd($totalDra, (string)$this->calculateMontant($f), 2);
+                $totalDra = bcadd($totalDra, (string)$this->calculateFactureMontant($f), 2);
             }
 
             $dra->update([
@@ -250,15 +252,23 @@ class FactureController extends Controller
 
             DB::commit();
 
-            return redirect()->route('achat.dras.factures.index', $dra->n_dra)
-                ->with('success', 'Facture supprimée avec succès.');
+            return redirect()->route('achat.dras.bon-achats.index', $dra->n_dra)
+                ->with('success', 'Bon d\'achat supprimé avec succès.');
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->withErrors(['error' => 'Erreur lors de la suppression: ' . $e->getMessage()]);
         }
     }
 
-    protected function calculateMontant(Facture $facture): float
+    protected function calculateMontant(BonAchat $bonAchat): float
+    {
+        return $bonAchat->pieces->sum(function ($piece) {
+            $subtotal = $piece->prix_piece * $piece->pivot->qte_ba;
+            return $subtotal * (1 + ($piece->tva / 100));
+        });
+    }
+
+    protected function calculateFactureMontant(Facture $facture): float
     {
         $piecesTotal = $facture->pieces->sum(function ($piece) {
             $subtotal = $piece->prix_piece * $piece->pivot->qte_f;
@@ -268,11 +278,5 @@ class FactureController extends Controller
         return $piecesTotal + ($facture->droit_timbre ?? 0);
     }
 
-    protected function calculateBonAchatMontant($bonAchat): float
-    {
-        return $bonAchat->pieces->sum(function ($piece) {
-            $subtotal = $piece->prix_piece * $piece->pivot->qte_ba;
-            return $subtotal * (1 + ($piece->tva / 100));
-        });
-    }
 }
+

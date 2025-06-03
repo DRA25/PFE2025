@@ -1,5 +1,5 @@
 <?php
-namespace App\Http\Controllers\Achat;
+namespace App\Http\Controllers\Scentre;
 
 use App\Http\Controllers\Controller;
 use App\Models\Centre;
@@ -108,7 +108,7 @@ class DraController extends Controller
             'total_dra' => 0,
         ]);
 
-        return redirect()->route('achat.dras.index');
+        return redirect()->route('scentre.dras.index');
     }
 
 
@@ -142,7 +142,7 @@ class DraController extends Controller
             $centre->decrement('montant_disponible', $totalDra);
         }
 
-        return redirect()->route('achat.dras.index')->with('success', 'DRA créé avec succès.');
+        return redirect()->route('scentre.dras.index')->with('success', 'DRA créé avec succès.');
     }
 
 
@@ -208,7 +208,7 @@ return Inertia::render('Dra/Edit', [
 
             DB::commit();
 
-            return redirect()->route('achat.dras.index')
+            return redirect()->route('scentre.dras.index')
                 ->with('success', 'DRA supprimé avec succès');
 
         } catch (\Exception $e) {
@@ -238,7 +238,7 @@ return Inertia::render('Dra/Edit', [
 
         $dra->update(['etat' => 'cloture']);
 
-        return redirect()->route('achat.dras.index')
+        return redirect()->route('scentre.dras.index')
             ->with('success', 'DRA clôturé avec succès');
     }
 

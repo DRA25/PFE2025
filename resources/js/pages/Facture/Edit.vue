@@ -35,11 +35,11 @@ const props = defineProps<{
 }>()
 
 const breadcrumbs: BreadcrumbItem[] = [
-    { title:'Achat', href: '/achat'},
-    { title: 'Gestion des DRAs', href: route('achat.dras.index') },
-    { title: `Details de DRA ${props.dra.n_dra}`, href: route('achat.dras.show', { dra: props.dra.n_dra }) },
-    { title: `Factures de ${props.dra.n_dra}`, href: route('achat.dras.factures.index', { dra: props.dra.n_dra }) },
-    { title: `Modifier Facture ${props.facture.n_facture}`, href: route('achat.dras.factures.edit', { dra: props.dra.n_dra, facture: props.facture.n_facture }) },
+    { title:'Centre', href: '/scentre'},
+    { title: 'Gestion des DRAs', href: route('scentre.dras.index') },
+    { title: `Details de DRA ${props.dra.n_dra}`, href: route('scentre.dras.show', { dra: props.dra.n_dra }) },
+    { title: `Factures de ${props.dra.n_dra}`, href: route('scentre.dras.factures.index', { dra: props.dra.n_dra }) },
+    { title: `Modifier Facture ${props.facture.n_facture}`, href: route('scentre.dras.factures.edit', { dra: props.dra.n_dra, facture: props.facture.n_facture }) },
 ]
 
 const form = useForm({
@@ -99,9 +99,9 @@ function removePiece(index: number) {
 }
 
 function submit() {
-    form.put(route('achat.dras.factures.update', { dra: props.dra.n_dra, facture: props.facture.n_facture }), {
+    form.put(route('scentre.dras.factures.update', { dra: props.dra.n_dra, facture: props.facture.n_facture }), {
         onSuccess: () => {
-            window.location.href = route('achat.dras.factures.index', { dra: props.dra.n_dra })
+            window.location.href = route('scentre.dras.factures.index', { dra: props.dra.n_dra })
         },
         onError: () => {
             console.log('Validation errors:', form.errors)
@@ -111,12 +111,12 @@ function submit() {
 
 function destroyFacture() {
     if (confirm("Êtes-vous sûr de vouloir supprimer cet facture ?")) {
-        form.delete(route('achat.dras.factures.destroy', {
+        form.delete(route('scentre.dras.factures.destroy', {
             dra: props.dra.n_dra,
             facture: props.facture.n_facture
         }), {
             onSuccess: () => {
-                window.location.href = route('achat.dras.factures.index', { dra: props.dra.n_dra });
+                window.location.href = route('scentre.dras.factures.index', { dra: props.dra.n_dra });
             },
             onError: () => {
                 console.log("Erreur lors de la suppression.");
@@ -331,7 +331,7 @@ function destroyFacture() {
                     </button>
                     <div class="flex gap-4">
                         <Link
-                            :href="route('achat.dras.factures.index', { dra: props.dra.n_dra })"
+                            :href="route('scentre.dras.factures.index', { dra: props.dra.n_dra })"
                             class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition"
                         >
                             Annuler

@@ -29,3 +29,4 @@ require __DIR__ . '/atelier.php';
 require __DIR__ . '/centre.php';
 require __DIR__ . '/fournisseur.php';
 require __DIR__ . '/about.php';
+require __DIR__ . '/scentre.php';

@@ -26,9 +26,9 @@ const form = useForm({
 });
 
 const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Achat', href: route('achat.index') },
-    { title: 'Demandes de Pièces', href: route('achat.demandes-pieces.index') },
-    { title: 'Détails', href: route('achat.demandes-pieces.show', { demande_piece: props.demande.id_dp }) }
+    { title: 'Centre', href: route('scentre.index') },
+    { title: 'Demandes de Pièces', href: route('scentre.demandes-pieces.index') },
+    { title: 'Détails', href: route('scentre.demandes-pieces.show', { demande_piece: props.demande.id_dp }) }
 ];
 </script>
 
@@ -93,7 +93,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                         Mettre à jour l'état
                     </h2>
 
-                    <form @submit.prevent="form.put(route('achat.demandes-pieces.update', { demande_piece: demande.id_dp }))">
+                    <form @submit.prevent="form.put(route('scentre.demandes-pieces.update', { demande_piece: demande.id_dp }))">
                         <div class="mb-4">
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                 État
@@ -113,7 +113,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                                 Mettre à jour
                             </button>
                             <a
-                                :href="route('achat.demandes-pieces.export-single-pdf', { demande_piece: demande.id_dp })"
+                                :href="route('scentre.demandes-pieces.export-single-pdf', { demande_piece: demande.id_dp })"
                                 target="_blank"
                                 class="px-4 py-2 ml-2 bg-green-600 text-white rounded-md hover:bg-green-700"
                             >

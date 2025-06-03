@@ -21,9 +21,9 @@ const props = defineProps<{
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Achat', href: route('achat.dras.index') },
-    { title: 'Gestion des DRAs', href: '/achat/dras' },
-    { title: `Details de DRA ${props.dra.n_dra}`, href: route('achat.dras.show', { dra: props.dra.n_dra }) },
+    { title: 'Centre', href: route('scentre.dras.index') },
+    { title: 'Gestion des DRAs', href: '/scentre/dras' },
+    { title: `Details de DRA ${props.dra.n_dra}`, href: route('scentre.dras.show', { dra: props.dra.n_dra }) },
 
 ];
 
