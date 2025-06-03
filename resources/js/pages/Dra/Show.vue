@@ -76,7 +76,7 @@ const closeDra = (draId: string, currentEtat: string) => {
 
                     <div>
                         <p class="text-sm text-gray-500 dark:text-gray-400">Total DRA</p>
-                        <p class="text-gray-900 dark:text-gray-100">{{ dra.total_dra }}</p>
+                        <p class="text-gray-900 dark:text-gray-100">{{ Number(dra.total_dra).toFixed(2) }}</p>
                     </div>
 
 

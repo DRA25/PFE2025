@@ -116,38 +116,9 @@ const availableAmountForCenter = computed(() => {
 });
 
 
-const closeDra = (draId: string, currentEtat: string) => {
-    const normalizedEtat = currentEtat.toLowerCase();
-    if (normalizedEtat !== 'refuse' && normalizedEtat !== 'actif') {
-        alert('Seuls les DRAs actifs ou refusés peuvent être clôturés');
-        return;
-    }
 
-    if (confirm('Êtes-vous sûr de vouloir clôturer ce DRA ?')) {
-        router.put(route('achat.dras.close', { dra: draId }), {
-            preserveScroll: true,
-            onSuccess: () => {
-                localDras.value = localDras.value.map(dra =>
-                    dra.n_dra === draId ? { ...dra, etat: 'cloture' } : dra
-                );
-            },
-            onError: (errors) => {
-                alert('Erreur lors de la clôture du DRA: ' + (errors.message || 'Une erreur est survenue'));
-            },
-        });
-    }
-};
 
-const confirmDeleteDra = (draId: string, etat: string) => {
-    if (etat === 'cloture') {
-        alert('Vous ne pouvez pas supprimer un DRA clôturé.');
-        return;
-    }
 
-    if (confirm('Êtes-vous sûr de vouloir supprimer ce DRA ? Cette action est irréversible.')) {
-        router.delete(route('achat.dras.destroy', { dra: draId }));
-    }
-};
 
 const requestSort = (column: string) => {
     if (!sortConfig.value || sortConfig.value.column !== column) {
@@ -206,7 +177,8 @@ const createDra = () => {
                     <h2 class="text-md font-semibold text-[#042B62FF] dark:text-[#BDBDBDFF] mb-2">Statistiques Centre</h2>
                     <p class="text-sm text-gray-700 dark:text-gray-300">
                         <span class="font-bold">Montant Disponible:</span>
-                        {{ availableAmountForCenter.toLocaleString('fr-FR') }} DA
+                        {{ Number(parseFloat(availableAmountForCenter).toFixed(2)).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }} DA
+
                     </p>
                 </div>
             </div>
@@ -262,7 +234,8 @@ const createDra = () => {
                     >
                         <TableCell>{{ dra.n_dra }}</TableCell>
                         <TableCell>{{ new Date(dra.date_creation).toLocaleDateString() }}</TableCell>
-                        <TableCell>{{ dra.total_dra.toLocaleString('fr-FR') }} DA</TableCell>
+                        <TableCell>{{ Number(parseFloat(dra.total_dra).toFixed(2)).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }} DA
+                        </TableCell>
                         <TableCell>
                             <span
                                 class="font-bold"

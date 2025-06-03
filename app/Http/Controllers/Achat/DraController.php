@@ -148,12 +148,6 @@ class DraController extends Controller
 
     public function edit(Dra $dra)
 {
-$userCentreId = Auth::user()->id_centre;
-
-// Authorization: Ensure the DRA belongs to the user's center
-if ($dra->id_centre !== $userCentreId) {
-abort(403, 'Unauthorized action.');
-}
 
 return Inertia::render('Dra/Edit', [
 'dra' => $dra,
@@ -162,10 +156,7 @@ return Inertia::render('Dra/Edit', [
 
     public function update(Request $request, Dra $dra)
     {
-        // Authorization - ensure DRA belongs to user's center
-        if ($dra->id_centre !== Auth::user()->id_centre) {
-            abort(403, 'Unauthorized action.');
-        }
+
 
         $validated = $request->validate([
             'etat' => 'required|string|in:cloture,refuse,accepte',

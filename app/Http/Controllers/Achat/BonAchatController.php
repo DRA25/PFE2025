@@ -109,7 +109,7 @@ class BonAchatController extends Controller
             }
 
             $dra->update([
-                'total_dra' => (float)$totalDra,
+                'total_dra' => round($totalDra, 2),
             ]);
 
             $dra->centre->update([

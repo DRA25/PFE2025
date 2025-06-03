@@ -32,14 +32,11 @@ class ConsulterDraController extends Controller
 
     public function show($n_dra)
     {
-        $userCentreId = Auth::user()->id_centre;
+
 
         $dra = Dra::with('centre')->where('n_dra', $n_dra)->firstOrFail();
 
-        if ($dra->id_centre !== $userCentreId) {
-            abort(403, 'Unauthorized action.');
-        }
-
+//
         // Load factures with related data
         $factures = $dra->factures()
             ->with(['fournisseur:id_fourn,nom_fourn', 'pieces:id_piece,nom_piece,prix_piece,tva'])

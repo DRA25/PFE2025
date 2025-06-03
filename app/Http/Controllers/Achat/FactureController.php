@@ -100,10 +100,10 @@ class FactureController extends Controller
             $totalDra = '0';
 
             foreach ($dra->bonAchats as $ba) {
-                $totalDra = bcadd($totalDra, (string)$this->calculateBonAchatMontant($ba), 2);
+                $totalDra = bcadd($totalDra, (string)$this->calculateBonAchatMontant($ba),2);
             }
             foreach ($dra->factures as $f) {
-                $totalDra = bcadd($totalDra, (string)$this->calculateMontant($f), 2);
+                $totalDra = bcadd($totalDra, (string)$this->calculateMontant($f),2);
             }
 
             if ($dra->centre->montant_disponible < $totalFacture) {
@@ -112,8 +112,9 @@ class FactureController extends Controller
             }
 
             $dra->update([
-                'total_dra' => (float)$totalDra,
+                'total_dra' => round($totalDra, 2),
             ]);
+
 
             $dra->centre->update([
                 'montant_disponible' => $dra->centre->montant_disponible - $totalFacture

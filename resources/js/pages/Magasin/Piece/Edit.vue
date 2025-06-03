@@ -179,7 +179,7 @@ function destroyPiece() {
                 </div>
 
                 <div class="flex justify-between items-center pt-4">
-                    
+
                     <button
                         type="button"
                         @click="destroyPiece"
