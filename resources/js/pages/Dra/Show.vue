@@ -35,7 +35,7 @@ const closeDra = (draId: string, currentEtat: string) => {
     }
 
     if (confirm('Êtes-vous sûr de vouloir clôturer ce DRA ?')) {
-        router.put(route('achat.dras.close', { dra: draId }), {
+        router.put(route('scentre.dras.close', { dra: draId }), {
             preserveScroll: true,
             // After successful update, Inertia will typically refresh the page with updated props.
             // No explicit local state update is needed here unless you're handling partial reloads.

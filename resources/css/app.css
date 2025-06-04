@@ -91,7 +91,7 @@
 :root {
   --background: hsl(0, 0%, 100%);
   --foreground: hsl(215, 92%, 20%);
-  --card: hsl(215, 92%, 20%);
+  --card: hsl(238, 86%, 22%);
   --card-foreground: hsl(0 0% 3.9%);
   --popover: hsl(0 0% 100%);
   --popover-foreground: hsl(0 0% 3.9%);
@@ -116,7 +116,7 @@
   --radius: 0.5rem;
   --sidebar-background: hsl(215, 92%, 20%);
   --sidebar-foreground: hsl(42, 90%, 53%);
-  --sidebar-primary: hsl(215, 92%, 20%);
+  --sidebar-primary: hsl(42, 90%, 53%);
   --sidebar-primary-foreground: hsl(0 0% 98%);
   --sidebar-accent: hsl(0 0% 94%);
   --sidebar-accent-foreground: hsl(0 0% 30%);
@@ -151,8 +151,8 @@
   --chart-3: hsl(30 80% 55%);
   --chart-4: hsl(280 65% 60%);
   --chart-5: hsl(340 75% 55%);
-  --sidebar-background: hsl(42, 90%, 53%);
-  --sidebar-foreground: hsl(215, 92%, 20%);
+  --sidebar-background: hsl(222, 39%, 6%);
+  --sidebar-foreground: hsl(0, 0%, 74%);
   --sidebar-primary: hsl(42, 90%, 53%);
   --sidebar-primary-foreground: hsl(0 0% 100%);
   --sidebar-accent: hsl(0 0% 15.9%);

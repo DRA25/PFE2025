@@ -120,8 +120,8 @@ if (user.value?.roles?.some((role: any) => role.name === 'admin' || role.name ==
         });
     }
 
-// Conditionally add "Achat"
-if (user.value?.roles?.some((role: any) => role.name === 'admin' || role.name === 'service centre' )) {
+// Conditionally add "Centre"
+if (user.value?.roles?.some((role: any) => role.name === 'admin' || role.name === 'service centre' || role.name === 'service achat' )) {
     mainNavItems.push({
         title: 'Centre',
         href: '/scentre',
