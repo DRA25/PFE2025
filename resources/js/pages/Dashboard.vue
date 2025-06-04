@@ -7,25 +7,85 @@ import BarChartEcharts from '@/Components/ui/charts/BarChartEcharts.vue';
 import DonutChart from '@/Components/ui/charts/DonutChart.vue';
 import { ref, watch, computed } from 'vue';
 
-import { onMounted } from 'vue';
-import axios from 'axios';
+import { toPng } from 'dom-to-image-more';
+import jsPDF from 'jspdf';
+const dashboardRef = ref<HTMLElement | null>(null);
 
-const insightText = ref<string>('Chargement des informations...'); // Chargement des informations...
+import domtoimage from 'dom-to-image-more';
+import { Button } from '@/components/ui/button';
 
-onMounted(async () => {
+
+async function exportPDF() {
+    if (!dashboardRef.value) return;
+
+    const html = document.documentElement;
+    const originalClass = html.className;
+    html.classList.remove('dark');
+    await new Promise(resolve => setTimeout(resolve, 100));
+
     try {
-        const response = await axios.post('/dashboard/insights', {
-            draChart: props.draChart,
-            draCountByCentre: props.draCountByCentre,
-            draAmountByCentre: props.draAmountByCentre,
+        const dataUrl = await toPng(dashboardRef.value, {
+            cacheBust: true,
+            backgroundColor: '#ffffff',
         });
 
-        insightText.value = response.data.insight;
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const headerHeight = 25;
+        const imageStartY = headerHeight + 15;
+
+        // Load logo
+        const logo = new Image();
+        logo.src = '/images/Naftal.png';
+
+        logo.onload = () => {
+
+            pdf.setFillColor(50, 50, 50); // lighter gray
+            pdf.rect(0, 0, pageWidth, headerHeight, 'F');
+
+            // 🖼️ Scale logo to fit header height (max 15mm tall)
+            const aspectRatio = logo.width / logo.height;
+            const logoHeight = 15;
+            const logoWidth = logoHeight * aspectRatio;
+
+            pdf.addImage(logo, 'PNG', 10, 5, logoWidth, logoHeight); // dynamic width
+
+            // 📄 Title in darker gray
+            pdf.setTextColor(255, 255, 255);
+            pdf.setFont('helvetica', 'bold');
+            pdf.setFontSize(16);
+            pdf.text('Tableau de Bord - Rapport', pageWidth / 2, 15, { align: 'center' });
+
+            // 📅 Date line
+            pdf.setFontSize(10);
+            pdf.setFont('helvetica', 'normal');
+            pdf.setTextColor(80, 80, 80);
+            const today = new Date().toLocaleDateString();
+            pdf.text(`Date d'export : ${today}`, 10, headerHeight + 8);
+
+            // 📊 Dashboard content
+            const chartImage = new Image();
+            chartImage.src = dataUrl;
+
+            chartImage.onload = () => {
+                const imgWidth = pageWidth;
+                const imgHeight = (chartImage.height / chartImage.width) * imgWidth;
+
+                pdf.addImage(chartImage, 'PNG', 0, imageStartY, imgWidth, imgHeight);
+                pdf.save('tableau-de-bord.pdf');
+            };
+        };
     } catch (error) {
-        insightText.value = 'Échec du chargement des informations.'; // Échec du chargement des informations.
-        console.error(error);
+        console.error('Export failed:', error);
+    } finally {
+        html.className = originalClass;
     }
-});
+}
+
+
+
+
+
 
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -149,8 +209,20 @@ const draAmountByCentreBarColors = computed(() => {
 
 <template>
     <Head title="Tableau de bord" /> <AppLayout :breadcrumbs="breadcrumbs">
+
+
     <div class="container mx-auto px-4 py-8">
-        <h1 class="text-4xl font-extrabold text-gray-900 dark:text-white mb-8">Aperçu du Tableau de Bord</h1> <div class="bg-white dark:bg-gray-800 shadow-lg rounded-xl p-6 mb-8 border border-gray-200 dark:border-gray-700">
+        <div class="flex justify-between">
+        <h1 class="text-4xl font-extrabold text-gray-900 dark:text-white mb-8">Aperçu du Tableau de Bord</h1>
+        <Button
+            @click="exportPDF"
+            class="px-6 py-2 bg-green-600 text-white font-semibold rounded-md hover:bg-green-700"
+        >
+            Exporter les Diagrammes en PDF
+        </Button>
+        </div>
+        <div class="bg-white dark:bg-gray-800 shadow-lg rounded-xl p-6 mb-8 border border-gray-200 dark:border-gray-700">
+
         <h2 class="text-2xl font-semibold text-gray-800 dark:text-white mb-5">Filtrer Vos Données</h2> <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
         <div>
             <label for="centre" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -202,7 +274,7 @@ const draAmountByCentreBarColors = computed(() => {
             Réinitialiser les Filtres
         </button> </div>
     </div>
-
+        <div ref="dashboardRef">
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
             <div class="bg-white dark:bg-gray-800 shadow-lg rounded-xl p-6 border border-gray-200 dark:border-gray-700">
                 <h2 class="text-2xl font-semibold text-gray-800 dark:text-white mb-4">Nombre de DRA par Mois</h2> <div class="aspect-video">
@@ -255,6 +327,7 @@ const draAmountByCentreBarColors = computed(() => {
             </div>
             </div>
         </div>
+            </div>
     </div>
 </AppLayout>
 </template>
