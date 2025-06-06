@@ -2,6 +2,7 @@
 
 
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DirectionDashboardController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -11,11 +12,9 @@ Route::get('/', function () {
 })->name('home');
 
 
-//Route::get('dashboard', function () {
-//    return Inertia::render('Dashboard');
-//})->middleware(['auth', 'verified'])->name('dashboard');
 
-Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+
 
 
 require __DIR__.'/settings.php';
@@ -31,3 +30,4 @@ require __DIR__ . '/centre.php';
 require __DIR__ . '/fournisseur.php';
 require __DIR__ . '/about.php';
 require __DIR__ . '/scentre.php';
+require __DIR__ . '/dashboard.php';

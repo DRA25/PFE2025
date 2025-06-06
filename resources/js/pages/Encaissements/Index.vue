@@ -77,17 +77,7 @@ const sortedEncaissements = computed(() => {
     return data
 })
 
-const deleteEncaissement = (id: string) => {
-    if (confirm('Êtes-vous sûr de vouloir supprimer cet encaissement ?')) {
-        router.delete(route('encaissements.destroy', { encaissement: id }), {
-            preserveScroll: true,
-            onSuccess: () => {},
-            onError: (errors) => {
-                alert('Erreur lors de la suppression: ' + (errors.message || 'Une erreur est survenue'))
-            },
-        })
-    }
-}
+
 </script>
 
 <template>
@@ -95,13 +85,7 @@ const deleteEncaissement = (id: string) => {
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex justify-between items-center m-5 mb-0 gap-4 flex-wrap">
             <div class="flex items-center gap-2 w-full md:w-1/3">
-                <Search class="w-4 h-4 text-gray-500 dark:text-gray-400" />
-                <input
-                    type="text"
-                    v-model="searchQuery"
-                    placeholder="Rechercher par centre, remboursement, montant ou date..."
-                    class="w-full bg-gray-100 px-4 py-2 rounded-md border border-gray-200 dark:border-gray-700 dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
-                />
+
             </div>
 
             <Link

@@ -23,11 +23,7 @@ const page = usePage();
 const user = computed(() => page.props.auth.user);
 
 const mainNavItems: NavItem[] = [
-    {
-        title: 'Dashboard',
-        href: '/dashboard',
-        icon: LayoutGrid,
-    },
+
     {
         title: 'À propos',
         href: '/about',
@@ -40,7 +36,25 @@ const mainNavItems: NavItem[] = [
 
 ];
 
+if (user.value?.roles?.some((role: any) =>
+    role.name === 'service centre')) {
+    mainNavItems.push({
+        title: 'Dashboard',
+        href: '/dashboard',
+        icon: LayoutGrid,
+    });
+}
 
+
+// Conditionally add "Centre"
+if (user.value?.roles?.some((role: any) =>
+    role.name === 'admin' || role.name === 'service cf' || role.name === 'service achat' || role.name === 'service paiment' )) {
+    mainNavItems.push({
+        title: 'Dashboard',
+        href: '/directiondashboard',
+        icon: LayoutGrid,
+    });
+}
 
 // Conditionally add "centre"
 if (user.value?.roles?.some((role: any) => role.name === 'admin' )) {
