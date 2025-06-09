@@ -1,16 +1,29 @@
 <?php
 
 use App\Http\Controllers\Scentre\BonAchatController;
+use App\Http\Controllers\Scentre\BonCommandeController;
 use App\Http\Controllers\Scentre\DraController;
 use App\Http\Controllers\Scentre\EncaissementController;
 use App\Http\Controllers\Scentre\FactureController;
 use App\Http\Controllers\Scentre\ScentreController;
 use App\Http\Controllers\Scentre\ScentreDemandePieceController;
+
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth', 'role:service centre|admin'])->group(function () {
     // Group all scentre-related routes under /scentre prefix
     Route::prefix('scentre')->name('scentre.')->group(function () {
+
+        Route::prefix('boncommandes')->name('boncommandes.')->group(function () {
+            Route::get('/', [BonCommandeController::class, 'index'])->name('index');
+            Route::get('/create', [BonCommandeController::class, 'create'])->name('create');
+            Route::post('/', [BonCommandeController::class, 'store'])->name('store');
+            Route::get('/{n_bc}', [BonCommandeController::class, 'show'])->name('show');
+            Route::get('/{n_bc}/edit', [BonCommandeController::class, 'edit'])->name('edit');
+            Route::put('/{n_bc}', [BonCommandeController::class, 'update'])->name('update');
+            Route::delete('/{n_bc}', [BonCommandeController::class, 'destroy'])->name('destroy');
+            Route::get('/{n_bc}/export-pdf', [BonCommandeController::class, 'exportPdf'])->name('export-pdf');
+        });
 
         Route::get('/demandes-export-pdf', [ScentreDemandePieceController::class, 'exportListPdf'])
             ->name('demandes-pieces.export-pdf');
@@ -62,6 +75,7 @@ Route::middleware(['auth', 'role:service centre|admin'])->group(function () {
             Route::get('/{bonAchat}/edit', [BonAchatController::class, 'edit'])->name('edit');
             Route::put('/{bonAchat}', [BonAchatController::class, 'update'])->name('update');
             Route::delete('/{bonAchat}', [BonAchatController::class, 'destroy'])->name('destroy');
+
         });
     });
 });

@@ -65,6 +65,21 @@ const breadcrumbs: BreadcrumbItem[] = [
                         Traitez les demandes de pièces provenant des magasins.
                     </p>
                 </Link>
+
+                <Link
+                    href="/scentre/boncommandes"
+                    class="group bg-white dark:bg-gray-700 p-6 rounded-lg shadow-md hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 flex flex-col items-center text-center"
+                >
+                    <div class="p-3 bg-[#042B62] text-white rounded-full mb-4 group-hover:bg-[#F3B21B] group-hover:text-[#042B62] transition-colors duration-300">
+                        <ClipboardCheck class="w-8 h-8" />
+                    </div>
+                    <h2 class="text-xl font-semibold mb-2 text-[#042B62FF] dark:text-[#F3B21B] group-hover:text-blue-700 dark:group-hover:text-yellow-300 transition-colors duration-300">
+                        Rediger les Bons de Commandes
+                    </h2>
+                    <p class="text-gray-600 dark:text-gray-300 text-sm">
+                        Traitez les Bons de Commandes.
+                    </p>
+                </Link>
             </div>
         </div>
     </AppLayout>

@@ -41,6 +41,12 @@ class Piece extends Model
         return $this->belongsToMany(Facture::class, 'quantite_b_a_s', 'id_piece', 'n_ba')
             ->withPivot('qte_ba');
     }
+
+    public function boncommandes()
+    {
+        return $this->belongsToMany(BonDeCommande::class, 'commande_pieces', 'id_piece', 'n_bc')
+            ->withPivot('qte_commandep');
+    }
     public function centre()
     {
         return $this->belongsTo(Centre::class, 'id_centre');

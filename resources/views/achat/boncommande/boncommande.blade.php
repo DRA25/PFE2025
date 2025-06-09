@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bon de Commande n° {{ $boncommande['n_bc'] }}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            text-align: center;
+        }
+
+        .t1 {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .t1, .ttd {
+            border: 1px solid black;
+        }
+
+        .ttd {
+            text-align: center;
+        }
+
+        img {
+            width: 90px; /* Adjust logo size if needed */
+        }
+
+        h1 {
+            color: #042B62FF;
+            text-align: center;
+            font-size: 1.5rem;
+            margin-top: 20px;
+        }
+
+        .t2 {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            font-family: 'Inter', sans-serif;
+            margin-bottom: 40px; /* Adjusted margin for better spacing */
+        }
+
+        .t2, .t2 th, .t2 td { /* Apply border to all table elements explicitly */
+            border: 1px solid #000000;
+        }
+
+        .t2 th, .t2 td {
+            padding: 8px;
+            text-align: left;
+        }
+
+        .t2 th {
+            background-color: #f2f2f2;
+            font-size: 0.9rem;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .info-section {
+            text-align: left;
+            margin-bottom: 20px;
+            padding-left: 10px; /* Add some padding for better readability */
+            padding-right: 10px;
+        }
+
+        .info-item {
+            margin-bottom: 5px;
+            font-size: 1rem;
+            color: #333; /* Darker text for info */
+        }
+
+        .info-item strong {
+            color: #042B62FF; /* Highlight labels */
+        }
+
+        .footer-text {
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: 30px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+<table class="t1">
+    <tr>
+        <td class="ttd" style="width:10%"><img src="{{ public_path('images/Naftal.png') }}" alt="Company Logo"></td>
+        <td class="ttd" style="width:70%"><h1>Détails du Bon de Commande n° {{ $boncommande['n_bc'] }}</h1></td>
+        <td style="width:20%; padding: 0;"></td>
+    </tr>
+</table>
+
+<div class="info-section">
+    <div class="info-item"><strong>Date du Bon de Commande:</strong> {{ \Carbon\Carbon::parse($boncommande['date_bc'])->format('d/m/Y') }}</div>
+
+</div>
+
+
+<table class="t2">
+    <thead>
+    <tr>
+        <th>ID Pièce</th>
+        <th>Nom Pièce</th>
+        <th>Quantité Commandée</th>
+    </tr>
+    </thead>
+    <tbody>
+    @foreach($boncommande['pieces'] as $piece)
+        <tr>
+            <td>{{ $piece['id_piece'] }}</td>
+            <td>{{ $piece['nom_piece'] }}</td>
+            <td>{{ $piece['qte_commandep'] }}</td>
+        </tr>
+    @endforeach
+    </tbody>
+</table>
+
+<p class="footer-text">Généré le: {{ \Carbon\Carbon::now()->format('d/m/Y H:i') }}</p>
+
+</body>
+</html>
