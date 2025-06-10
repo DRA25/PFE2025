@@ -13,9 +13,26 @@ return new class extends Migration
     {
         Schema::create('prestations', function (Blueprint $table) {
             $table->integer('id_prest')->primary();
+            $table->string('nom_prest');
             $table->string('desc_prest');
             $table->integer('prix_prest');
             $table->date('date_prest');
+            $table->float('tva', 5, 2);
+            $table->string('compte_general_code');
+            $table->string('compte_analytique_code');
+
+
+            $table->foreign('compte_general_code')
+                ->references('code')
+                ->on('comptes_generaux')
+                ->onUpdate('cascade')
+                ->onDelete('restrict');
+
+            $table->foreign('compte_analytique_code')
+                ->references('code')
+                ->on('comptes_analytiques')
+                ->onUpdate('cascade')
+                ->onDelete('restrict');
         });
     }
 

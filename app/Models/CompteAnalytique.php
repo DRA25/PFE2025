@@ -18,5 +18,10 @@ class CompteAnalytique extends Model
     {
         return $this->hasMany(Piece::class, 'compte_analytique_code', 'code');
     }
+
+    public function prestations()
+    {
+        return $this->hasMany(Prestation::class, 'compte_analytique_code', 'code');
+    }
 }
 

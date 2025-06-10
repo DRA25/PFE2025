@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\PrestationController;
 use App\Http\Controllers\Scentre\BonAchatController;
 use App\Http\Controllers\Scentre\BonCommandeController;
 use App\Http\Controllers\Scentre\DraController;
@@ -13,6 +14,40 @@ use Illuminate\Support\Facades\Route;
 Route::middleware(['auth', 'role:service centre|admin'])->group(function () {
     // Group all scentre-related routes under /scentre prefix
     Route::prefix('scentre')->name('scentre.')->group(function () {
+
+
+        // Prestations Routes
+        Route::prefix('prestations')->name('prestations.')->group(function () {
+            // List all prestations
+            Route::get('/', [PrestationController::class, 'index'])
+                ->name('index');
+
+            // Show create form
+            Route::get('/create', [PrestationController::class, 'create'])
+                ->name('create');
+
+            // Store new prestation
+            Route::post('/', [PrestationController::class, 'store'])
+                ->name('store');
+
+            // Show single prestation
+            Route::get('/{prestation}', [PrestationController::class, 'show'])
+                ->name('show');
+
+            // Show edit form
+            Route::get('/{prestation}/edit', [PrestationController::class, 'edit'])
+                ->name('edit');
+
+            // Update prestation
+            Route::put('/{prestation}', [PrestationController::class, 'update'])
+                ->name('update');
+
+            // Delete prestation
+            Route::delete('/{prestation}', [PrestationController::class, 'destroy'])
+                ->name('destroy');
+        });
+
+
 
         Route::prefix('boncommandes')->name('boncommandes.')->group(function () {
             Route::get('/', [BonCommandeController::class, 'index'])->name('index');

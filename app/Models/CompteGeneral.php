@@ -20,4 +20,9 @@ class CompteGeneral extends Model
     {
         return $this->hasMany(Piece::class, 'compte_general_code', 'code');
     }
+
+    public function prestations()
+    {
+        return $this->hasMany(Prestation::class, 'compte_general_code', 'code');
+    }
 }

@@ -26,4 +26,10 @@ class BonDeCommande extends Model
         return $this->belongsToMany(Piece::class, 'commande_pieces', 'n_bc', 'id_piece')
             ->withPivot('qte_commandep');
     }
+
+    public function prestations()
+    {
+        return $this->belongsToMany(Piece::class, 'commande_prests', 'n_bc', 'id_prest')
+            ->withPivot('qte_commandepr');
+    }
 }

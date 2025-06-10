@@ -17,6 +17,22 @@ return new class extends Migration
             $table->string('desc_change');
             $table->string('type_change');
             $table->integer('prix_charge');
+            $table->float('tva', 5, 2);
+            $table->string('compte_general_code');
+            $table->string('compte_analytique_code');
+
+
+            $table->foreign('compte_general_code')
+                ->references('code')
+                ->on('comptes_generaux')
+                ->onUpdate('cascade')
+                ->onDelete('restrict');
+
+            $table->foreign('compte_analytique_code')
+                ->references('code')
+                ->on('comptes_analytiques')
+                ->onUpdate('cascade')
+                ->onDelete('restrict');
         });
     }
 
