@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3'
 import AppLayout from '@/layouts/AppLayout.vue'
-import { ArrowLeft, FileText ,Download} from 'lucide-vue-next' // Added FileText for consistent icon usage
+import { ArrowLeft, FileText, Download } from 'lucide-vue-next'
 import {
     Table,
     TableHeader,
@@ -18,12 +18,21 @@ declare function route(name: string, params?: any): string
 
 const props = defineProps<{
     boncommande: {
-        n_bc: string // Use string if your route param is string; change to number if needed
+        n_bc: string
         date_bc: string
         pieces: Array<{
             id_piece: number
             nom_piece: string
             qte_commandep: number
+            prix_piece: number // Assuming price is available for total calculation
+            tva: number // Assuming TVA is available for total calculation
+        }>
+        prestations: Array<{ // Add prestations to the boncommande prop
+            id_prest: number
+            nom_prest: string
+            qte_commandepr: number
+            prix_prest: number // Assuming price is available for total calculation
+            tva: number // Assuming TVA is available for total calculation
         }>
     }
 }>()
@@ -34,6 +43,32 @@ const breadcrumbs = computed<BreadcrumbItem[]>(() => [
     { title: 'Gestion des Bons de Commande', href: route('scentre.boncommandes.index') },
     { title: `Bon n° ${props.boncommande.n_bc}`, href: '#' },
 ])
+
+// Calculate total amount for display
+const totalAmount = computed(() => {
+    let total = 0;
+
+    // Calculate total for pieces
+    if (props.boncommande.pieces) {
+        total += props.boncommande.pieces.reduce((subTotal, piece) => {
+            const itemSubtotal = piece.prix_piece * piece.qte_commandep;
+            const itemTotalWithTva = itemSubtotal * (1 + (piece.tva / 100));
+            return subTotal + itemTotalWithTva;
+        }, 0);
+    }
+
+
+    // Calculate total for prestations
+    if (props.boncommande.prestations) {
+        total += props.boncommande.prestations.reduce((subTotal, prestation) => {
+            const itemSubtotal = prestation.prix_prest * prestation.qte_commandepr;
+            const itemTotalWithTva = itemSubtotal * (1 + (prestation.tva / 100));
+            return subTotal + itemTotalWithTva;
+        }, 0);
+    }
+
+    return total;
+})
 </script>
 
 <template>
@@ -53,10 +88,9 @@ const breadcrumbs = computed<BreadcrumbItem[]>(() => [
                     <Download class="w-4 h-4" />
                     <span>Exporter en PDF</span>
                 </a>
-
             </div>
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <!-- Left Column: Bon de Commande Information -->
                 <div class="space-y-4">
                     <h2 class="text-xl font-semibold text-[#042B62FF] dark:text-[#F3B21B]">
                         Informations sur le Bon de Commande
@@ -76,12 +110,14 @@ const breadcrumbs = computed<BreadcrumbItem[]>(() => [
                         <p class="text-sm text-gray-500 dark:text-gray-400">Nombre de Pièces Commandées</p>
                         <p class="text-gray-900 dark:text-gray-100">{{ boncommande.pieces.length }}</p>
                     </div>
+
+                    <div>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Nombre de Prestations Commandées</p>
+                        <p class="text-gray-900 dark:text-gray-100">{{ boncommande.prestations.length }}</p>
+                    </div>
                 </div>
-
-
             </div>
 
-            <!-- PIÈCES COMMANDÉES Section -->
             <div class="mt-10">
                 <h2 class="text-xl font-semibold text-[#042B62FF] dark:text-[#F3B21B] mb-4">Pièces Commandées</h2>
                 <div v-if="boncommande.pieces.length > 0" class="space-y-2">
@@ -107,7 +143,33 @@ const breadcrumbs = computed<BreadcrumbItem[]>(() => [
                 <p v-else class="text-gray-600 dark:text-gray-400">Aucune pièce n'est commandée pour ce bon.</p>
             </div>
 
-            <!-- Bottom Return Link (Optional, if you want two return buttons) -->
+            <div class="mt-10">
+                <h2 class="text-xl font-semibold text-[#042B62FF] dark:text-[#F3B21B] mb-4">Prestations Commandées</h2>
+                <div v-if="boncommande.prestations.length > 0" class="space-y-2">
+                    <Table class="m-3 w-39/40 bg-white dark:bg-[#111827] rounded-lg">
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Nom de la Prestation</TableHead>
+                                <TableHead>Quantité Commandée</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            <TableRow
+                                v-for="prestation in boncommande.prestations"
+                                :key="prestation.id_prest"
+                                class="hover:bg-gray-300 dark:hover:bg-gray-900"
+                            >
+                                <TableCell>{{ prestation.nom_prest }}</TableCell>
+                                <TableCell>{{ prestation.qte_commandepr }}</TableCell>
+                            </TableRow>
+                        </TableBody>
+                    </Table>
+                </div>
+                <p v-else class="text-gray-600 dark:text-gray-400">Aucune prestation n'est commandée pour ce bon.</p>
+            </div>
+
+
+
             <div class="mt-10">
                 <Link
                     :href="route('scentre.boncommandes.index')"

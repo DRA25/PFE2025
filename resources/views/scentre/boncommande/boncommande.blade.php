@@ -87,6 +87,15 @@
             margin-top: 30px;
             text-align: center;
         }
+
+        .total-amount {
+            text-align: right;
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-top: 20px;
+            padding-right: 10px;
+            color: #042B62FF;
+        }
     </style>
 </head>
 <body>
@@ -99,29 +108,70 @@
 </table>
 
 <div class="info-section">
+    <div class="info-item"><strong>Numéro BC:</strong> {{ $boncommande['n_bc'] }}</div>
     <div class="info-item"><strong>Date du Bon de Commande:</strong> {{ \Carbon\Carbon::parse($boncommande['date_bc'])->format('d/m/Y') }}</div>
-
+    <div class="info-item"><strong>Nombre de Pièces Commandées:</strong> {{ count($boncommande['pieces']) }}</div>
+    <div class="info-item"><strong>Nombre de Prestations Commandées:</strong> {{ count($boncommande['prestations']) }}</div>
 </div>
 
+---
 
-<table class="t2">
-    <thead>
-    <tr>
-        <th>ID Pièce</th>
-        <th>Nom Pièce</th>
-        <th>Quantité Commandée</th>
-    </tr>
-    </thead>
-    <tbody>
-    @foreach($boncommande['pieces'] as $piece)
+<h2>Pièces Commandées</h2>
+@if(count($boncommande['pieces']) > 0)
+    <table class="t2">
+        <thead>
         <tr>
-            <td>{{ $piece['id_piece'] }}</td>
-            <td>{{ $piece['nom_piece'] }}</td>
-            <td>{{ $piece['qte_commandep'] }}</td>
+            <th>ID Pièce</th>
+            <th>Nom Pièce</th>
+            <th>Quantité Commandée</th>
+
         </tr>
-    @endforeach
-    </tbody>
-</table>
+        </thead>
+        <tbody>
+        @foreach($boncommande['pieces'] as $piece)
+            <tr>
+                <td>{{ $piece['id_piece'] }}</td>
+                <td>{{ $piece['nom_piece'] }}</td>
+                <td>{{ $piece['qte_commandep'] }}</td>
+
+            </tr>
+        @endforeach
+        </tbody>
+    </table>
+@else
+    <p>Aucune pièce n'est commandée pour ce bon.</p>
+@endif
+
+---
+
+<h2>Prestations Commandées</h2>
+@if(count($boncommande['prestations']) > 0)
+    <table class="t2">
+        <thead>
+        <tr>
+            <th>ID Prestation</th>
+            <th>Nom Prestation</th>
+            <th>Quantité Commandée</th>
+
+
+        </tr>
+        </thead>
+        <tbody>
+        @foreach($boncommande['prestations'] as $prestation)
+            <tr>
+                <td>{{ $prestation['id_prest'] }}</td>
+                <td>{{ $prestation['nom_prest'] }}</td>
+                <td>{{ $prestation['qte_commandepr'] }}</td>
+
+            </tr>
+        @endforeach
+        </tbody>
+    </table>
+@else
+    <p>Aucune prestation n'est commandée pour ce bon.</p>
+@endif
+
+
 
 <p class="footer-text">Généré le: {{ \Carbon\Carbon::now()->format('d/m/Y H:i') }}</p>
 

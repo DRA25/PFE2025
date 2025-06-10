@@ -1,20 +1,25 @@
 <script setup lang="ts">
 import { Head, Link, useForm } from '@inertiajs/vue3'
-import AppLayout from '@/layouts/AppLayout.vue' // Assuming you have an AppLayout component
-import { type BreadcrumbItem } from '@/types' // Assuming you have a type for breadcrumbs
-import { Plus, Trash2 } from 'lucide-vue-next'; // Icons
+import AppLayout from '@/layouts/AppLayout.vue'
+import { type BreadcrumbItem } from '@/types'
+import { Plus, Trash2 } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 
 const props = defineProps({
     pieces: Array<{
         id_piece: string | number;
         nom_piece: string;
-        prix_piece: number; // Assuming pieces now have price
-        tva: number; // Assuming pieces now have TVA
+        prix_piece: number;
+        tva: number;
+    }>(),
+    prestations: Array<{ // Add prestations to props
+        id_prest: string | number;
+        nom_prest: string;
+        prix_prest: number;
+        tva: number;
     }>(),
 })
 
-// Breadcrumbs for navigation (adjust as per your actual routes)
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Centre', href: '/scentre' },
     { title: 'Gestion des Bons de Commande', href: route('scentre.boncommandes.index') },
@@ -25,43 +30,83 @@ const form = useForm({
     n_bc: '',
     date_bc: '',
     selectedPieces: [] as Array<{ id_piece: string | number, qte_commandep: number }>,
+    selectedPrestations: [] as Array<{ id_prest: string | number, qte_commandepr: number }>, // Add selectedPrestations to form
 })
 
 const selectedPiece = ref<string | number>('')
-const quantity = ref(1)
+const quantityPiece = ref(1) // Renamed for clarity
+const selectedPrestation = ref<string | number>('') // New ref for selected prestation
+const quantityPrestation = ref(1) // New ref for prestation quantity
 
 // Computed property to calculate the total amount
 const totalAmount = computed(() => {
-    return form.selectedPieces.reduce((total, item) => {
-        const piece = props.pieces.find(p => p.id_piece == item.id_piece)
-        if (!piece) return total
+    let total = 0;
 
-        const subtotal = piece.prix_piece * item.qte_commandep
-        const totalWithTva = subtotal * (1 + (piece.tva / 100))
-        return total + totalWithTva
-    }, 0)
+    // Calculate total for pieces
+    total += form.selectedPieces.reduce((subTotal, item) => {
+        const piece = props.pieces.find(p => p.id_piece == item.id_piece)
+        if (!piece) return subTotal
+
+        const itemSubtotal = piece.prix_piece * item.qte_commandep
+        const itemTotalWithTva = itemSubtotal * (1 + (piece.tva / 100))
+        return subTotal + itemTotalWithTva
+    }, 0);
+
+    // Calculate total for prestations
+    total += form.selectedPrestations.reduce((subTotal, item) => {
+        const prestation = props.prestations.find(p => p.id_prest == item.id_prest)
+        if (!prestation) return subTotal
+
+        const itemSubtotal = prestation.prix_prest * item.qte_commandepr
+        const itemTotalWithTva = itemSubtotal * (1 + (prestation.tva / 100))
+        return subTotal + itemTotalWithTva
+    }, 0);
+
+    return total;
 })
 
 function addPiece() {
-    if (!selectedPiece.value || quantity.value < 1) return
+    if (!selectedPiece.value || quantityPiece.value < 1) return
 
     const existingIndex = form.selectedPieces.findIndex(p => p.id_piece === selectedPiece.value)
 
     if (existingIndex >= 0) {
-        form.selectedPieces[existingIndex].qte_commandep += quantity.value
+        form.selectedPieces[existingIndex].qte_commandep += quantityPiece.value
     } else {
         form.selectedPieces.push({
             id_piece: selectedPiece.value,
-            qte_commandep: quantity.value,
+            qte_commandep: quantityPiece.value,
         })
     }
 
     selectedPiece.value = ''
-    quantity.value = 1
+    quantityPiece.value = 1
 }
 
 function removePiece(index: number) {
     form.selectedPieces.splice(index, 1)
+}
+
+function addPrestation() { // New function to add prestation
+    if (!selectedPrestation.value || quantityPrestation.value < 1) return
+
+    const existingIndex = form.selectedPrestations.findIndex(p => p.id_prest === selectedPrestation.value)
+
+    if (existingIndex >= 0) {
+        form.selectedPrestations[existingIndex].qte_commandepr += quantityPrestation.value
+    } else {
+        form.selectedPrestations.push({
+            id_prest: selectedPrestation.value,
+            qte_commandepr: quantityPrestation.value,
+        })
+    }
+
+    selectedPrestation.value = ''
+    quantityPrestation.value = 1
+}
+
+function removePrestation(index: number) { // New function to remove prestation
+    form.selectedPrestations.splice(index, 1)
 }
 
 function submit() {
@@ -69,12 +114,12 @@ function submit() {
         onSuccess: () => {
             form.reset()
             selectedPiece.value = ''
-            quantity.value = 1
-            // Redirect to the list of boncommandes after successful creation
+            quantityPiece.value = 1
+            selectedPrestation.value = ''
+            quantityPrestation.value = 1
             window.location.href = route('scentre.boncommandes.index')
         },
         onError: () => {
-            // Errors displayed via form.errors
             console.error("Form submission errors:", form.errors);
         }
     })
@@ -103,6 +148,10 @@ function submit() {
                     <div v-if="form.errors.selectedPieces" class="text-red-600 text-sm">{{ form.errors.selectedPieces }}</div>
                     <div v-if="form.errors['selectedPieces.*.id_piece']" class="text-red-600 text-sm">{{ form.errors['selectedPieces.*.id_piece'] }}</div>
                     <div v-if="form.errors['selectedPieces.*.qte_commandep']" class="text-red-600 text-sm">{{ form.errors['selectedPieces.*.qte_commandep'] }}</div>
+                    <div v-if="form.errors.selectedPrestations" class="text-red-600 text-sm">{{ form.errors.selectedPrestations }}</div>
+                    <div v-if="form.errors['selectedPrestations.*.id_prest']" class="text-red-600 text-sm">{{ form.errors['selectedPrestations.*.id_prest'] }}</div>
+                    <div v-if="form.errors['selectedPrestations.*.qte_commandepr']" class="text-red-600 text-sm">{{ form.errors['selectedPrestations.*.qte_commandepr'] }}</div>
+                    <div v-if="form.errors.general" class="text-red-600 text-sm">{{ form.errors.general }}</div>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -155,13 +204,13 @@ function submit() {
                         </div>
 
                         <div class="space-y-2 w-full md:w-auto">
-                            <label for="quantity" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Quantité</label>
+                            <label for="quantityPiece" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Quantité</label>
                             <input
-                                id="quantity"
-                                v-model.number="quantity"
+                                id="quantityPiece"
+                                v-model.number="quantityPiece"
                                 type="number"
                                 min="1"
-                                aria-label="Quantité"
+                                aria-label="Quantité pièce"
                                 class="w-full md:w-24 border border-gray-300 dark:border-gray-600 p-2 rounded focus:ring-2 focus:ring-[#042B62] dark:focus:ring-[#F3B21B] focus:border-transparent dark:bg-gray-800 dark:text-white"
                             />
                         </div>
@@ -169,11 +218,11 @@ function submit() {
                         <button
                             type="button"
                             @click="addPiece"
-                            :disabled="!selectedPiece || quantity < 1"
+                            :disabled="!selectedPiece || quantityPiece < 1"
                             class="w-full md:w-auto px-4 py-2 rounded-lg transition flex items-center justify-center md:justify-start gap-1 bg-[#042B62] dark:bg-[#F3B21B] dark:text-[#042B62] text-white hover:bg-blue-900 dark:hover:bg-yellow-200 disabled:opacity-50"
                         >
                             <Plus class="w-4 h-4" />
-                            Ajouter
+                            Ajouter Pièce
                         </button>
                     </div>
 
@@ -191,18 +240,15 @@ function submit() {
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
                                     {{ props.pieces.find(p => p.id_piece == item.id_piece)?.nom_piece }}
                                 </td>
-
-
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
                                     <input
                                         v-model.number="item.qte_commandep"
                                         type="number"
                                         min="1"
-                                        aria-label="Modifier quantité"
+                                        aria-label="Modifier quantité pièce"
                                         class="w-20 border border-gray-300 dark:border-gray-600 p-1 rounded focus:ring-2 focus:ring-[#042B62] dark:focus:ring-[#F3B21B] focus:border-transparent dark:bg-gray-800 dark:text-white"
                                     />
                                 </td>
-
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
                                     <button
                                         type="button"
@@ -217,13 +263,100 @@ function submit() {
                             </tbody>
                         </table>
                     </div>
-
                     <div v-else class="text-center py-4 text-gray-500 dark:text-gray-400">
-                        Aucune pièce sélectionnée
+                        Aucune pièce sélectionnée.
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <h3 class="text-md font-medium text-gray-700 dark:text-gray-300">Ajouter des Prestations</h3>
+
+                    <div class="flex flex-col md:flex-row gap-3 items-end">
+                        <div class="flex-1 space-y-2 w-full">
+                            <label for="selectPrestation" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Prestation</label>
+                            <select
+                                id="selectPrestation"
+                                v-model="selectedPrestation"
+                                aria-label="Sélectionner une prestation"
+                                class="w-full border border-gray-300 dark:border-gray-600 p-2 rounded focus:ring-2 focus:ring-[#042B62] dark:focus:ring-[#F3B21B] focus:border-transparent dark:bg-gray-800 dark:text-white"
+                            >
+                                <option value="">-- Sélectionnez une prestation --</option>
+                                <option
+                                    v-for="prestation in props.prestations"
+                                    :key="prestation.id_prest"
+                                    :value="prestation.id_prest"
+                                >
+                                    {{ prestation.nom_prest }}
+                                </option>
+                            </select>
+                        </div>
+
+                        <div class="space-y-2 w-full md:w-auto">
+                            <label for="quantityPrestation" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Quantité</label>
+                            <input
+                                id="quantityPrestation"
+                                v-model.number="quantityPrestation"
+                                type="number"
+                                min="1"
+                                aria-label="Quantité prestation"
+                                class="w-full md:w-24 border border-gray-300 dark:border-gray-600 p-2 rounded focus:ring-2 focus:ring-[#042B62] dark:focus:ring-[#F3B21B] focus:border-transparent dark:bg-gray-800 dark:text-white"
+                            />
+                        </div>
+
+                        <button
+                            type="button"
+                            @click="addPrestation"
+                            :disabled="!selectedPrestation || quantityPrestation < 1"
+                            class="w-full md:w-auto px-4 py-2 rounded-lg transition flex items-center justify-center md:justify-start gap-1 bg-[#042B62] dark:bg-[#F3B21B] dark:text-[#042B62] text-white hover:bg-blue-900 dark:hover:bg-yellow-200 disabled:opacity-50"
+                        >
+                            <Plus class="w-4 h-4" />
+                            Ajouter Prestation
+                        </button>
                     </div>
 
-
+                    <div v-if="form.selectedPrestations.length > 0" class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-600">
+                            <thead class="bg-gray-50 dark:bg-gray-600">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Prestation</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Quantité</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Actions</th>
+                            </tr>
+                            </thead>
+                            <tbody class="bg-white dark:bg-gray-700 divide-y divide-gray-200 dark:divide-gray-600">
+                            <tr v-for="(item, index) in form.selectedPrestations" :key="index">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
+                                    {{ props.prestations.find(p => p.id_prest == item.id_prest)?.nom_prest }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
+                                    <input
+                                        v-model.number="item.qte_commandepr"
+                                        type="number"
+                                        min="1"
+                                        aria-label="Modifier quantité prestation"
+                                        class="w-20 border border-gray-300 dark:border-gray-600 p-1 rounded focus:ring-2 focus:ring-[#042B62] dark:focus:ring-[#F3B21B] focus:border-transparent dark:bg-gray-800 dark:text-white"
+                                    />
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
+                                    <button
+                                        type="button"
+                                        @click="removePrestation(index)"
+                                        aria-label="Supprimer prestation"
+                                        class="text-red-600 hover:text-red-900 dark:hover:text-red-400"
+                                    >
+                                        <Trash2 class="w-5 h-5" />
+                                    </button>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div v-else class="text-center py-4 text-gray-500 dark:text-gray-400">
+                        Aucune prestation sélectionnée.
+                    </div>
                 </div>
+
+
 
                 <div class="flex justify-end space-x-4 pt-4">
                     <Link
@@ -234,7 +367,7 @@ function submit() {
                     </Link>
                     <button
                         type="submit"
-                        :disabled="form.processing || form.selectedPieces.length === 0"
+                        :disabled="form.processing || (form.selectedPieces.length === 0 && form.selectedPrestations.length === 0)"
                         class="px-4 py-2 bg-[#042B62] dark:bg-[#F3B21B] text-white dark:text-[#042B62] rounded-lg hover:bg-blue-900 dark:hover:bg-yellow-200 transition flex items-center gap-2 disabled:opacity-50"
                     >
                         <span>Créer</span>
