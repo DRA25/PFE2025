@@ -28,7 +28,7 @@
         }
 
         img {
-            width: 90px; /* Adjust logo size if needed */
+            width: 90px;
         }
 
         h1 {
@@ -38,15 +38,23 @@
             margin-top: 20px;
         }
 
+        h2 {
+            color: #042B62FF;
+            text-align: center;
+            font-size: 1.2rem;
+            margin-top: 30px;
+            margin-bottom: 10px;
+        }
+
         .t2 {
             width: 100%;
             border-collapse: collapse;
             margin-top: 20px;
             font-family: 'Inter', sans-serif;
-            margin-bottom: 40px; /* Adjusted margin for better spacing */
+            margin-bottom: 40px;
         }
 
-        .t2, .t2 th, .t2 td { /* Apply border to all table elements explicitly */
+        .t2, .t2 th, .t2 td {
             border: 1px solid #000000;
         }
 
@@ -67,18 +75,18 @@
         .info-section {
             text-align: left;
             margin-bottom: 20px;
-            padding-left: 10px; /* Add some padding for better readability */
+            padding-left: 10px;
             padding-right: 10px;
         }
 
         .info-item {
             margin-bottom: 5px;
             font-size: 1rem;
-            color: #333; /* Darker text for info */
+            color: #333;
         }
 
         .info-item strong {
-            color: #042B62FF; /* Highlight labels */
+            color: #042B62FF;
         }
 
         .footer-text {
@@ -96,6 +104,11 @@
             padding-right: 10px;
             color: #042B62FF;
         }
+
+        .divider {
+            border-top: 1px solid #ddd;
+            margin: 20px 0;
+        }
     </style>
 </head>
 <body>
@@ -112,9 +125,10 @@
     <div class="info-item"><strong>Date du Bon de Commande:</strong> {{ \Carbon\Carbon::parse($boncommande['date_bc'])->format('d/m/Y') }}</div>
     <div class="info-item"><strong>Nombre de Pièces Commandées:</strong> {{ count($boncommande['pieces']) }}</div>
     <div class="info-item"><strong>Nombre de Prestations Commandées:</strong> {{ count($boncommande['prestations']) }}</div>
+    <div class="info-item"><strong>Nombre de Charges Commandées:</strong> {{ count($boncommande['charges']) }}</div>
 </div>
 
----
+<div class="divider"></div>
 
 <h2>Pièces Commandées</h2>
 @if(count($boncommande['pieces']) > 0)
@@ -123,7 +137,7 @@
         <tr>
             <th>ID Pièce</th>
             <th>Nom Pièce</th>
-            <th>Quantité Commandée</th>
+            <th>Quantité</th>
 
         </tr>
         </thead>
@@ -142,7 +156,7 @@
     <p>Aucune pièce n'est commandée pour ce bon.</p>
 @endif
 
----
+<div class="divider"></div>
 
 <h2>Prestations Commandées</h2>
 @if(count($boncommande['prestations']) > 0)
@@ -151,8 +165,7 @@
         <tr>
             <th>ID Prestation</th>
             <th>Nom Prestation</th>
-            <th>Quantité Commandée</th>
-
+            <th>Quantité</th>
 
         </tr>
         </thead>
@@ -170,6 +183,37 @@
 @else
     <p>Aucune prestation n'est commandée pour ce bon.</p>
 @endif
+
+<div class="divider"></div>
+
+<h2>Charges Commandées</h2>
+@if(count($boncommande['charges']) > 0)
+    <table class="t2">
+        <thead>
+        <tr>
+            <th>ID Charge</th>
+            <th>Nom Charge</th>
+            <th>Quantité</th>
+
+        </tr>
+        </thead>
+        <tbody>
+        @foreach($boncommande['charges'] as $charge)
+            <tr>
+                <td>{{ $charge['id_charge'] }}</td>
+                <td>{{ $charge['nom_charge'] }}</td>
+                <td>{{ $charge['qte_commandec'] }}</td>
+
+            </tr>
+        @endforeach
+        </tbody>
+    </table>
+@else
+    <p>Aucune charge n'est commandée pour ce bon.</p>
+@endif
+
+<div class="divider"></div>
+
 
 
 

@@ -2,35 +2,39 @@
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router } from '@inertiajs/vue3';
-// import BarChart from '@/Components/ui/charts/BarChart.vue'; // Nous allons supprimer cette importation
 import BarChartEcharts from '@/Components/ui/charts/BarChartEcharts.vue';
 import DonutChart from '@/Components/ui/charts/DonutChart.vue';
 import { ref, watch, computed } from 'vue';
 
 import { toPng } from 'dom-to-image-more';
 import jsPDF from 'jspdf';
-const dashboardRef = ref<HTMLElement | null>(null);
-
-import domtoimage from 'dom-to-image-more';
 import { Button } from '@/components/ui/button';
 
+const dashboardRef = ref<HTMLElement | null>(null);
 
 async function exportPDF() {
     if (!dashboardRef.value) return;
 
     const html = document.documentElement;
     const originalClass = html.className;
-    html.classList.remove('dark');
-    await new Promise(resolve => setTimeout(resolve, 100));
+    html.classList.remove('dark'); // Ensure light mode for export
+    await new Promise(resolve => setTimeout(resolve, 100)); // Small delay for rendering
 
-    // Add paddingBottom temporarily
+    // Temporarily add paddingBottom and capture original styles
     const originalPaddingBottom = dashboardRef.value.style.paddingBottom;
+    const originalBoxShadow = dashboardRef.value.style.boxShadow;
+    const originalBorder = dashboardRef.value.style.border;
+
     dashboardRef.value.style.paddingBottom = '10px';
+    // Remove shadows/borders for cleaner PDF capture if they interfere
+    dashboardRef.value.style.boxShadow = 'none';
+    dashboardRef.value.style.border = 'none';
+
 
     try {
         const dataUrl = await toPng(dashboardRef.value, {
             cacheBust: true,
-            backgroundColor: '#ffffff',
+            backgroundColor: '#ffffff', // Ensure white background for the image
         });
 
         const pdf = new jsPDF('p', 'mm', 'a4');
@@ -42,24 +46,27 @@ async function exportPDF() {
         logo.src = '/images/Naftal.png';
 
         logo.onload = () => {
-            pdf.setFillColor(50, 50, 50);
+            // Header background
+            pdf.setFillColor(4, 43, 98); // Matches the primary blue color
             pdf.rect(0, 0, pageWidth, headerHeight, 'F');
 
+            // Add logo
             const aspectRatio = logo.width / logo.height;
             const logoHeight = 15;
             const logoWidth = logoHeight * aspectRatio;
-
             pdf.addImage(logo, 'PNG', 10, 5, logoWidth, logoHeight);
 
-            pdf.setTextColor(255, 255, 255);
+            // Header text
+            pdf.setTextColor(255, 255, 255); // White text
             pdf.setFont('helvetica', 'bold');
             pdf.setFontSize(16);
             pdf.text('Tableau de Bord - Rapport', pageWidth / 2, 15, { align: 'center' });
 
+            // Date of export
             pdf.setFontSize(10);
             pdf.setFont('helvetica', 'normal');
-            pdf.setTextColor(80, 80, 80);
-            const today = new Date().toLocaleDateString();
+            pdf.setTextColor(80, 80, 80); // Dark grey text for date
+            const today = new Date().toLocaleDateString('fr-FR'); // Format for French locale
             pdf.text(`Date d'export : ${today}`, 10, headerHeight + 8);
 
             const chartImage = new Image();
@@ -69,30 +76,31 @@ async function exportPDF() {
                 const imgWidth = pageWidth;
                 const imgHeight = (chartImage.height / chartImage.width) * imgWidth;
 
-                pdf.addImage(chartImage, 'PNG', 0, imageStartY, imgWidth, imgHeight);
+                // Ensure image fits within PDF, scale down if too large
+                if (imgHeight > pdf.internal.pageSize.getHeight() - imageStartY - 10) { // 10mm bottom margin
+                    const scaleFactor = (pdf.internal.pageSize.getHeight() - imageStartY - 10) / imgHeight;
+                    imgHeight *= scaleFactor;
+                    imgWidth *= scaleFactor;
+                }
+                pdf.addImage(chartImage, 'PNG', (pageWidth - imgWidth) / 2, imageStartY, imgWidth, imgHeight); // Center image
                 pdf.save('tableau-de-bord.pdf');
             };
         };
     } catch (error) {
         console.error('Export failed:', error);
     } finally {
+        // Restore original styles
         html.className = originalClass;
-        // Restore original padding
         if (dashboardRef.value) {
             dashboardRef.value.style.paddingBottom = originalPaddingBottom;
+            dashboardRef.value.style.boxShadow = originalBoxShadow;
+            dashboardRef.value.style.border = originalBorder;
         }
     }
 }
 
-
-
-
-
-
-
-
 const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Tableau de bord', href: '/directiondashboard' }, // Tableau de bord
+    { title: 'Tableau de bord', href: '/directiondashboard' },
 ];
 
 const props = defineProps<{
@@ -114,11 +122,9 @@ const props = defineProps<{
     selectedMonth: number | null
 }>();
 
-// Créer des références réactives pour les valeurs de filtre
 const localCentre = ref<string | null>(props.selectedCentre);
 const localMonth = ref<number | null>(props.selectedMonth);
 
-// Mettre à jour les valeurs locales lorsque les props changent
 watch(() => props.selectedCentre, (newVal) => {
     localCentre.value = newVal;
 });
@@ -140,50 +146,43 @@ function resetFilters() {
     applyFilters();
 }
 
-// Couleurs de base pour le cyclage
 const baseColors = [
-    '#3B82F6', // Bleu
-    '#10B981', // Vert
-    '#f4aa2c', // Jaune
-    '#EF4444', // Rouge
+    '#3B82F6', // Blue
+    '#10B981', // Green
+    '#f4aa2c', // Yellow
+    '#EF4444', // Red
     '#06B6D4', // Cyan
-    '#080b68', // Indigo
-    '#2e2e2e', // Gris
-    '#000000', // Noir
+    '#080b68', // Indigo (darker blue)
+    '#2e2e2e', // Gray (dark)
     '#D97706', // Orange
-    '#EAB308', // Jaune
+    '#EAB308', // Amber (another yellow)
     '#F43F5E', // Rose
+    '#8B5CF6', // Purple
+    '#EC4899', // Pink
 ];
 
-// Propriété calculée pour générer dynamiquement la carte centerColors
 const centerColors = computed<Record<string, string>>(() => {
     const colorsMap: Record<string, string> = {};
     if (props.centres && props.centres.length > 0) {
         props.centres.forEach((centre, index) => {
-            // Utiliser l'adresse_centre comme clé et cycler à travers baseColors
             colorsMap[centre.adresse_centre] = baseColors[index % baseColors.length];
         });
     }
     return colorsMap;
 });
 
-// Transformer les données draChart pour BarChartEcharts
 const monthlyDraChartData = computed(() => {
     return props.draChart.labels.map((label, index) => ({
-        month: label, // Utiliser 'month' comme index pour l'axe des x
-        count: props.draChart.data[index] // Utiliser 'count' comme catégorie pour l'axe des y
+        month: label,
+        count: props.draChart.data[index]
     }));
 });
 
-// Définir un tableau simple de couleurs pour le graphique mensuel, en cyclant à travers un sous-ensemble de baseColors
 const monthlyChartColors = computed(() => {
-    // Vous pouvez choisir une couleur spécifique ou cycler à travers un petit sous-ensemble de baseColors
-    // Pour simplifier, choisissons juste une couleur ou cyclons à travers un petit sous-ensemble pour les totaux mensuels
-    return monthlyDraChartData.value.map((_, index) => baseColors[index % 3]); // Cycle à travers les 3 premières couleurs de base
+    // Using a more distinct subset of base colors for monthly chart if desired, or just one color
+    return monthlyDraChartData.value.map((_, index) => baseColors[index % 5]); // Cycle through 5 colors
 });
 
-
-// Transformer draCountByCentre au format requis par DonutChart
 const donutData = computed(() => {
     return props.draCountByCentre.map(centre => ({
         name: centre.name,
@@ -191,146 +190,165 @@ const donutData = computed(() => {
     }));
 });
 
-// Propriété calculée pour obtenir les couleurs spécifiques pour le DonutChart
 const donutChartColors = computed(() => {
-    // S'assurer que le 'name' de draCountByCentre correspond à adresse_centre pour la recherche de couleur
     return props.draCountByCentre.map(item => centerColors.value[item.name] || '#CCCCCC');
 });
 
-// Propriétés calculées pour générer des tableaux de couleurs pour BarChartEcharts
 const draCountByCentreBarColors = computed(() => {
-    // S'assurer que le 'name' de draCountByCentre correspond à adresse_centre pour la recherche de couleur
     return props.draCountByCentre.map(item => centerColors.value[item.name] || '#CCCCCC');
 });
 
 const draAmountByCentreBarColors = computed(() => {
-    // S'assurer que le 'name' de draAmountByCentre correspond à adresse_centre pour la recherche de couleur
     return props.draAmountByCentre.map(item => centerColors.value[item.name] || '#CCCCCC');
 });
-
 </script>
 
 <template>
-    <Head title="Tableau de bord" /> <AppLayout :breadcrumbs="breadcrumbs">
+    <Head title="Tableau de bord" />
+    <AppLayout :breadcrumbs="breadcrumbs">
+        <div class="min-h-screen bg-gradient-to-br from-white to-blue-50 dark:from-slate-900 dark:to-gray-900 font-inter text-gray-800 dark:text-gray-200 p-4 sm:p-6 lg:p-8">
+            <div class="max-w-6xl mx-auto bg-white dark:bg-gray-800 rounded-3xl shadow-2xl overflow-hidden transition-all duration-500">
+                <div class="p-6 sm:p-8 lg:p-10">
+                    <div class="flex items-center justify-between mb-10 flex-wrap gap-4">
+                        <h1 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-[#042B62] dark:text-[#F3B21B] tracking-tight leading-tight">
+                            Aperçu du Tableau de Bord
+                        </h1>
+                        <Button
+                            @click="exportPDF"
+                            class="px-6 py-3 bg-[#042B62] text-white font-semibold rounded-lg hover:bg-blue-700 dark:bg-[#F3B21B] dark:text-[#042B62] dark:hover:bg-yellow-400 transition-colors duration-300 shadow-md"
+                        >
+                            Exporter les Diagrammes en PDF
+                        </Button>
+                    </div>
 
+                    <div class="bg-gray-50 dark:bg-gray-900 shadow-inner rounded-xl p-6 mb-8 border border-gray-100 dark:border-gray-700">
+                        <h2 class="text-2xl font-bold text-[#042B62] dark:text-[#F3B21B] mb-5">
+                            Filtrer Vos Données
+                        </h2>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                            <div>
+                                <label for="centre" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    Filtrer par Centre
+                                </label>
+                                <select
+                                    id="centre"
+                                    v-model="localCentre"
+                                    class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 shadow-sm"
+                                >
+                                    <option :value="null">Tous les Centres</option>
+                                    <option
+                                        v-for="centre in centres"
+                                        :key="centre.id_centre"
+                                        :value="centre.id_centre"
+                                    >
+                                        {{ centre.adresse_centre }} - {{ centre.id_centre }}
+                                    </option>
+                                </select>
+                            </div>
 
-    <div class="container mx-auto px-4 py-8">
-        <div class="flex justify-between">
-        <h1 class="text-4xl font-extrabold text-gray-900 dark:text-white mb-8">Aperçu du Tableau de Bord</h1>
-        <Button
-            @click="exportPDF"
-            class="px-6 py-2 bg-green-600 text-white font-semibold rounded-md hover:bg-green-700"
-        >
-            Exporter les Diagrammes en PDF
-        </Button>
+                            <div>
+                                <label for="month" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    Filtrer par Mois
+                                </label>
+                                <select
+                                    id="month"
+                                    v-model="localMonth"
+                                    class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 shadow-sm"
+                                >
+                                    <option :value="null">Tous les Mois</option>
+                                    <option
+                                        v-for="month in months"
+                                        :key="month.value"
+                                        :value="month.value"
+                                    >
+                                        {{ month.label }}
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="flex space-x-4">
+                            <button
+                                @click="applyFilters"
+                                class="px-8 py-3 bg-[#042B62] text-white font-semibold rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition-all duration-300 shadow-md"
+                            >
+                                Appliquer les Filtres
+                            </button>
+                            <button
+                                @click="resetFilters"
+                                class="px-8 py-3 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition-all duration-300 shadow-md"
+                            >
+                                Réinitialiser les Filtres
+                            </button>
+                        </div>
+                    </div>
+
+                    <div ref="dashboardRef">
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                            <div class="bg-white dark:bg-gray-800 shadow-lg rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+                                <h2 class="text-2xl font-bold text-[#042B62] dark:text-[#F3B21B] mb-4">Nombre de DRA par Mois</h2>
+                                <div class="aspect-video">
+                                    <BarChartEcharts
+                                        index="month"
+                                        :data="monthlyDraChartData"
+                                        :categories="['count']"
+                                        :y-formatter="(tick) => `${tick} DRAs`"
+                                        :colors="monthlyChartColors"
+                                        :rounded-corners="4"
+                                    />
+                                </div>
+                            </div>
+
+                            <div class="bg-white dark:bg-gray-800 shadow-lg rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+                                <h2 class="text-2xl font-bold text-[#042B62] dark:text-[#F3B21B] mb-4">Nombre de DRA par Centre</h2>
+                                <div class="aspect-video">
+                                    <BarChartEcharts
+                                        index="name"
+                                        :data="draCountByCentre"
+                                        :categories="['total']"
+                                        :y-formatter="(tick) => `${tick} DRAs`"
+                                        :rounded-corners="4"
+                                        :colors="draCountByCentreBarColors"
+                                    />
+                                </div>
+                            </div>
+
+                            <div class="bg-white dark:bg-gray-800 shadow-lg rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+                                <h2 class="text-2xl font-bold text-[#042B62] dark:text-[#F3B21B] mb-4">Montant Total de DRA par Centre</h2>
+                                <div class="aspect-video">
+                                    <BarChartEcharts
+                                        index="name"
+                                        :data="draAmountByCentre"
+                                        :categories="['total']"
+                                        :y-formatter="(tick) => `${tick.toLocaleString()} DA`"
+                                        :rounded-corners="4"
+                                        :colors="draAmountByCentreBarColors"
+                                    />
+                                </div>
+                            </div>
+
+                            <div class="bg-white dark:bg-gray-800 shadow-lg rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+                                <h2 class="text-2xl font-bold text-[#042B62] dark:text-[#F3B21B] mb-4">
+                                    Distribution des DRA par Centre
+                                </h2>
+                                <div class="aspect-video">
+                                    <DonutChart
+                                        :data="donutData"
+                                        :radius="['40%', '70%']"
+                                        :colors="donutChartColors"
+                                        :legend="{
+        orient: 'vertical',
+        left: 'right',
+        top: 'center',
+        formatter: '{name}'
+    }"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="bg-white dark:bg-gray-800 shadow-lg rounded-xl p-6 mb-8 border border-gray-200 dark:border-gray-700">
-
-        <h2 class="text-2xl font-semibold text-gray-800 dark:text-white mb-5">Filtrer Vos Données</h2> <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-        <div>
-            <label for="centre" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Filtrer par Centre
-            </label> <select
-            id="centre"
-            v-model="localCentre"
-            class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-blue-500 focus:border-blue-500 transition-colors"
-        >
-            <option :value="null">Tous les Centres</option> <option
-            v-for="centre in centres"
-            :key="centre.id_centre"
-            :value="centre.id_centre"
-        >
-            {{ centre.adresse_centre }} - {{ centre.id_centre }}
-        </option>
-        </select>
-        </div>
-
-        <div>
-            <label for="month" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Filtrer par Mois
-            </label> <select
-            id="month"
-            v-model="localMonth"
-            class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-blue-500 focus:border-blue-500 transition-colors"
-        >
-            <option :value="null">Tous les Mois</option> <option
-            v-for="month in months"
-            :key="month.value"
-            :value="month.value"
-        >
-            {{ month.label }}
-        </option>
-        </select>
-        </div>
-    </div>
-
-        <div class="flex space-x-4">
-            <button
-                @click="applyFilters"
-                class="px-6 py-2 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition-all"
-            >
-                Appliquer les Filtres
-            </button> <button
-            @click="resetFilters"
-            class="px-6 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-semibold rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition-all"
-        >
-            Réinitialiser les Filtres
-        </button> </div>
-    </div>
-        <div ref="dashboardRef" class="mb-10">
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            <div class="bg-white dark:bg-gray-800 shadow-lg rounded-xl p-6 border border-gray-200 dark:border-gray-700">
-                <h2 class="text-2xl font-semibold text-gray-800 dark:text-white mb-4">Nombre de DRA par Mois</h2> <div class="aspect-video">
-                <BarChartEcharts
-                    index="month"
-                    :data="monthlyDraChartData"
-                    :categories="['count']"
-                    :y-formatter="(tick) => `${tick} DRAs`"
-                    :colors="monthlyChartColors"
-                    :rounded-corners="4"
-                />
-            </div>
-            </div>
-
-            <div class="bg-white dark:bg-gray-800 shadow-lg rounded-xl p-6 border border-gray-200 dark:border-gray-700">
-                <h2 class="text-2xl font-semibold text-gray-800 dark:text-white mb-4">Nombre de DRA par Centre</h2> <div class="aspect-video">
-                <BarChartEcharts
-                    index="name"
-                    :data="draCountByCentre"
-                    :categories="['total']"
-                    :y-formatter="(tick) => `${tick} DRAs`"
-                    :rounded-corners="4"
-                    :colors="draCountByCentreBarColors"
-                />
-            </div>
-            </div>
-
-            <div class="bg-white dark:bg-gray-800 shadow-lg rounded-xl p-6 border border-gray-200 dark:border-gray-700">
-                <h2 class="text-2xl font-semibold text-gray-800 dark:text-white mb-4">Montant Total de DRA par Centre</h2> <div class="aspect-video">
-                <BarChartEcharts
-                    index="name"
-                    :data="draAmountByCentre"
-                    :categories="['total']"
-                    :y-formatter="(tick) => `${tick.toLocaleString()} DA`"
-                    :rounded-corners="4"
-                    :colors="draAmountByCentreBarColors"
-                />
-            </div>
-            </div>
-
-            <div class="bg-white dark:bg-gray-800 shadow-lg rounded-xl p-6 border border-gray-200 dark:border-gray-700">
-                <h2 class="text-2xl font-semibold text-gray-800 dark:text-white mb-4">
-                    Distribution des DRA par Centre
-                </h2> <div class="aspect-video">
-                <DonutChart
-                    :data="donutData"
-                    :radius="['40%', '70%']"
-                    :colors="donutChartColors"
-                />
-            </div>
-            </div>
-        </div>
-            </div>
-    </div>
-</AppLayout>
+    </AppLayout>
 </template>

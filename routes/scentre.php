@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ChargeController;
 use App\Http\Controllers\PrestationController;
 use App\Http\Controllers\Scentre\BonAchatController;
 use App\Http\Controllers\Scentre\BonCommandeController;
@@ -12,6 +13,18 @@ use App\Http\Controllers\Scentre\ScentreDemandePieceController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth', 'role:service centre|admin'])->group(function () {
+
+    Route::resource('scentre/charges', ChargeController::class)
+        ->names([
+            'index' => 'scentre.charges.index',
+            'create' => 'scentre.charges.create',
+            'store' => 'scentre.charges.store',
+            'show' => 'scentre.charges.show',
+            'edit' => 'scentre.charges.edit',
+            'update' => 'scentre.charges.update',
+            'destroy' => 'scentre.charges.destroy',
+        ]);
+
     // Group all scentre-related routes under /scentre prefix
     Route::prefix('scentre')->name('scentre.')->group(function () {
 

@@ -13,7 +13,6 @@ import {
 import { type BreadcrumbItem } from '@/types'
 import { computed } from 'vue'
 
-// If route() is not defined in TS context, declare it (replace with your route helper import if needed)
 declare function route(name: string, params?: any): string
 
 const props = defineProps<{
@@ -24,27 +23,32 @@ const props = defineProps<{
             id_piece: number
             nom_piece: string
             qte_commandep: number
-            prix_piece: number // Assuming price is available for total calculation
-            tva: number // Assuming TVA is available for total calculation
+            prix_piece: number
+            tva: number
         }>
-        prestations: Array<{ // Add prestations to the boncommande prop
+        prestations: Array<{
             id_prest: number
             nom_prest: string
             qte_commandepr: number
-            prix_prest: number // Assuming price is available for total calculation
-            tva: number // Assuming TVA is available for total calculation
+            prix_prest: number
+            tva: number
+        }>
+        charges: Array<{
+            id_charge: number
+            nom_charge: string
+            qte_commandec: number
+            prix_charge: number
+            tva: number
         }>
     }
 }>()
 
-// Make breadcrumbs reactive because it depends on props
 const breadcrumbs = computed<BreadcrumbItem[]>(() => [
     { title: 'Centre', href: '/scentre' },
     { title: 'Gestion des Bons de Commande', href: route('scentre.boncommandes.index') },
     { title: `Bon n° ${props.boncommande.n_bc}`, href: '#' },
 ])
 
-// Calculate total amount for display
 const totalAmount = computed(() => {
     let total = 0;
 
@@ -57,12 +61,20 @@ const totalAmount = computed(() => {
         }, 0);
     }
 
-
     // Calculate total for prestations
     if (props.boncommande.prestations) {
         total += props.boncommande.prestations.reduce((subTotal, prestation) => {
             const itemSubtotal = prestation.prix_prest * prestation.qte_commandepr;
             const itemTotalWithTva = itemSubtotal * (1 + (prestation.tva / 100));
+            return subTotal + itemTotalWithTva;
+        }, 0);
+    }
+
+    // Calculate total for charges
+    if (props.boncommande.charges) {
+        total += props.boncommande.charges.reduce((subTotal, charge) => {
+            const itemSubtotal = charge.prix_charge * charge.qte_commandec;
+            const itemTotalWithTva = itemSubtotal * (1 + (charge.tva / 100));
             return subTotal + itemTotalWithTva;
         }, 0);
     }
@@ -115,6 +127,13 @@ const totalAmount = computed(() => {
                         <p class="text-sm text-gray-500 dark:text-gray-400">Nombre de Prestations Commandées</p>
                         <p class="text-gray-900 dark:text-gray-100">{{ boncommande.prestations.length }}</p>
                     </div>
+
+                    <div>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Nombre de Charges Commandées</p>
+                        <p class="text-gray-900 dark:text-gray-100">{{ boncommande.charges.length }}</p>
+                    </div>
+
+
                 </div>
             </div>
 
@@ -126,6 +145,7 @@ const totalAmount = computed(() => {
                             <TableRow>
                                 <TableHead>Nom de la Pièce</TableHead>
                                 <TableHead>Quantité Commandée</TableHead>
+
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -136,6 +156,7 @@ const totalAmount = computed(() => {
                             >
                                 <TableCell>{{ piece.nom_piece }}</TableCell>
                                 <TableCell>{{ piece.qte_commandep }}</TableCell>
+
                             </TableRow>
                         </TableBody>
                     </Table>
@@ -151,6 +172,7 @@ const totalAmount = computed(() => {
                             <TableRow>
                                 <TableHead>Nom de la Prestation</TableHead>
                                 <TableHead>Quantité Commandée</TableHead>
+
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -161,6 +183,7 @@ const totalAmount = computed(() => {
                             >
                                 <TableCell>{{ prestation.nom_prest }}</TableCell>
                                 <TableCell>{{ prestation.qte_commandepr }}</TableCell>
+
                             </TableRow>
                         </TableBody>
                     </Table>
@@ -168,7 +191,33 @@ const totalAmount = computed(() => {
                 <p v-else class="text-gray-600 dark:text-gray-400">Aucune prestation n'est commandée pour ce bon.</p>
             </div>
 
+            <div class="mt-10">
+                <h2 class="text-xl font-semibold text-[#042B62FF] dark:text-[#F3B21B] mb-4">Charges Commandées</h2>
+                <div v-if="boncommande.charges.length > 0" class="space-y-2">
+                    <Table class="m-3 w-39/40 bg-white dark:bg-[#111827] rounded-lg">
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Nom de la Charge</TableHead>
+                                <TableHead>Quantité Commandée</TableHead>
 
+
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            <TableRow
+                                v-for="charge in boncommande.charges"
+                                :key="charge.id_charge"
+                                class="hover:bg-gray-300 dark:hover:bg-gray-900"
+                            >
+                                <TableCell>{{ charge.nom_charge }}</TableCell>
+                                <TableCell>{{ charge.qte_commandec }}</TableCell>
+
+                            </TableRow>
+                        </TableBody>
+                    </Table>
+                </div>
+                <p v-else class="text-gray-600 dark:text-gray-400">Aucune charge n'est commandée pour ce bon.</p>
+            </div>
 
             <div class="mt-10">
                 <Link

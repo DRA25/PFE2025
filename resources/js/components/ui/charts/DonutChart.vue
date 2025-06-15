@@ -27,15 +27,17 @@ const chartOptions = ref({
     },
     legend: {
         orient: 'vertical',
-        right: 10,
-        top: 'center',
+        // Changed 'right' to 'left' here
+        left: 10,
+        top: 'bottom',
         data: props.data.map(item => item.name)
     },
     series: [
         {
             name: 'Distribution',
             type: 'pie',
-            radius: props.radius || ['50%', '80%'],
+            // Ensuring the larger radius as per previous discussion
+            radius: props.radius || ['55%', '85%'],
             avoidLabelOverlap: false,
             itemStyle: {
                 borderRadius: 5,

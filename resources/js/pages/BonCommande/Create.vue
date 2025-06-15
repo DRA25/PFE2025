@@ -12,10 +12,16 @@ const props = defineProps({
         prix_piece: number;
         tva: number;
     }>(),
-    prestations: Array<{ // Add prestations to props
+    prestations: Array<{
         id_prest: string | number;
         nom_prest: string;
         prix_prest: number;
+        tva: number;
+    }>(),
+    charges: Array<{
+        id_charge: string | number;
+        nom_charge: string;
+        prix_charge: number;
         tva: number;
     }>(),
 })
@@ -30,13 +36,16 @@ const form = useForm({
     n_bc: '',
     date_bc: '',
     selectedPieces: [] as Array<{ id_piece: string | number, qte_commandep: number }>,
-    selectedPrestations: [] as Array<{ id_prest: string | number, qte_commandepr: number }>, // Add selectedPrestations to form
+    selectedPrestations: [] as Array<{ id_prest: string | number, qte_commandepr: number }>,
+    selectedCharges: [] as Array<{ id_charge: string | number, qte_commandec: number }>,
 })
 
 const selectedPiece = ref<string | number>('')
-const quantityPiece = ref(1) // Renamed for clarity
-const selectedPrestation = ref<string | number>('') // New ref for selected prestation
-const quantityPrestation = ref(1) // New ref for prestation quantity
+const quantityPiece = ref(1)
+const selectedPrestation = ref<string | number>('')
+const quantityPrestation = ref(1)
+const selectedCharge = ref<string | number>('')
+const quantityCharge = ref(1)
 
 // Computed property to calculate the total amount
 const totalAmount = computed(() => {
@@ -59,6 +68,16 @@ const totalAmount = computed(() => {
 
         const itemSubtotal = prestation.prix_prest * item.qte_commandepr
         const itemTotalWithTva = itemSubtotal * (1 + (prestation.tva / 100))
+        return subTotal + itemTotalWithTva
+    }, 0);
+
+    // Calculate total for charges
+    total += form.selectedCharges.reduce((subTotal, item) => {
+        const charge = props.charges.find(c => c.id_charge == item.id_charge)
+        if (!charge) return subTotal
+
+        const itemSubtotal = charge.prix_charge * item.qte_commandec
+        const itemTotalWithTva = itemSubtotal * (1 + (charge.tva / 100))
         return subTotal + itemTotalWithTva
     }, 0);
 
@@ -87,7 +106,7 @@ function removePiece(index: number) {
     form.selectedPieces.splice(index, 1)
 }
 
-function addPrestation() { // New function to add prestation
+function addPrestation() {
     if (!selectedPrestation.value || quantityPrestation.value < 1) return
 
     const existingIndex = form.selectedPrestations.findIndex(p => p.id_prest === selectedPrestation.value)
@@ -105,8 +124,30 @@ function addPrestation() { // New function to add prestation
     quantityPrestation.value = 1
 }
 
-function removePrestation(index: number) { // New function to remove prestation
+function removePrestation(index: number) {
     form.selectedPrestations.splice(index, 1)
+}
+
+function addCharge() {
+    if (!selectedCharge.value || quantityCharge.value < 1) return
+
+    const existingIndex = form.selectedCharges.findIndex(c => c.id_charge === selectedCharge.value)
+
+    if (existingIndex >= 0) {
+        form.selectedCharges[existingIndex].qte_commandec += quantityCharge.value
+    } else {
+        form.selectedCharges.push({
+            id_charge: selectedCharge.value,
+            qte_commandec: quantityCharge.value,
+        })
+    }
+
+    selectedCharge.value = ''
+    quantityCharge.value = 1
+}
+
+function removeCharge(index: number) {
+    form.selectedCharges.splice(index, 1)
 }
 
 function submit() {
@@ -117,6 +158,8 @@ function submit() {
             quantityPiece.value = 1
             selectedPrestation.value = ''
             quantityPrestation.value = 1
+            selectedCharge.value = ''
+            quantityCharge.value = 1
             window.location.href = route('scentre.boncommandes.index')
         },
         onError: () => {
@@ -151,6 +194,9 @@ function submit() {
                     <div v-if="form.errors.selectedPrestations" class="text-red-600 text-sm">{{ form.errors.selectedPrestations }}</div>
                     <div v-if="form.errors['selectedPrestations.*.id_prest']" class="text-red-600 text-sm">{{ form.errors['selectedPrestations.*.id_prest'] }}</div>
                     <div v-if="form.errors['selectedPrestations.*.qte_commandepr']" class="text-red-600 text-sm">{{ form.errors['selectedPrestations.*.qte_commandepr'] }}</div>
+                    <div v-if="form.errors.selectedCharges" class="text-red-600 text-sm">{{ form.errors.selectedCharges }}</div>
+                    <div v-if="form.errors['selectedCharges.*.id_charge']" class="text-red-600 text-sm">{{ form.errors['selectedCharges.*.id_charge'] }}</div>
+                    <div v-if="form.errors['selectedCharges.*.qte_commande']" class="text-red-600 text-sm">{{ form.errors['selectedCharges.*.qte_commande'] }}</div>
                     <div v-if="form.errors.general" class="text-red-600 text-sm">{{ form.errors.general }}</div>
                 </div>
 
@@ -180,6 +226,7 @@ function submit() {
                     </div>
                 </div>
 
+                <!-- Pieces Section -->
                 <div class="space-y-4">
                     <h3 class="text-md font-medium text-gray-700 dark:text-gray-300">Ajouter des Pièces</h3>
 
@@ -268,6 +315,7 @@ function submit() {
                     </div>
                 </div>
 
+                <!-- Prestations Section -->
                 <div class="space-y-4">
                     <h3 class="text-md font-medium text-gray-700 dark:text-gray-300">Ajouter des Prestations</h3>
 
@@ -356,6 +404,95 @@ function submit() {
                     </div>
                 </div>
 
+                <!-- Charges Section -->
+                <div class="space-y-4">
+                    <h3 class="text-md font-medium text-gray-700 dark:text-gray-300">Ajouter des Charges</h3>
+
+                    <div class="flex flex-col md:flex-row gap-3 items-end">
+                        <div class="flex-1 space-y-2 w-full">
+                            <label for="selectCharge" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Charge</label>
+                            <select
+                                id="selectCharge"
+                                v-model="selectedCharge"
+                                aria-label="Sélectionner une charge"
+                                class="w-full border border-gray-300 dark:border-gray-600 p-2 rounded focus:ring-2 focus:ring-[#042B62] dark:focus:ring-[#F3B21B] focus:border-transparent dark:bg-gray-800 dark:text-white"
+                            >
+                                <option value="">-- Sélectionnez une charge --</option>
+                                <option
+                                    v-for="charge in props.charges"
+                                    :key="charge.id_charge"
+                                    :value="charge.id_charge"
+                                >
+                                    {{ charge.nom_charge }}
+                                </option>
+                            </select>
+                        </div>
+
+                        <div class="space-y-2 w-full md:w-auto">
+                            <label for="quantityCharge" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Quantité</label>
+                            <input
+                                id="quantityCharge"
+                                v-model.number="quantityCharge"
+                                type="number"
+                                min="1"
+                                aria-label="Quantité charge"
+                                class="w-full md:w-24 border border-gray-300 dark:border-gray-600 p-2 rounded focus:ring-2 focus:ring-[#042B62] dark:focus:ring-[#F3B21B] focus:border-transparent dark:bg-gray-800 dark:text-white"
+                            />
+                        </div>
+
+                        <button
+                            type="button"
+                            @click="addCharge"
+                            :disabled="!selectedCharge || quantityCharge < 1"
+                            class="w-full md:w-auto px-4 py-2 rounded-lg transition flex items-center justify-center md:justify-start gap-1 bg-[#042B62] dark:bg-[#F3B21B] dark:text-[#042B62] text-white hover:bg-blue-900 dark:hover:bg-yellow-200 disabled:opacity-50"
+                        >
+                            <Plus class="w-4 h-4" />
+                            Ajouter Charge
+                        </button>
+                    </div>
+
+                    <div v-if="form.selectedCharges.length > 0" class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-600">
+                            <thead class="bg-gray-50 dark:bg-gray-600">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Charge</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Quantité</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Actions</th>
+                            </tr>
+                            </thead>
+                            <tbody class="bg-white dark:bg-gray-700 divide-y divide-gray-200 dark:divide-gray-600">
+                            <tr v-for="(item, index) in form.selectedCharges" :key="index">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
+                                    {{ props.charges.find(c => c.id_charge == item.id_charge)?.nom_charge }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
+                                    <input
+                                        v-model.number="item.qte_commandec"
+                                        type="number"
+                                        min="1"
+                                        aria-label="Modifier quantité charge"
+                                        class="w-20 border border-gray-300 dark:border-gray-600 p-1 rounded focus:ring-2 focus:ring-[#042B62] dark:focus:ring-[#F3B21B] focus:border-transparent dark:bg-gray-800 dark:text-white"
+                                    />
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
+                                    <button
+                                        type="button"
+                                        @click="removeCharge(index)"
+                                        aria-label="Supprimer charge"
+                                        class="text-red-600 hover:text-red-900 dark:hover:text-red-400"
+                                    >
+                                        <Trash2 class="w-5 h-5" />
+                                    </button>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div v-else class="text-center py-4 text-gray-500 dark:text-gray-400">
+                        Aucune charge sélectionnée.
+                    </div>
+                </div>
+
 
 
                 <div class="flex justify-end space-x-4 pt-4">
@@ -367,7 +504,7 @@ function submit() {
                     </Link>
                     <button
                         type="submit"
-                        :disabled="form.processing || (form.selectedPieces.length === 0 && form.selectedPrestations.length === 0)"
+                        :disabled="form.processing || (form.selectedPieces.length === 0 && form.selectedPrestations.length === 0 && form.selectedCharges.length === 0)"
                         class="px-4 py-2 bg-[#042B62] dark:bg-[#F3B21B] text-white dark:text-[#042B62] rounded-lg hover:bg-blue-900 dark:hover:bg-yellow-200 transition flex items-center gap-2 disabled:opacity-50"
                     >
                         <span>Créer</span>

@@ -22,13 +22,18 @@ const props = defineProps({
             nom_piece: string
             qte_commandep: number
         }>,
-        prestations: Array<{ // Add prestations to the prop type
+        prestations: Array<{
             id_prest: number
             nom_prest: string
             qte_commandepr: number
         }>,
+        charges: Array<{
+            id_charge: number
+            nom_charge: string
+            qte_commandec: number
+        }>,
     }>,
-    success: String, // Add success prop if you're passing it from controller
+    success: String,
 })
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -56,20 +61,20 @@ const sortedBonCommandes = computed(() => {
             String(bc.n_bc).toLowerCase().includes(query) ||
             bc.date_bc.toLowerCase().includes(query) ||
             bc.pieces?.some(piece => piece.nom_piece.toLowerCase().includes(query)) ||
-            bc.prestations?.some(prestation => prestation.nom_prest.toLowerCase().includes(query)) // Include prestations in search
+            bc.prestations?.some(prestation => prestation.nom_prest.toLowerCase().includes(query)) ||
+            bc.charges?.some(charge => charge.nom_charge.toLowerCase().includes(query))
         );
     }
 
     if (sortConfig.value) {
         const { column, direction } = sortConfig.value;
         data.sort((a, b) => {
-            let valA: any, valB: any; // Use 'any' for flexibility with different types
+            let valA: any, valB: any;
 
             if (column === 'n_bc' || column === 'date_bc') {
                 valA = a[column];
                 valB = b[column];
             } else {
-                // Default to empty strings for non-sortable columns or complex objects
                 valA = '';
                 valB = '';
             }
@@ -87,16 +92,12 @@ const sortedBonCommandes = computed(() => {
     return data;
 });
 
-// For the delete action
 const form = useForm({});
 
 const deleteBonCommande = (n_bc: string) => {
     if (confirm('Êtes-vous sûr de vouloir supprimer ce bon de commande ?')) {
         form.delete(route('scentre.boncommandes.destroy', { n_bc }), {
-            onSuccess: () => {
-                // Logic after successful deletion, e.g., show success message
-                // The page will automatically re-render due to Inertia
-            },
+            onSuccess: () => {},
             onError: (errors) => {
                 console.error('Error deleting bon de commande:', errors);
                 alert('Une erreur est survenue lors de la suppression.');
@@ -115,7 +116,7 @@ const deleteBonCommande = (n_bc: string) => {
                 <input
                     type="text"
                     v-model="searchQuery"
-                    placeholder="Rechercher par numéro, date, pièce ou prestation..."
+                    placeholder="Rechercher par numéro, date, pièce, prestation ou charge..."
                     class="w-full bg-gray-100 px-4 py-2 rounded-md border border-gray-200 dark:border-gray-700 dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
                 />
             </div>
@@ -149,7 +150,7 @@ const deleteBonCommande = (n_bc: string) => {
                             Date
                             <ArrowUpDown class="ml-2 h-4 w-4 inline-block" />
                         </TableHead>
-                        <TableHead>Détails (Pièces & Prestations)</TableHead>
+                        <TableHead>Détails (Pièces, Prestations & Charges)</TableHead>
                         <TableHead>Actions</TableHead>
                     </TableRow>
                 </TableHeader>
@@ -170,21 +171,27 @@ const deleteBonCommande = (n_bc: string) => {
                                         {{ piece.nom_piece }} — Qté: {{ piece.qte_commandep }}
                                     </div>
                                 </div>
-                                <div v-if="bc.prestations && bc.prestations.length > 0">
+                                <div v-if="bc.prestations && bc.prestations.length > 0" class="mb-2">
                                     <h4 class="font-semibold text-gray-800 dark:text-gray-200">Prestations:</h4>
                                     <div v-for="prestation in bc.prestations" :key="prestation.id_prest" class="text-sm">
                                         {{ prestation.nom_prest }} — Qté: {{ prestation.qte_commandepr }}
                                     </div>
                                 </div>
-                                <div v-if="(!bc.pieces || bc.pieces.length === 0) && (!bc.prestations || bc.prestations.length === 0)" class="text-sm text-gray-500 dark:text-gray-400">
-                                    Aucune pièce ou prestation
+                                <div v-if="bc.charges && bc.charges.length > 0">
+                                    <h4 class="font-semibold text-gray-800 dark:text-gray-200">Charges:</h4>
+                                    <div v-for="charge in bc.charges" :key="charge.id_charge" class="text-sm">
+                                        {{ charge.nom_charge }} — Qté: {{ charge.qte_commandec }}
+                                    </div>
+                                </div>
+                                <div v-if="(!bc.pieces || bc.pieces.length === 0) && (!bc.prestations || bc.prestations.length === 0) && (!bc.charges || bc.charges.length === 0)" class="text-sm text-gray-500 dark:text-gray-400">
+                                    Aucune pièce, prestation ou charge
                                 </div>
                             </TableCell>
                             <TableCell>
                                 <div class="flex items-center space-x-2">
                                     <Link
                                         :href="route('scentre.boncommandes.edit', { n_bc: bc.n_bc })"
-                                        class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-400  transition flex items-center gap-2"
+                                        class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-400 transition flex items-center gap-2"
                                         title="Modifier"
                                     >
                                         <Pencil class="w-4 h-4" />
@@ -200,14 +207,7 @@ const deleteBonCommande = (n_bc: string) => {
                                         <span>Afficher</span>
                                     </Link>
 
-                                    <button
-                                        @click="deleteBonCommande(bc.n_bc)"
-                                        class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-400 transition flex items-center gap-2"
-                                        title="Supprimer"
-                                    >
-                                        <Trash2 class="w-4 h-4" />
-                                        <span class="hidden sm:inline">Supprimer</span>
-                                    </button>
+
                                 </div>
                             </TableCell>
                         </TableRow>
@@ -221,9 +221,6 @@ const deleteBonCommande = (n_bc: string) => {
                     </template>
                 </TableBody>
             </Table>
-
-            <div class="m-5">
-            </div>
         </div>
     </AppLayout>
 </template>
