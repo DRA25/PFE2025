@@ -28,6 +28,11 @@ Route::middleware(['auth', 'role:service centre|admin'])->group(function () {
     // Group all scentre-related routes under /scentre prefix
     Route::prefix('scentre')->name('scentre.')->group(function () {
 
+        Route::get('/dras/{n_dra}/etat-sortie', [DraController::class, 'generateEtatSortie'])
+            ->name('dras.etat-sortie');
+
+        Route::get('/dras/export-all', [DraController::class, 'exportAllDras'])
+            ->name('dras.export-all');
 
         // Prestations Routes
         Route::prefix('prestations')->name('prestations.')->group(function () {
