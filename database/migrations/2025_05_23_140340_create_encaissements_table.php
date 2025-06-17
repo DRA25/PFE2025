@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('id_centre');
             $table->unsignedBigInteger('n_remb');
-            $table->integer('montant_enc');
+            $table->decimal('montant_enc');
             $table->date('date_enc');
             $table->timestamps();
 

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>État de Sortie - Tous les DRAs</title>
+    <title>BROUILLARD CAISSE REGIE</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
         body {
@@ -41,10 +41,30 @@
 
         h2 {
             color: #042B62FF;
-            text-align: center;
+            text-align: left; /* Changed from center to left */
             font-size: 1rem; /* Reduced h2 font size */
             margin-top: 30px;
             margin-bottom: 10px;
+            padding-left: 10px; /* Added padding */
+            padding-right: 10px; /* Added padding */
+        }
+
+        h3 {
+            color: #042B62FF;
+            text-align: left; /* Changed from center to left */
+            font-size: 0.9rem; /* Reduced h3 font size */
+            margin-bottom: 5px;
+            padding-left: 10px; /* Added padding */
+            padding-right: 10px; /* Added padding */
+        }
+
+        p.info-period {
+            color: #042B62FF;
+            text-align: left;
+            font-size: 0.85rem;
+            margin-bottom: 3px;
+            padding-left: 10px;
+            padding-right: 10px;
         }
 
         .t2 {
@@ -74,6 +94,10 @@
             text-align: center;
         }
 
+        .text-right {
+            text-align: right;
+        }
+
         .info-section {
             text-align: left;
             margin-bottom: 20px;
@@ -98,40 +122,18 @@
             text-align: center;
         }
 
-        .total-amount {
-            text-align: right;
-            font-size: 0.8rem;
-            font-weight: bold;
-            margin-top: 20px;
-            padding-right: 10px;
-            color: #042B62FF;
-        }
-
         .divider {
             border-top: 1px solid #ddd;
             margin: 15px 0; /* Reduced margin */
         }
 
-        /* Specific styles for the DRA table */
         .dra-table th, .dra-table td {
-            text-align: left; /* Override default center for table cells if needed */
+            text-align: left;
         }
-        .dra-total-row {
+
+        .total-row {
             font-weight: bold;
             background-color: #e6e6e6;
-        }
-
-        /* Adjusting specific column widths */
-        .dra-table th:nth-child(7), /* Nombre Pièces header */
-        .dra-table td:nth-child(7) { /* Nombre Pièces data */
-            width: 8%; /* Adjust as needed, making it smaller */
-            text-align: center; /* Keep content centered for numbers */
-        }
-
-        .dra-table th:nth-child(8), /* Total header */
-        .dra-table td:nth-child(8) { /* Total data */
-            width: 12%; /* Adjust as needed, making it larger */
-            text-align: right; /* Keep content right-aligned for numbers */
         }
     </style>
 </head>
@@ -140,14 +142,18 @@
     <tr>
         <td class="ttd" style="width:10%"><img src="{{ public_path('images/Naftal.png') }}" alt="Company Logo"></td>
         <td class="ttd" style="width:70%"><h1>BROUILLARD CAISSE REGIE</h1></td>
-        <td style="width:20%; padding: 0;">{{ \Carbon\Carbon::now()->format('d/m/Y H:i')}}</td>
+        <td style="width:20%; padding: 0; font-size: 0.8rem;">{{ \Carbon\Carbon::now()->format('d/m/Y H:i')}}</td>
     </tr>
 </table>
 
 <div class="info-section">
     <div class="info-item"><strong>Branche Carburants</strong></div>
     <div class="info-item"><strong>Direction {{ $centre_type }}</strong></div>
-    <div class="info-item"><strong>Code: 1{{ $id_centre }}</strong></div>
+    <div class="info-item"><strong>Code: {{ $centre_code }}</strong></div>
+</div>
+
+<div class="info-section">
+    <div class="info-item">Période: Du {{ $periode_debut }} à {{ $periode_fin }}</div>
 </div>
 
 <div class="divider"></div>
@@ -156,33 +162,39 @@
     <thead>
     <tr>
         <th>N° DRA</th>
-        <th>Date création</th>
+        <th>N° Bon de petite caisse</th>
+        <th>Date du bon</th>
         <th>Libellé</th>
-        <th>Montant</th>
-        <th>TVA</th>
-        <th>Droit Timbre</th>
-        <th style="width: 8%;">Nombre Pièces</th> <th style="width: 12%;">Total</th> </tr>
+        <th>Fournisseur</th>
+        <th class="text-right">Encaissement</th>
+        <th class="text-right">Decaissement</th>
+        <th>OBS</th>
+    </tr>
     </thead>
     <tbody>
     @foreach($items as $item)
-        <tr class="@if($item['is_total']) dra-total-row @endif">
-            <td>{{ $item['n_dra'] }}</td>
-            <td>{{ $item['date_creation'] }}</td>
+        <tr class="{{ $item['is_total'] ? 'total-row' : '' }}">
+            <td class="text-center">{{ $item['n_dra'] }}</td>
+            <td class="text-center">{{ $item['n_bon'] }}</td>
+            <td class="text-center">{{ $item['date_bon'] }}</td>
             <td>{{ $item['libelle'] }}</td>
-            <td class="text-right">{{ $item['montant'] }}</td>
-            <td class="text-right">{{ $item['tva'] }}</td>
-            <td class="text-right">{{ $item['droit_timbre'] }}</td>
-            <td class="text-center">{{ $item['nombre_piece'] }}</td>
-            <td class="text-right">{{ $item['total'] }}</td>
+            <td class="text-center">{{ $item['fournisseur'] }}</td>
+            <td class="text-right">{{ $item['encaissement'] }}</td>
+            <td class="text-right">{{ $item['decaissement'] }}</td>
+            <td>{{ $item['obs'] }}</td>
         </tr>
     @endforeach
-    <tr class="dra-total-row">
-        <td colspan="3">TOTAL GÉNÉRAL</td>
-        <td class="text-right">{{ $totalMontant }}</td>
-        <td class="text-right">{{ $totalTVA }}</td>
-        <td class="text-right">{{ $totalDroitTimbre }}</td>
-        <td class="text-center">{{ $items->where('is_total', false)->sum('nombre_piece') }}</td>
-        <td class="text-right">{{ $totalGeneral }}</td>
+    <tr class="total-row">
+        <td colspan="5" class="text-right">TOTAL PÉRIODE </td>
+        <td class="text-right">{{ $totalEncaissement }}</td>
+        <td class="text-right">{{ $totalDecaissement }}</td>
+        <td></td>
+    </tr>
+    <tr class="total-row">
+        <td colspan="5" class="text-right">SOLDE PÉRIODE / REPORT PÉRIODE </td>
+        <td class="text-right"> {{ $calculatedResult }}</td>
+        <td></td>
+        <td></td>
     </tr>
     </tbody>
 </table>
@@ -190,7 +202,7 @@
 <div class="divider"></div>
 
 <div class="info-section">
-    <div class="info-item"><strong>SOLDE PÉRIODE / REPORT PÉRIODE:</strong> {{ $totalGeneral }}</div>
+
     <div class="info-item">NB: LE SOLDE FIN DE PÉRIODE DOIT ÊTRE DÉBITEUR OU NUL EN AUCUN CAS IL PRÉSENTE UN SOLDE NÉGATIF</div>
     <div class="info-item">S'IL S'AGIT DE PLUSIEUR PAGES IL Y'A LIEU D'INDIQUER LE REPORT DES PAGES</div>
 </div>

@@ -53,4 +53,9 @@ class Dra extends Model
         return $this->hasOne(Remboursement::class, 'n_dra', 'n_dra');
     }
 
+
+    public function remboursements()
+    {
+        return $this->hasMany(Remboursement::class, 'n_dra', 'n_dra');
+    }
 }

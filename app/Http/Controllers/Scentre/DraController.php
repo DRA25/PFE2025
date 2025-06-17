@@ -260,150 +260,44 @@ return Inertia::render('Dra/Edit', [
         return $total;
     }
 
-    public function generateEtatSortie($n_dra)
-    {
-        $userCentreId = Auth::user()->id_centre;
-        $dra = Dra::with('centre')->where('n_dra', $n_dra)->firstOrFail();
 
-        if ($dra->id_centre !== $userCentreId) {
-            abort(403, 'Unauthorized action.');
-        }
-
-        $draDateCreation = $dra->date_creation->format('d/m/Y');
-
-        // Load factures with related data
-        $factures = $dra->factures()
-            ->with(['fournisseur:id_fourn,nom_fourn', 'pieces:id_piece,nom_piece,prix_piece,tva'])
-            ->get()
-            ->map(function ($facture) use ($draDateCreation) {
-                $totalQuantity = 0;
-
-                $montantHT = $facture->pieces->sum(function ($piece) use ($facture, &$totalQuantity) {
-                    $quantity = $facture->pieces->find($piece->id_piece)->pivot->qte_f ?? 1;
-                    $totalQuantity += $quantity;
-                    return $piece->prix_piece * $quantity;
-                });
-
-                $tva = $facture->pieces->sum(function ($piece) use ($facture) {
-                    $quantity = $facture->pieces->find($piece->id_piece)->pivot->qte_f ?? 1;
-                    return ($piece->prix_piece * $quantity) * ($piece->tva ?? 0) / 100;
-                });
-
-                $droitTimbre = $facture->droit_timbre ?? 0;
-                $total = $montantHT + $tva + $droitTimbre;
-
-                // Combine all piece names with quantities for the libelle
-                $pieceNames = $facture->pieces->map(function ($piece) use ($facture) {
-                    $quantity = $facture->pieces->find($piece->id_piece)->pivot->qte_f ?? 1;
-                    return $piece->nom_piece . ' (x' . $quantity . ')';
-                })->implode(', ');
-
-                return [
-                    'n_dra' => $facture->n_dra,
-                    'date_creation' => $draDateCreation,
-                    'libelle' => $pieceNames,
-                    'montant' => number_format($montantHT, 2, ',', ' '),
-                    'tva' => number_format($tva, 2, ',', ' '),
-                    'droit_timbre' => number_format($droitTimbre, 2, ',', ' '),
-                    'nombre_piece' => $totalQuantity, // Total physical pieces (sum of quantities)
-                    'total' => number_format($total, 2, ',', ' '),
-                ];
-            });
-
-        // Load bonAchats with related data
-        $bonAchats = $dra->bonAchats()
-            ->with(['fournisseur:id_fourn,nom_fourn', 'pieces:id_piece,nom_piece,prix_piece,tva'])
-            ->get()
-            ->map(function ($bonAchat) use ($draDateCreation) {
-                $totalQuantity = 0;
-
-                $montantHT = $bonAchat->pieces->sum(function ($piece) use ($bonAchat, &$totalQuantity) {
-                    $quantity = $bonAchat->pieces->find($piece->id_piece)->pivot->qte_b ?? 1;
-                    $totalQuantity += $quantity;
-                    return $piece->prix_piece * $quantity;
-                });
-
-                $tva = $bonAchat->pieces->sum(function ($piece) use ($bonAchat) {
-                    $quantity = $bonAchat->pieces->find($piece->id_piece)->pivot->qte_b ?? 1;
-                    return ($piece->prix_piece * $quantity) * ($piece->tva ?? 0) / 100;
-                });
-
-                $total = $montantHT + $tva;
-
-                // Combine all piece names with quantities for the libelle
-                $pieceNames = $bonAchat->pieces->map(function ($piece) use ($bonAchat) {
-                    $quantity = $bonAchat->pieces->find($piece->id_piece)->pivot->qte_b ?? 1;
-                    return $piece->nom_piece . ' (x' . $quantity . ')';
-                })->implode(', ');
-
-                return [
-                    'n_dra' => $bonAchat->n_dra,
-                    'date_creation' => $draDateCreation,
-                    'libelle' => $pieceNames,
-                    'montant' => number_format($montantHT, 2, ',', ' '),
-                    'tva' => number_format($tva, 2, ',', ' '),
-                    'droit_timbre' => '0,00',
-                    'nombre_piece' => $totalQuantity, // Total physical pieces (sum of quantities)
-                    'total' => number_format($total, 2, ',', ' '),
-                ];
-            });
-
-        // Combine both collections
-        $items = $factures->merge($bonAchats);
-
-        // Calculate remboursement totals
-        $totalMontant = $items->sum(function ($item) {
-            return (float) str_replace([' ', ','], ['', '.'], $item['montant']);
-        });
-
-        $totalTVA = $items->sum(function ($item) {
-            return (float) str_replace([' ', ','], ['', '.'], $item['tva']);
-        });
-
-        $totalDroitTimbre = $items->sum(function ($item) {
-            return (float) str_replace([' ', ','], ['', '.'], $item['droit_timbre']);
-        });
-
-        $totalGeneral = $items->sum(function ($item) {
-            return (float) str_replace([' ', ','], ['', '.'], $item['total']);
-        });
-
-        // Generate PDF
-        $pdf = PDF::loadView('scentre.dra.etat_sortie', [
-            'items' => $items,
-            'dra' => $dra,
-            'totalMontant' => number_format($totalMontant, 2, ',', ' '),
-            'totalTVA' => number_format($totalTVA, 2, ',', ' '),
-            'totalDroitTimbre' => number_format($totalDroitTimbre, 2, ',', ' '),
-            'totalGeneral' => number_format($totalGeneral, 2, ',', ' '),
-            'dateDebut' => '01/01/25',
-            'dateFin' => '31/03/25',
-        ]);
-
-        return $pdf->download('etat_sortie_' . $n_dra . '.pdf');
-    }
 
     public function exportAllDras()
     {
-
         $userCentreId = Auth::user()->id_centre;
         $allItems = collect();
         $centre = Centre::find($userCentreId);
         $centreType = $centre ? $centre->type_centre : 'Marine';
-        $dras = Dra::with(['centre', 'factures.pieces', 'bonAchats.pieces'])
+        $centreCode = $centre ? $centre->code_centre : '1A80';
+
+        // Fetch the 'seuil' value for the current centre
+        // Assuming 'seuil_centre' is the column name in your 'centres' table
+        $centreSeuil = $centre ? (float) $centre->seuil_centre : 0.00; // Get the numeric seuil, default to 0.00
+
+        $dras = Dra::with([
+            'centre',
+            'factures.pieces',
+            'factures.fournisseur',
+            'bonAchats.pieces',
+            'bonAchats.fournisseur',
+            'remboursements.encaissements'
+        ])
             ->where('id_centre', $userCentreId)
-            ->orderBy('date_creation', 'desc')
+            // If you still want to exclude 'actif' and 'refuse', uncomment the line below:
+            // ->whereNotIn('etat_dra', ['actif', 'refuse'])
+            ->orderBy('n_dra', 'asc') // Changed to order by n_dra from first to last
             ->get();
+
+        // Get period dates
+        $firstDate = $dras->first() ? $dras->first()->date_creation : now();
+        $lastDate = $dras->last() ? $dras->last()->date_creation : now();
 
         foreach ($dras as $dra) {
             $draItems = collect();
-            $draTotalMontant = 0;
-            $draTotalTVA = 0;
-            $draTotalDroitTimbre = 0;
-            $draTotalGeneral = 0;
-            $draTotalPieces = 0;
+            $draTotalDecaissement = 0;
+            $draTotalEncaissement = 0;
 
-            // Process factures
+            // Process factures (decaissement)
             foreach ($dra->factures as $facture) {
                 $totalQuantity = 0;
                 $montantHT = $facture->pieces->sum(function ($piece) use ($facture, &$totalQuantity) {
@@ -418,35 +312,31 @@ return Inertia::render('Dra/Edit', [
                 });
 
                 $droitTimbre = $facture->droit_timbre ?? 0;
-                $total = $montantHT + $tva + $droitTimbre;
+                $totalAmount = $montantHT + $tva + $droitTimbre;
 
                 $pieceNames = $facture->pieces->map(function ($piece) use ($facture) {
                     $quantity = $facture->pieces->find($piece->id_piece)->pivot->qte_f ?? 1;
                     return $piece->nom_piece . ' (x' . $quantity . ')';
                 })->implode(', ');
 
+                $fournisseurName = $facture->fournisseur ? $facture->fournisseur->nom_fourn : 'Non spécifié';
+
                 $draItems->push([
                     'n_dra' => $dra->n_dra,
-                    'date_creation' => $dra->date_creation->format('d/m/Y'),
+                    'n_bon' => '',
+                    'date_bon' => $dra->date_creation->format('d/m/Y'),
                     'libelle' => $pieceNames,
-                    'montant' => number_format($montantHT, 2, ',', ' '),
-                    'tva' => number_format($tva, 2, ',', ' '),
-                    'droit_timbre' => number_format($droitTimbre, 2, ',', ' '),
-                    'nombre_piece' => $totalQuantity,
-                    'total' => number_format($total, 2, ',', ' '),
-                    'etat' => $dra->etat,
+                    'fournisseur' => $fournisseurName,
+                    'encaissement' => '',
+                    'decaissement' => number_format($totalAmount, 2, ',', ' '),
+                    'obs' => '',
                     'is_total' => false
                 ]);
 
-                // Accumulate DRA totals
-                $draTotalMontant += $montantHT;
-                $draTotalTVA += $tva;
-                $draTotalDroitTimbre += $droitTimbre;
-                $draTotalGeneral += $total;
-                $draTotalPieces += $totalQuantity;
+                $draTotalDecaissement += $totalAmount;
             }
 
-            // Process bonAchats
+            // Process bonAchats (decaissement)
             foreach ($dra->bonAchats as $bonAchat) {
                 $totalQuantity = 0;
                 $montantHT = $bonAchat->pieces->sum(function ($piece) use ($bonAchat, &$totalQuantity) {
@@ -460,45 +350,61 @@ return Inertia::render('Dra/Edit', [
                     return ($piece->prix_piece * $quantity) * ($piece->tva ?? 0) / 100;
                 });
 
-                $total = $montantHT + $tva;
+                $totalAmount = $montantHT + $tva;
 
                 $pieceNames = $bonAchat->pieces->map(function ($piece) use ($bonAchat) {
                     $quantity = $bonAchat->pieces->find($piece->id_piece)->pivot->qte_ba ?? 1;
                     return $piece->nom_piece . ' (x' . $quantity . ')';
                 })->implode(', ');
 
+                $fournisseurName = $bonAchat->fournisseur ? $bonAchat->fournisseur->nom_fourn : 'Non spécifié';
+
                 $draItems->push([
                     'n_dra' => $dra->n_dra,
-                    'date_creation' => $dra->date_creation->format('d/m/Y'),
+                    'n_bon' => '',
+                    'date_bon' => $dra->date_creation->format('d/m/Y'),
                     'libelle' => $pieceNames,
-                    'montant' => number_format($montantHT, 2, ',', ' '),
-                    'tva' => number_format($tva, 2, ',', ' '),
-                    'droit_timbre' => '0,00',
-                    'nombre_piece' => $totalQuantity,
-                    'total' => number_format($total, 2, ',', ' '),
-                    'etat' => $dra->etat,
+                    'fournisseur' => $fournisseurName,
+                    'encaissement' => '',
+                    'decaissement' => number_format($totalAmount, 2, ',', ' '),
+                    'obs' => '',
                     'is_total' => false
                 ]);
 
-                // Accumulate DRA totals
-                $draTotalMontant += $montantHT;
-                $draTotalTVA += $tva;
-                $draTotalGeneral += $total;
-                $draTotalPieces += $totalQuantity;
+                $draTotalDecaissement += $totalAmount;
+            }
+
+            // Calculate total encaissement for this DRA (after processing all decaissements)
+            foreach ($dra->remboursements as $remboursement) {
+                $draTotalEncaissement += $remboursement->encaissements->sum('montant_enc');
+            }
+
+            // Add encaissement row if there are any (now placed AFTER decaissement items)
+            if ($draTotalEncaissement > 0) {
+                $draItems->push([
+                    'n_dra' => $dra->n_dra,
+                    'n_bon' => '',
+                    'date_bon' => $dra->date_creation->format('d/m/Y'),
+                    'libelle' => 'Encaissement remboursement',
+                    'fournisseur' => '',
+                    'encaissement' => number_format($draTotalEncaissement, 2, ',', ' '),
+                    'decaissement' => '',
+                    'obs' => '',
+                    'is_total' => false
+                ]);
             }
 
             // Add DRA total row if there are items
             if ($draItems->isNotEmpty()) {
                 $draItems->push([
                     'n_dra' => '',
-                    'date_creation' => '',
-                    'libelle' => 'TOTAL DRA ' . $dra->n_dra,
-                    'montant' => number_format($draTotalMontant, 2, ',', ' '),
-                    'tva' => number_format($draTotalTVA, 2, ',', ' '),
-                    'droit_timbre' => number_format($draTotalDroitTimbre, 2, ',', ' '),
-                    'nombre_piece' => $draTotalPieces,
-                    'total' => number_format($draTotalGeneral, 2, ',', ' '),
-                    'etat' => '',
+                    'n_bon' => '',
+                    'date_bon' => '',
+                    'libelle' => 'Total DRA',
+                    'fournisseur' => '',
+                    'encaissement' => number_format($draTotalEncaissement, 2, ',', ' '),
+                    'decaissement' => number_format($draTotalDecaissement, 2, ',', ' '),
+                    'obs' => '',
                     'is_total' => true
                 ]);
             }
@@ -506,34 +412,36 @@ return Inertia::render('Dra/Edit', [
             $allItems = $allItems->merge($draItems);
         }
 
-        // Calculate grand totals
-        $totalMontant = $allItems->where('is_total', false)->sum(function ($item) {
-            return (float) str_replace([' ', ','], ['', '.'], $item['montant']);
+        // Calculate grand totals (these are still numeric)
+        $rawTotalEncaissement = $allItems->where('is_total', false)->sum(function ($item) {
+            return (float) str_replace([' ', ','], ['', '.'], $item['encaissement']);
         });
 
-        $totalTVA = $allItems->where('is_total', false)->sum(function ($item) {
-            return (float) str_replace([' ', ','], ['', '.'], $item['tva']);
+        $rawTotalDecaissement = $allItems->where('is_total', false)->sum(function ($item) {
+            return (float) str_replace([' ', ','], ['', '.'], $item['decaissement']);
         });
 
-        $totalDroitTimbre = $allItems->where('is_total', false)->sum(function ($item) {
-            return (float) str_replace([' ', ','], ['', '.'], $item['droit_timbre']);
-        });
+        $rawBalancePeriod = $rawTotalEncaissement - $rawTotalDecaissement;
 
-        $totalGeneral = $allItems->where('is_total', false)->sum(function ($item) {
-            return (float) str_replace([' ', ','], ['', '.'], $item['total']);
-        });
+        // Calculate the new value: centreseuil + balancePeriod
+        // You mentioned "centreseuil - balanceperiod" but your current code has "+".
+        // I'll keep the "+" as it's in your provided code, but you can change it if needed.
+        $calculatedValue = $centreSeuil + $rawBalancePeriod;
 
-        $pdf = PDF::loadView('scentre.dra.etat_sortie_all', [
+        $pdf = PDF::loadView('scentre.dra.export_brouillard', [
             'items' => $allItems,
-            'totalMontant' => number_format($totalMontant, 2, ',', ' '),
-            'totalTVA' => number_format($totalTVA, 2, ',', ' '),
-            'totalDroitTimbre' => number_format($totalDroitTimbre, 2, ',', ' '),
-            'totalGeneral' => number_format($totalGeneral, 2, ',', ' '),
+            'totalEncaissement' => number_format($rawTotalEncaissement, 2, ',', ' '),
+            'totalDecaissement' => number_format($rawTotalDecaissement, 2, ',', ' '),
+            'balancePeriod' => number_format($rawBalancePeriod, 2, ',', ' '), // Original balance period, formatted
+            'centreseuil' => number_format($centreSeuil, 2, ',', ' '), // Pass formatted centreSeuil
+            'calculatedResult' => number_format($calculatedValue, 2, ',', ' '), // The new calculated result
             'id_centre' => $userCentreId,
-             'centre_type' => $centreType,
-
+            'centre_type' => $centreType,
+            'centre_code' => $centreCode,
+            'periode_debut' => $firstDate->format('d/m/Y'),
+            'periode_fin' => $lastDate->format('d/m/Y'),
         ]);
 
-        return $pdf->download('etat_sortie_all_dras.pdf');
+        return $pdf->download('brouillard_caisse_regie.pdf');
     }
 }
