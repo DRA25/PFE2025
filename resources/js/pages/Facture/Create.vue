@@ -4,22 +4,18 @@ import AppLayout from '@/layouts/AppLayout.vue'
 import { type BreadcrumbItem } from '@/types'
 import { Plus, Trash2 } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
-import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-
-import { usePage } from '@inertiajs/vue3'
-
-
+import { TableBody, TableCell, TableHead, TableHeader, TableRow, Table } from '@/components/ui/table'; // Ensure Table is imported
 
 const props = defineProps({
     dra: Object,
     fournisseurs: Array,
-    pieces: Array, // Add pieces to props
+    pieces: Array,
+    prestations: Array,
+    charges: Array,
 })
 
-
-
 const breadcrumbs: BreadcrumbItem[] = [
-    { title:'Centre', href: '/scentre'},
+    { title: 'Centre', href: '/scentre' },
     { title: 'Gestion des DRAs', href: route('scentre.dras.index') },
     { title: `Details de DRA ${props.dra.n_dra}`, href: route('scentre.dras.show', { dra: props.dra.n_dra }) },
     { title: `Factures pour DRA ${props.dra.n_dra}`, href: route('scentre.dras.factures.index', { dra: props.dra.n_dra }) },
@@ -32,65 +28,98 @@ const form = useForm({
     id_fourn: '',
     droit_timbre: 0,
     pieces: [] as Array<{ id_piece: string, qte_f: number }>,
+    prestations: [] as Array<{ id_prest: string, qte_fpr: number }>,
+    charges: [] as Array<{ id_charge: string, qte_fc: number }>,
 })
 
-// Track selected piece for the add form
-const selectedPiece = ref('')
-const quantity = ref(1)
+// Ref to control which item type is currently selected for adding
+const selectedItemType = ref<'piece' | 'prestation' | 'charge'>('piece'); // Default to piece
 
-// Calculate total amount
+// Track selected item and quantity for the add form
+const selectedItemId = ref('');
+const quantity = ref(1);
+
+// Calculate total amount including pieces, prestations, charges, and droit_timbre
 const totalAmount = computed(() => {
     const piecesTotal = form.pieces.reduce((total, item) => {
         const piece = props.pieces.find(p => p.id_piece == item.id_piece)
         if (!piece) return total
-
         const subtotal = piece.prix_piece * item.qte_f
         const totalWithTva = subtotal * (1 + (piece.tva / 100))
         return total + totalWithTva
     }, 0)
 
-    return piecesTotal + Number(form.droit_timbre || 0)
+    const prestationsTotal = form.prestations.reduce((total, item) => {
+        const prestation = props.prestations.find(p => p.id_prest == item.id_prest)
+        if (!prestation) return total
+        const subtotal = prestation.prix_prest * item.qte_fpr
+        const totalWithTva = subtotal * (1 + (prestation.tva / 100))
+        return total + totalWithTva
+    }, 0)
+
+    const chargesTotal = form.charges.reduce((total, item) => {
+        const charge = props.charges.find(c => c.id_charge == item.id_charge)
+        if (!charge) return total
+        const subtotal = charge.prix_charge * item.qte_fc
+        const totalWithTva = subtotal * (1 + (charge.tva / 100))
+        return total + totalWithTva
+    }, 0)
+
+    return piecesTotal + prestationsTotal + chargesTotal + Number(form.droit_timbre || 0)
 })
 
+// Generic function to add any item type
+function addItem() {
+    if (!selectedItemId.value || quantity.value < 1) return;
 
-// Add a piece to the invoice
-function addPiece() {
-    if (!selectedPiece.value) return
-
-    // Check if piece already exists
-    const existingIndex = form.pieces.findIndex(p => p.id_piece === selectedPiece.value)
-
-    if (existingIndex >= 0) {
-        // Update quantity if piece already exists
-        form.pieces[existingIndex].qte_f += quantity.value
-    } else {
-        // Add new piece
-        form.pieces.push({
-            id_piece: selectedPiece.value,
-            qte_f: quantity.value
-        })
+    if (selectedItemType.value === 'piece') {
+        const existingIndex = form.pieces.findIndex(p => p.id_piece === selectedItemId.value);
+        if (existingIndex >= 0) {
+            form.pieces[existingIndex].qte_f += quantity.value;
+        } else {
+            form.pieces.push({ id_piece: selectedItemId.value, qte_f: quantity.value });
+        }
+    } else if (selectedItemType.value === 'prestation') {
+        const existingIndex = form.prestations.findIndex(p => p.id_prest === selectedItemId.value);
+        if (existingIndex >= 0) {
+            form.prestations[existingIndex].qte_fpr += quantity.value;
+        } else {
+            form.prestations.push({ id_prest: selectedItemId.value, qte_fpr: quantity.value });
+        }
+    } else if (selectedItemType.value === 'charge') {
+        const existingIndex = form.charges.findIndex(c => c.id_charge === selectedItemId.value);
+        if (existingIndex >= 0) {
+            form.charges[existingIndex].qte_fc += quantity.value;
+        } else {
+            form.charges.push({ id_charge: selectedItemId.value, qte_fc: quantity.value });
+        }
     }
 
-    // Reset form
-    selectedPiece.value = ''
-    quantity.value = 1
+    selectedItemId.value = '';
+    quantity.value = 1;
 }
 
-// Remove a piece from the invoice
-function removePiece(index: number) {
-    form.pieces.splice(index, 1)
+// Generic function to remove any item type
+function removeItem(type: 'piece' | 'prestation' | 'charge', index: number) {
+    if (type === 'piece') {
+        form.pieces.splice(index, 1);
+    } else if (type === 'prestation') {
+        form.prestations.splice(index, 1);
+    } else if (type === 'charge') {
+        form.charges.splice(index, 1);
+    }
 }
 
 function submit() {
     form.post(route('scentre.dras.factures.store', { dra: props.dra.n_dra }), {
         onSuccess: () => {
-            form.reset()
-            window.location.href = route('scentre.dras.factures.index', { dra: props.dra.n_dra })
+            form.reset();
+            window.location.href = route('scentre.dras.factures.index', { dra: props.dra.n_dra });
         },
         onError: () => {
-            console.log('Validation error:', form.errors)
+            console.log('Validation error:', form.errors);
         }
-    })
+    });
 }
 </script>
 
@@ -159,18 +188,52 @@ function submit() {
                         </Link>
                     </div>
                     <div v-if="form.errors.id_fourn" class="text-red-500 text-sm">{{ form.errors.id_fourn }}</div>
-
                 </div>
 
-                <!-- Piece Selection Section -->
-                <div class="space-y-4">
-                    <h3 class="text-md font-medium text-gray-700 dark:text-gray-300">Pièces</h3>
+                <!-- Radio buttons for item type selection -->
+                <div class="space-y-2">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Type d'article à ajouter</label>
+                    <div class="flex items-center space-x-4">
+                        <label class="flex items-center cursor-pointer">
+                            <input
+                                type="radio"
+                                v-model="selectedItemType"
+                                value="piece"
+                                class="form-radio h-4 w-4 text-[#042B62] dark:text-[#F3B21B]"
+                            />
+                            <span class="ml-2 text-gray-700 dark:text-gray-300">Pièce</span>
+                        </label>
+                        <label class="flex items-center cursor-pointer">
+                            <input
+                                type="radio"
+                                v-model="selectedItemType"
+                                value="prestation"
+                                class="form-radio h-4 w-4 text-[#042B62] dark:text-[#F3B21B]"
+                            />
+                            <span class="ml-2 text-gray-700 dark:text-gray-300">Prestation</span>
+                        </label>
+                        <label class="flex items-center cursor-pointer">
+                            <input
+                                type="radio"
+                                v-model="selectedItemType"
+                                value="charge"
+                                class="form-radio h-4 w-4 text-[#042B62] dark:text-[#F3B21B]"
+                            />
+                            <span class="ml-2 text-gray-700 dark:text-gray-300">Charge</span>
+                        </label>
+                    </div>
+                </div>
 
+                <!-- Conditional Input Section based on selectedItemType -->
+                <div class="space-y-4">
                     <div class="flex gap-3 items-end">
                         <div class="flex-1 space-y-2">
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Pièce</label>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                {{ selectedItemType === 'piece' ? 'Pièce' : selectedItemType === 'prestation' ? 'Prestation' : 'Charge' }}
+                            </label>
                             <select
-                                v-model="selectedPiece"
+                                v-if="selectedItemType === 'piece'"
+                                v-model="selectedItemId"
                                 class="w-full border border-gray-300 dark:border-gray-600 p-2 rounded focus:ring-2 focus:ring-[#042B62] dark:focus:ring-[#F3B21B] focus:border-transparent dark:bg-gray-800 dark:text-white"
                             >
                                 <option value="">-- Sélectionnez une pièce --</option>
@@ -180,6 +243,34 @@ function submit() {
                                     :value="piece.id_piece"
                                 >
                                     {{ piece.nom_piece }} ({{ piece.prix_piece }} DA, TVA {{ piece.tva }}%)
+                                </option>
+                            </select>
+                            <select
+                                v-else-if="selectedItemType === 'prestation'"
+                                v-model="selectedItemId"
+                                class="w-full border border-gray-300 dark:border-gray-600 p-2 rounded focus:ring-2 focus:ring-[#042B62] dark:focus:ring-[#F3B21B] focus:border-transparent dark:bg-gray-800 dark:text-white"
+                            >
+                                <option value="">-- Sélectionnez une prestation --</option>
+                                <option
+                                    v-for="prestation in props.prestations"
+                                    :key="prestation.id_prest"
+                                    :value="prestation.id_prest"
+                                >
+                                    {{ prestation.nom_prest }} ({{ prestation.prix_prest }} DA, TVA {{ prestation.tva }}%)
+                                </option>
+                            </select>
+                            <select
+                                v-else-if="selectedItemType === 'charge'"
+                                v-model="selectedItemId"
+                                class="w-full border border-gray-300 dark:border-gray-600 p-2 rounded focus:ring-2 focus:ring-[#042B62] dark:focus:ring-[#F3B21B] focus:border-transparent dark:bg-gray-800 dark:text-white"
+                            >
+                                <option value="">-- Sélectionnez une charge --</option>
+                                <option
+                                    v-for="charge in props.charges"
+                                    :key="charge.id_charge"
+                                    :value="charge.id_charge"
+                                >
+                                    {{ charge.nom_charge }} ({{ charge.prix_charge }} DA, TVA {{ charge.tva }}%)
                                 </option>
                             </select>
                         </div>
@@ -196,8 +287,8 @@ function submit() {
 
                         <button
                             type="button"
-                            @click="addPiece"
-                            :disabled="!selectedPiece"
+                            @click="addItem"
+                            :disabled="!selectedItemId || quantity < 1"
                             class="px-4 py-2 rounded-lg transition flex items-center gap-1 bg-[#042B62] dark:bg-[#F3B21B] dark:text-[#042B62] text-white hover:bg-blue-900 dark:hover:bg-yellow-200 disabled:opacity-50"
                         >
                             <Plus class="w-4 h-4" />
@@ -205,7 +296,9 @@ function submit() {
                         </button>
                     </div>
 
+                    <!-- Display Table for Pieces -->
                     <div v-if="form.pieces.length > 0" class="overflow-x-auto bg-gray-100 dark:bg-gray-800 rounded-lg m-5">
+                        <h4 class="text-md font-medium text-gray-700 dark:text-gray-300 p-3">Pièces sélectionnées:</h4>
                         <Table class="w-full">
                             <TableHeader>
                                 <TableRow class="bg-gray-50 dark:bg-gray-700">
@@ -217,11 +310,10 @@ function submit() {
                                     <TableHead>Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
-
                             <TableBody>
                                 <TableRow
                                     v-for="(item, index) in form.pieces"
-                                    :key="index"
+                                    :key="`piece-${index}`"
                                     class="hover:bg-gray-300 dark:hover:bg-gray-900"
                                 >
                                     <TableCell>
@@ -244,16 +336,16 @@ function submit() {
                                     <TableCell>
                                         {{
                                             (
-                                                props.pieces.find(p => p.id_piece === item.id_piece)?.prix_piece *
+                                                (props.pieces.find(p => p.id_piece === item.id_piece)?.prix_piece ?? 0) *
                                                 item.qte_f *
-                                                (1 + (props.pieces.find(p => p.id_piece === item.id_piece)?.tva / 100))
+                                                (1 + ((props.pieces.find(p => p.id_piece === item.id_piece)?.tva ?? 0) / 100))
                                             ).toFixed(2)
                                         }} DA
                                     </TableCell>
                                     <TableCell>
                                         <button
                                             type="button"
-                                            @click="removePiece(index)"
+                                            @click="removeItem('piece', index)"
                                             class="text-red-600 hover:text-red-900 dark:hover:text-red-400"
                                             aria-label="Supprimer pièce"
                                         >
@@ -265,26 +357,149 @@ function submit() {
                         </Table>
                     </div>
 
-                    <div v-else class="text-center py-4 text-gray-500 dark:text-gray-400">
-                        Aucune pièce sélectionnée
+                    <!-- Display Table for Prestations -->
+                    <div v-if="form.prestations.length > 0" class="overflow-x-auto bg-gray-100 dark:bg-gray-800 rounded-lg m-5">
+                        <h4 class="text-md font-medium text-gray-700 dark:text-gray-300 p-3">Prestations sélectionnées:</h4>
+                        <Table class="w-full">
+                            <TableHeader>
+                                <TableRow class="bg-gray-50 dark:bg-gray-700">
+                                    <TableHead>Prestation</TableHead>
+                                    <TableHead>Prix Unitaire</TableHead>
+                                    <TableHead>TVA</TableHead>
+                                    <TableHead>Quantité</TableHead>
+                                    <TableHead>Total</TableHead>
+                                    <TableHead>Actions</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                <TableRow
+                                    v-for="(item, index) in form.prestations"
+                                    :key="`prestation-${index}`"
+                                    class="hover:bg-gray-300 dark:hover:bg-gray-900"
+                                >
+                                    <TableCell>
+                                        {{ props.prestations.find(p => p.id_prest === item.id_prest)?.nom_prest }}
+                                    </TableCell>
+                                    <TableCell>
+                                        {{ props.prestations.find(p => p.id_prest === item.id_prest)?.prix_prest }} DA
+                                    </TableCell>
+                                    <TableCell>
+                                        {{ props.prestations.find(p => p.id_prest === item.id_prest)?.tva }}%
+                                    </TableCell>
+                                    <TableCell>
+                                        <input
+                                            v-model.number="item.qte_fpr"
+                                            type="number"
+                                            min="1"
+                                            class="w-20 border border-gray-300 dark:border-gray-600 p-1 rounded focus:ring-2 focus:ring-[#042B62] dark:focus:ring-[#F3B21B] focus:border-transparent dark:bg-gray-800 dark:text-white"
+                                        />
+                                    </TableCell>
+                                    <TableCell>
+                                        {{
+                                            (
+                                                (props.prestations.find(p => p.id_prest === item.id_prest)?.prix_prest ?? 0) *
+                                                item.qte_fpr *
+                                                (1 + ((props.prestations.find(p => p.id_prest === item.id_prest)?.tva ?? 0) / 100))
+                                            ).toFixed(2)
+                                        }} DA
+                                    </TableCell>
+                                    <TableCell>
+                                        <button
+                                            type="button"
+                                            @click="removeItem('prestation', index)"
+                                            class="text-red-600 hover:text-red-900 dark:hover:text-red-400"
+                                            aria-label="Supprimer prestation"
+                                        >
+                                            <Trash2 class="w-5 h-5" />
+                                        </button>
+                                    </TableCell>
+                                </TableRow>
+                            </TableBody>
+                        </Table>
                     </div>
 
-                    <!-- Droit Timbre Input -->
-                    <div class="flex justify-end items-center space-x-2">
-                        <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Droit Timbre (DA):</label>
-                        <input
-                            v-model.number="form.droit_timbre"
-                            type="number"
-                            min="0"
-                            class="w-32 border border-gray-300 dark:border-gray-600 p-2 rounded focus:ring-2 focus:ring-[#042B62] dark:focus:ring-[#F3B21B] focus:border-transparent dark:bg-gray-800 dark:text-white"
-                        />
+                    <!-- Display Table for Charges -->
+                    <div v-if="form.charges.length > 0" class="overflow-x-auto bg-gray-100 dark:bg-gray-800 rounded-lg m-5">
+                        <h4 class="text-md font-medium text-gray-700 dark:text-gray-300 p-3">Charges sélectionnées:</h4>
+                        <Table class="w-full">
+                            <TableHeader>
+                                <TableRow class="bg-gray-50 dark:bg-gray-700">
+                                    <TableHead>Charge</TableHead>
+                                    <TableHead>Prix Unitaire</TableHead>
+                                    <TableHead>TVA</TableHead>
+                                    <TableHead>Quantité</TableHead>
+                                    <TableHead>Total</TableHead>
+                                    <TableHead>Actions</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                <TableRow
+                                    v-for="(item, index) in form.charges"
+                                    :key="`charge-${index}`"
+                                    class="hover:bg-gray-300 dark:hover:bg-gray-900"
+                                >
+                                    <TableCell>
+                                        {{ props.charges.find(c => c.id_charge === item.id_charge)?.nom_charge }}
+                                    </TableCell>
+                                    <TableCell>
+                                        {{ props.charges.find(c => c.id_charge === item.id_charge)?.prix_charge }} DA
+                                    </TableCell>
+                                    <TableCell>
+                                        {{ props.charges.find(c => c.id_charge === item.id_charge)?.tva }}%
+                                    </TableCell>
+                                    <TableCell>
+                                        <input
+                                            v-model.number="item.qte_fc"
+                                            type="number"
+                                            min="1"
+                                            class="w-20 border border-gray-300 dark:border-gray-600 p-1 rounded focus:ring-2 focus:ring-[#042B62] dark:focus:ring-[#F3B21B] focus:border-transparent dark:bg-gray-800 dark:text-white"
+                                        />
+                                    </TableCell>
+                                    <TableCell>
+                                        {{
+                                            (
+                                                (props.charges.find(c => c.id_charge === item.id_charge)?.prix_charge ?? 0) *
+                                                item.qte_fc *
+                                                (1 + ((props.charges.find(c => c.id_charge === item.id_charge)?.tva ?? 0) / 100))
+                                            ).toFixed(2)
+                                        }} DA
+                                    </TableCell>
+                                    <TableCell>
+                                        <button
+                                            type="button"
+                                            @click="removeItem('charge', index)"
+                                            class="text-red-600 hover:text-red-900 dark:hover:text-red-400"
+                                            aria-label="Supprimer charge"
+                                        >
+                                            <Trash2 class="w-5 h-5" />
+                                        </button>
+                                    </TableCell>
+                                </TableRow>
+                            </TableBody>
+                        </Table>
                     </div>
 
-                    <!-- Total Amount -->
-                    <div class="flex justify-end">
-                        <div class="text-lg font-semibold text-gray-700 dark:text-gray-300">
-                            Montant Total: {{ totalAmount.toFixed(2) }} DA
-                        </div>
+                    <div v-if="form.pieces.length === 0 && form.prestations.length === 0 && form.charges.length === 0" class="text-center py-4 text-gray-500 dark:text-gray-400">
+                        Aucun article sélectionné. Veuillez ajouter au moins une pièce, prestation ou charge.
+                    </div>
+                </div>
+
+                <!-- Droit Timbre Input -->
+                <div class="flex justify-end items-center space-x-2">
+                    <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Droit Timbre (DA):</label>
+                    <input
+                        v-model.number="form.droit_timbre"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        class="w-32 border border-gray-300 dark:border-gray-600 p-2 rounded focus:ring-2 focus:ring-[#042B62] dark:focus:ring-[#F3B21B] focus:border-transparent dark:bg-gray-800 dark:text-white"
+                    />
+                </div>
+
+                <!-- Total Amount -->
+                <div class="flex justify-end">
+                    <div class="text-lg font-semibold text-gray-700 dark:text-gray-300">
+                        Montant Total: {{ totalAmount.toFixed(2) }} DA
                     </div>
                 </div>
 
@@ -297,7 +512,7 @@ function submit() {
                     </Link>
                     <button
                         type="submit"
-                        :disabled="form.processing || form.pieces.length === 0"
+                        :disabled="form.processing || (form.pieces.length === 0 && form.prestations.length === 0 && form.charges.length === 0)"
                         class="px-4 py-2 bg-[#042B62] dark:bg-[#F3B21B] text-white dark:text-[#042B62] rounded-lg hover:bg-blue-900 dark:hover:bg-yellow-200 transition flex items-center gap-2 disabled:opacity-50"
                     >
                         <span>Créer</span>
@@ -308,3 +523,4 @@ function submit() {
         </div>
     </AppLayout>
 </template>
+

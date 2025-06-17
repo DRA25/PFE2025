@@ -24,7 +24,6 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Centre', href: route('scentre.dras.index') },
     { title: 'Gestion des DRAs', href: '/scentre/dras' },
     { title: `Details de DRA ${props.dra.n_dra}`, href: route('scentre.dras.show', { dra: props.dra.n_dra }) },
-
 ];
 
 const closeDra = (draId: string, currentEtat: string) => {
@@ -37,16 +36,12 @@ const closeDra = (draId: string, currentEtat: string) => {
     if (confirm('Êtes-vous sûr de vouloir clôturer ce DRA ?')) {
         router.put(route('scentre.dras.close', { dra: draId }), {
             preserveScroll: true,
-            // After successful update, Inertia will typically refresh the page with updated props.
-            // No explicit local state update is needed here unless you're handling partial reloads.
             onError: (errors) => {
                 alert('Erreur lors de la clôture du DRA: ' + (errors.message || 'Une erreur est survenue'));
             },
         });
     }
 };
-
-
 </script>
 
 <template>
@@ -78,12 +73,8 @@ const closeDra = (draId: string, currentEtat: string) => {
                         <p class="text-sm text-gray-500 dark:text-gray-400">Total DRA</p>
                         <p class="text-gray-900 dark:text-gray-100">{{ Number(dra.total_dra).toFixed(2) }}</p>
                     </div>
-
-
-
-
                 </div>
-                <!-- Action Buttons -->
+
                 <div class="mt-20 flex flex-wrap gap-4 justify-center md:justify-end h-fit">
                     <Link
                         v-if="dra.etat === 'actif' || dra.etat === 'refuse'"
@@ -117,17 +108,14 @@ const closeDra = (draId: string, currentEtat: string) => {
                         :href="route('scentre.dras.destroy', { dra: dra.n_dra })"
                         method="delete"
                         as="button"
-                        @click.prevent="confirmDeleteDra(dra.n_dra, dra.etat)"
                         class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-400 transition flex items-center gap-2"
                     >
                         <Trash2 class="w-4 h-4" />
                         <span>Supprimer</span>
                     </Link>
                 </div>
-
             </div>
 
-            <!-- FACTURES -->
             <div class="mt-10">
                 <h2 class="text-xl font-semibold text-[#042B62FF] dark:text-[#F3B21B] mb-4">Factures liées</h2>
                 <div v-if="factures.length > 0" class="space-y-2">
@@ -135,13 +123,12 @@ const closeDra = (draId: string, currentEtat: string) => {
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Fournisseur</TableHead>
+                                <TableHead>Type</TableHead>
                                 <TableHead>Libellé</TableHead>
-                                <TableHead>Montant</TableHead>
+                                <TableHead>Montant HT</TableHead>
                                 <TableHead>TVA</TableHead>
                                 <TableHead>Droit Timbre</TableHead>
-                                <TableHead>Nombre de pièces</TableHead>
                                 <TableHead>Total</TableHead>
-
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -152,29 +139,71 @@ const closeDra = (draId: string, currentEtat: string) => {
                             >
                                 <TableCell>{{ facture.fournisseur.nom_fourn }}</TableCell>
                                 <TableCell>
+                                    <span v-if="facture.pieces.length > 0" class="block">Pièces</span>
+                                    <span v-if="facture.prestations.length > 0" class="block">Prestations</span>
+                                    <span v-if="facture.charges.length > 0" class="block">Charges</span>
+                                </TableCell>
+                                <TableCell>
                                     <div v-for="piece in facture.pieces" :key="piece.id_piece" class="text-sm">
                                         {{ piece.nom_piece }} (x{{ piece.pivot.qte_f }})
                                     </div>
-                                </TableCell>
-                                <TableCell>{{ Number(facture.montant).toFixed(2) }} DA</TableCell>
-                                <TableCell>
-                                    <div v-for="piece in facture.pieces" :key="piece.id_piece" class="text-sm">
-                                    {{ piece.tva }}%
+                                    <div v-for="prestation in facture.prestations" :key="prestation.id_prest" class="text-sm">
+                                        {{ prestation.nom_prest }} (x{{ prestation.pivot.qte_fpr }})
+                                    </div>
+                                    <div v-for="charge in facture.charges" :key="charge.id_charge" class="text-sm">
+                                        {{ charge.nom_charge }} (x{{ charge.pivot.qte_fc }})
                                     </div>
                                 </TableCell>
-                                <TableCell>{{ facture.droit_timbre }} DA</TableCell>
-                                <TableCell>{{ facture.pieces.length }}</TableCell>
-                                <TableCell>{{ Number(facture.montant + facture.droit_timbre).toFixed(2) }} DA</TableCell>
-
+                                <TableCell>
+                                    <div v-if="facture.pieces.length > 0" class="text-sm">
+                                        {{ facture.pieces.reduce((sum, piece) => sum + (piece.prix_piece * (piece.pivot.qte_f || 1)), 0).toFixed(2) }} DA
+                                    </div>
+                                    <div v-if="facture.prestations.length > 0" class="text-sm">
+                                        {{ facture.prestations.reduce((sum, prest) => sum + prest.prix_prest * (prest.pivot.qte_fpr || 1), 0).toFixed(2) }} DA
+                                    </div>
+                                    <div v-if="facture.charges.length > 0" class="text-sm">
+                                        {{ facture.charges.reduce((sum, charge) => sum + charge.prix_charge * (charge.pivot.qte_fc || 1), 0).toFixed(2) }} DA
+                                    </div>
+                                </TableCell>
+                                <TableCell>
+                                    <div v-if="facture.pieces.length > 0" class="text-sm">
+                                        {{ facture.pieces.reduce((sum, piece) => sum + (piece.prix_piece * (piece.pivot.qte_f || 1) * (piece.tva || 0) / 100), 0).toFixed(2) }} DA
+                                    </div>
+                                    <div v-if="facture.prestations.length > 0" class="text-sm">
+                                        {{ facture.prestations.reduce((sum, prest) => sum + (prest.prix_prest  * (prest.pivot.qte_fpr || 1) * (prest.tva || 0) / 100), 0).toFixed(2) }} DA
+                                    </div>
+                                    <div v-if="facture.charges.length > 0" class="text-sm">
+                                        {{ facture.charges.reduce((sum, charge) => sum + (charge.prix_charge * (charge.pivot.qte_fc || 1) * (charge.tva || 0) / 100), 0).toFixed(2) }} DA
+                                    </div>
+                                </TableCell>
+                                <TableCell>{{ facture.droit_timbre || 0 }} DA</TableCell>
+                                <TableCell>
+                                    {{
+                                        (
+                                            // Pieces total (HT + TVA)
+                                            facture.pieces.reduce((sum, piece) => sum +
+                                                    (piece.prix_piece * (piece.pivot.qte_f || 1) * (1 + (piece.tva || 0) / 100)),
+                                                0) +
+                                            // Prestations total (HT + TVA)
+                                            facture.prestations.reduce((sum, prest) => sum +
+                                                    (prest.prix_prest * (prest.pivot.qte_fpr || 1)  * (1 + (prest.tva || 0) / 100)),
+                                                0) +
+                                            // Charges total (HT + TVA)
+                                            facture.charges.reduce((sum, charge) => sum +
+                                                    (charge.prix_charge * (charge.pivot.qte_fc || 1)  * (1 + (charge.tva || 0) / 100)),
+                                                0) +
+                                            // Droit timbre
+                                            (facture.droit_timbre || 0)
+                                        ).toFixed(2)
+                                    }} DA
+                                </TableCell>
                             </TableRow>
                         </TableBody>
                     </Table>
-
                 </div>
                 <p v-else class="text-gray-600 dark:text-gray-400">Aucune facture liée à ce DRA.</p>
             </div>
 
-            <!-- BON ACHATS -->
             <div class="mt-10">
                 <h2 class="text-xl font-semibold text-[#042B62FF] dark:text-[#F3B21B] mb-4">Bons d'Achat liés</h2>
                 <div v-if="bonAchats.length > 0" class="space-y-2">
@@ -183,9 +212,8 @@ const closeDra = (draId: string, currentEtat: string) => {
                             <TableRow>
                                 <TableHead>Fournisseur</TableHead>
                                 <TableHead>Libellé</TableHead>
-                                <TableHead>Montant</TableHead>
+                                <TableHead>Montant HT</TableHead>
                                 <TableHead>TVA</TableHead>
-                                <TableHead>Nombre de pièces</TableHead>
                                 <TableHead>Total</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -201,20 +229,16 @@ const closeDra = (draId: string, currentEtat: string) => {
                                         {{ piece.nom_piece }} (x{{ piece.pivot.qte_ba }})
                                     </div>
                                 </TableCell>
-                                <TableCell>{{ Number(bon.montant).toFixed(2) }} DA</TableCell>
                                 <TableCell>
-                                    <div v-for="piece in bon.pieces" :key="piece.id_piece" class="text-sm">
-                                        {{ piece.tva }}%
-                                    </div>
+                                    {{ bon.pieces.reduce((sum, piece) => sum + (piece.prix_piece * (piece.pivot.qte_ba || 1)), 0).toFixed(2) }} DA
                                 </TableCell>
-                                <TableCell>{{ bon.pieces.length }}</TableCell>
+                                <TableCell>
+                                    {{ bon.pieces.reduce((sum, piece) => sum + (piece.prix_piece * (piece.pivot.qte_ba || 1) * (piece.tva || 0) / 100), 0).toFixed(2) }} DA
+                                </TableCell>
                                 <TableCell>{{ Number(bon.montant).toFixed(2) }} DA</TableCell>
-
                             </TableRow>
                         </TableBody>
                     </Table>
-
-
                 </div>
                 <p v-else class="text-gray-600 dark:text-gray-400">Aucun bon d'achat lié à ce DRA.</p>
             </div>

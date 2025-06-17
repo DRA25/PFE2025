@@ -39,4 +39,10 @@ class Charge extends Model
         return $this->belongsToMany(BonDeCommande::class, 'commande_charges', 'id_charge', 'n_bc')
             ->withPivot('qte_commandec');
     }
+
+    public function factures()
+    {
+        return $this->belongsToMany(Facture::class, 'facture_charge', 'id_charge', 'n_facture')
+            ->withPivot('qte_fc'); // Use the correct pivot column name here
+    }
 }

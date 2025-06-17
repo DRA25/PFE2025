@@ -45,4 +45,10 @@ class Prestation extends Model
         return $this->belongsToMany(BonDeCommande::class, 'commande_prests', 'id_prest', 'n_bc')
             ->withPivot('qte_commandepr');
     }
+
+    public function factures()
+    {
+        return $this->belongsToMany(Facture::class, 'facture_prestation', 'id_prest', 'n_facture')
+            ->withPivot('qte_fpr'); // Use the correct pivot column name here
+    }
 }

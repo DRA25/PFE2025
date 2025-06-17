@@ -28,6 +28,20 @@ protected $fillable = [
             ->withPivot('qte_f');
     }
 
+    // New: Relationship for Prestations
+    public function prestations()
+    {
+        return $this->belongsToMany(Prestation::class, 'facture_prestation', 'n_facture', 'id_prest')
+            ->withPivot('qte_fpr'); // Use the correct pivot column name here
+    }
+
+    // New: Relationship for Charges
+    public function charges()
+    {
+        return $this->belongsToMany(Charge::class, 'facture_charge', 'n_facture', 'id_charge')
+            ->withPivot('qte_fc'); // Use the correct pivot column name here
+    }
+
     /**
      * Calculate the total amount of the facture.
      */

@@ -39,7 +39,11 @@ class ConsulterDraController extends Controller
 //
         // Load factures with related data
         $factures = $dra->factures()
-            ->with(['fournisseur:id_fourn,nom_fourn', 'pieces:id_piece,nom_piece,prix_piece,tva'])
+            ->with(['fournisseur:id_fourn,nom_fourn',
+                'pieces:id_piece,nom_piece,prix_piece,tva',
+                'prestations:id_prest,nom_prest,desc_prest,prix_prest,tva',
+                'charges:id_charge,nom_charge,desc_change,prix_charge,tva'
+            ])
             ->get()
             ->map(function ($facture) {
                 $facture->montant = $this->calculateMontant($facture);
@@ -75,12 +79,34 @@ class ConsulterDraController extends Controller
 
     protected function calculateMontant($model)
     {
-        // Sum of pieces (HT + TVA)
-        $total = $model->pieces->sum(function ($piece) {
-            $ht = $piece->prix_piece;
-            $tva = $piece->tva ?? 0;
-            return $ht * (1 + $tva / 100);
-        });
+        $total = 0;
+
+        // Calculate pieces total (HT + TVA)
+        if ($model->relationLoaded('pieces')) {
+            $total += $model->pieces->sum(function ($piece) {
+                $ht = $piece->prix_piece;
+                $tva = $piece->tva ?? 0;
+                return $ht * (1 + $tva / 100);
+            });
+        }
+
+        // Add prestations (HT + TVA)
+        if ($model->relationLoaded('prestations')) {
+            $total += $model->prestations->sum(function ($prestation) {
+                $ht = $prestation->prix_prest;
+                $tva = $prestation->tva ?? 0;
+                return $ht * (1 + $tva / 100);
+            });
+        }
+
+        // Add charges (HT + TVA)
+        if ($model->relationLoaded('charges')) {
+            $total += $model->charges->sum(function ($charge) {
+                $ht = $charge->prix_charge;
+                $tva = $charge->tva ?? 0;
+                return $ht * (1 + $tva / 100);
+            });
+        }
 
         // If it's a Facture, add droit_timbre
         if ($model instanceof \App\Models\Facture) {

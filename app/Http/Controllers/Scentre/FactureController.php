@@ -7,6 +7,8 @@ use App\Models\Dra;
 use App\Models\Facture;
 use App\Models\Fournisseur;
 use App\Models\Piece;
+use App\Models\Prestation;
+use App\Models\Charge;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -16,7 +18,12 @@ class FactureController extends Controller
     public function index(Dra $dra)
     {
         $factures = $dra->factures()
-            ->with(['fournisseur:id_fourn,nom_fourn', 'pieces:id_piece,nom_piece,prix_piece,tva'])
+            ->with([
+                'fournisseur:id_fourn,nom_fourn',
+                'pieces:id_piece,nom_piece,prix_piece,tva',
+                'prestations:id_prest,nom_prest,prix_prest,tva',
+                'charges:id_charge,nom_charge,prix_charge,tva'
+            ])
             ->get()
             ->map(function ($facture) {
                 $facture->montant = $this->calculateMontant($facture);
@@ -32,7 +39,12 @@ class FactureController extends Controller
     public function show(Dra $dra)
     {
         $factures = $dra->factures()
-            ->with(['fournisseur:id_fourn,nom_fourn', 'pieces:id_piece,nom_piece,prix_piece,tva'])
+            ->with([
+                'fournisseur:id_fourn,nom_fourn',
+                'pieces:id_piece,nom_piece,prix_piece,tva',
+                'prestations:id_prest,nom_prest,prix_prest,tva',
+                'charges:id_charge,nom_charge,prix_charge,tva'
+            ])
             ->get()
             ->map(function ($facture) {
                 $facture->montant = $this->calculateMontant($facture);
@@ -49,11 +61,15 @@ class FactureController extends Controller
     {
         $fournisseurs = Fournisseur::all(['id_fourn', 'nom_fourn']);
         $pieces = Piece::all(['id_piece', 'nom_piece', 'prix_piece', 'tva']);
+        $prestations = Prestation::all(['id_prest', 'nom_prest', 'prix_prest', 'tva']);
+        $charges = Charge::all(['id_charge', 'nom_charge', 'prix_charge', 'tva']);
 
         return inertia('Facture/Create', [
             'dra' => $dra,
             'fournisseurs' => $fournisseurs,
             'pieces' => $pieces,
+            'prestations' => $prestations,
+            'charges' => $charges,
         ]);
     }
 
@@ -64,10 +80,21 @@ class FactureController extends Controller
             'date_facture' => 'required|date',
             'id_fourn' => 'required|exists:fournisseurs,id_fourn',
             'droit_timbre' => 'nullable|numeric',
-            'pieces' => 'required|array|min:1',
-            'pieces.*.id_piece' => 'required|exists:pieces,id_piece',
-            'pieces.*.qte_f' => 'required|integer|min:1',
+            'pieces' => 'nullable|array',
+            'pieces.*.id_piece' => 'required_with:pieces|exists:pieces,id_piece',
+            'pieces.*.qte_f' => 'required_with:pieces|integer|min:1',
+            'prestations' => 'nullable|array',
+            'prestations.*.id_prest' => 'required_with:prestations|exists:prestations,id_prest',
+            'prestations.*.qte_fpr' => 'required_with:prestations|integer|min:1',
+            'charges' => 'nullable|array',
+            'charges.*.id_charge' => 'required_with:charges|exists:charges,id_charge',
+            'charges.*.qte_fc' => 'required_with:charges|integer|min:1',
         ]);
+
+        // At least one of pieces, prestations, or charges must be present
+        if (empty($request->pieces) && empty($request->prestations) && empty($request->charges)) {
+            return back()->withErrors(['items' => 'Vous devez sélectionner au moins un article (pièce, prestation ou charge).']);
+        }
 
         DB::beginTransaction();
 
@@ -81,11 +108,32 @@ class FactureController extends Controller
             ]);
             $facture->save();
 
-            $pieceAttachments = [];
-            foreach ($request->pieces as $piece) {
-                $pieceAttachments[$piece['id_piece']] = ['qte_f' => $piece['qte_f']];
+            // Attach pieces if present
+            if (!empty($request->pieces)) {
+                $pieceAttachments = [];
+                foreach ($request->pieces as $piece) {
+                    $pieceAttachments[$piece['id_piece']] = ['qte_f' => $piece['qte_f']];
+                }
+                $facture->pieces()->attach($pieceAttachments);
             }
-            $facture->pieces()->attach($pieceAttachments);
+
+            // Attach prestations if present
+            if (!empty($request->prestations)) {
+                $prestationAttachments = [];
+                foreach ($request->prestations as $prestation) {
+                    $prestationAttachments[$prestation['id_prest']] = ['qte_fpr' => $prestation['qte_fpr']];
+                }
+                $facture->prestations()->attach($prestationAttachments);
+            }
+
+            // Attach charges if present
+            if (!empty($request->charges)) {
+                $chargeAttachments = [];
+                foreach ($request->charges as $charge) {
+                    $chargeAttachments[$charge['id_charge']] = ['qte_fc' => $charge['qte_fc']];
+                }
+                $facture->charges()->attach($chargeAttachments);
+            }
 
             $totalFacture = $this->calculateMontant($facture);
 
@@ -96,14 +144,14 @@ class FactureController extends Controller
             }
 
             // Calculate total_dra including both bonAchats and factures
-            $dra->load('bonAchats.pieces', 'factures.pieces');
+            $dra->load('bonAchats.pieces', 'factures.pieces', 'factures.prestations', 'factures.charges');
             $totalDra = '0';
 
             foreach ($dra->bonAchats as $ba) {
-                $totalDra = bcadd($totalDra, (string)$this->calculateBonAchatMontant($ba),2);
+                $totalDra = bcadd($totalDra, (string)$this->calculateBonAchatMontant($ba), 2);
             }
             foreach ($dra->factures as $f) {
-                $totalDra = bcadd($totalDra, (string)$this->calculateMontant($f),2);
+                $totalDra = bcadd($totalDra, (string)$this->calculateMontant($f), 2);
             }
 
             if ($dra->centre->montant_disponible < $totalFacture) {
@@ -114,7 +162,6 @@ class FactureController extends Controller
             $dra->update([
                 'total_dra' => round($totalDra, 2),
             ]);
-
 
             $dra->centre->update([
                 'montant_disponible' => $dra->centre->montant_disponible - $totalFacture
@@ -134,13 +181,18 @@ class FactureController extends Controller
     {
         $fournisseurs = Fournisseur::all(['id_fourn', 'nom_fourn']);
         $pieces = Piece::all(['id_piece', 'nom_piece', 'prix_piece', 'tva']);
-        $facture->load('pieces');
+        $prestations = Prestation::all(['id_prest', 'nom_prest', 'prix_prest', 'tva']);
+        $charges = Charge::all(['id_charge', 'nom_charge', 'prix_charge', 'tva']);
+
+        $facture->load('pieces', 'prestations', 'charges');
 
         return Inertia::render('Facture/Edit', [
             'dra' => $dra,
             'facture' => $facture,
             'fournisseurs' => $fournisseurs,
             'allPieces' => $pieces,
+            'allPrestations' => $prestations,
+            'allCharges' => $charges,
         ]);
     }
 
@@ -151,10 +203,21 @@ class FactureController extends Controller
             'date_facture' => 'required|date',
             'id_fourn' => 'required|exists:fournisseurs,id_fourn',
             'droit_timbre' => 'nullable|numeric',
-            'pieces' => 'required|array|min:1',
-            'pieces.*.id_piece' => 'required|exists:pieces,id_piece',
-            'pieces.*.qte_f' => 'required|integer|min:1',
+            'pieces' => 'nullable|array',
+            'pieces.*.id_piece' => 'required_with:pieces|exists:pieces,id_piece',
+            'pieces.*.qte_f' => 'required_with:pieces|integer|min:1',
+            'prestations' => 'nullable|array',
+            'prestations.*.id_prest' => 'required_with:prestations|exists:prestations,id_prest',
+            'prestations.*.qte_fpr' => 'required_with:prestations|integer|min:1',
+            'charges' => 'nullable|array',
+            'charges.*.id_charge' => 'required_with:charges|exists:charges,id_charge',
+            'charges.*.qte_fc' => 'required_with:charges|integer|min:1',
         ]);
+
+        // At least one of pieces, prestations, or charges must be present
+        if (empty($request->pieces) && empty($request->prestations) && empty($request->charges)) {
+            return back()->withErrors(['items' => 'Vous devez sélectionner au moins un article (pièce, prestation ou charge).']);
+        }
 
         DB::beginTransaction();
 
@@ -174,11 +237,38 @@ class FactureController extends Controller
                 'droit_timbre' => $request->droit_timbre ?? 0,
             ]);
 
-            $pieceAttachments = [];
-            foreach ($request->pieces as $piece) {
-                $pieceAttachments[$piece['id_piece']] = ['qte_f' => $piece['qte_f']];
+            // Sync pieces if present
+            if (!empty($request->pieces)) {
+                $pieceAttachments = [];
+                foreach ($request->pieces as $piece) {
+                    $pieceAttachments[$piece['id_piece']] = ['qte_f' => $piece['qte_f']];
+                }
+                $facture->pieces()->sync($pieceAttachments);
+            } else {
+                $facture->pieces()->detach();
             }
-            $facture->pieces()->sync($pieceAttachments);
+
+            // Sync prestations if present
+            if (!empty($request->prestations)) {
+                $prestationAttachments = [];
+                foreach ($request->prestations as $prestation) {
+                    $prestationAttachments[$prestation['id_prest']] = ['qte_fpr' => $prestation['qte_fpr']];
+                }
+                $facture->prestations()->sync($prestationAttachments);
+            } else {
+                $facture->prestations()->detach();
+            }
+
+            // Sync charges if present
+            if (!empty($request->charges)) {
+                $chargeAttachments = [];
+                foreach ($request->charges as $charge) {
+                    $chargeAttachments[$charge['id_charge']] = ['qte_fc' => $charge['qte_fc']];
+                }
+                $facture->charges()->sync($chargeAttachments);
+            } else {
+                $facture->charges()->detach();
+            }
 
             $facture->refresh();
             $newMontant = $this->calculateMontant($facture);
@@ -190,7 +280,7 @@ class FactureController extends Controller
             }
 
             $totalDra = 0;
-            $dra->load(['bonAchats.pieces', 'factures.pieces']);
+            $dra->load(['bonAchats.pieces', 'factures.pieces', 'factures.prestations', 'factures.charges']);
 
             foreach ($dra->bonAchats as $ba) {
                 $totalDra += $this->calculateBonAchatMontant($ba);
@@ -228,13 +318,15 @@ class FactureController extends Controller
             $montantToRestore = $this->calculateMontant($facture);
 
             $facture->pieces()->detach();
+            $facture->prestations()->detach();
+            $facture->charges()->detach();
             $facture->delete();
 
             $dra->centre->update([
                 'montant_disponible' => $dra->centre->montant_disponible + $montantToRestore
             ]);
 
-            $dra->load('bonAchats.pieces', 'factures.pieces');
+            $dra->load('bonAchats.pieces', 'factures.pieces', 'factures.prestations', 'factures.charges');
 
             $totalDra = '0';
             foreach ($dra->bonAchats as $ba) {
@@ -265,7 +357,17 @@ class FactureController extends Controller
             return $subtotal * (1 + ($piece->tva / 100));
         });
 
-        return $piecesTotal + ($facture->droit_timbre ?? 0);
+        $prestationsTotal = $facture->prestations->sum(function ($prestation) {
+            $subtotal = $prestation->prix_prest * $prestation->pivot->qte_fpr;
+            return $subtotal * (1 + ($prestation->tva / 100));
+        });
+
+        $chargesTotal = $facture->charges->sum(function ($charge) {
+            $subtotal = $charge->prix_charge * $charge->pivot->qte_fc;
+            return $subtotal * (1 + ($charge->tva / 100));
+        });
+
+        return $piecesTotal + $prestationsTotal + $chargesTotal + ($facture->droit_timbre ?? 0);
     }
 
     protected function calculateBonAchatMontant($bonAchat): float

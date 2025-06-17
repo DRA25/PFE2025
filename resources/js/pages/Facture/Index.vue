@@ -32,7 +32,25 @@ const props = defineProps({
             pivot: {
                 qte_f: number
             }
-        }>
+        }>,
+        prestations: Array<{ // Add prestations to props
+            id_prest: number
+            nom_prest: string
+            prix_prest: number
+            tva: number
+            pivot: {
+                qte_fpr: number
+            }
+        }>,
+        charges: Array<{ // Add charges to props
+            id_charge: number
+            nom_charge: string
+            prix_charge: number
+            tva: number
+            pivot: {
+                qte_fc: number
+            }
+        }>,
     }>(),
 })
 
@@ -54,14 +72,25 @@ const requestSort = (column: string) => {
     }
 }
 
-// Calculate total amount for a facture including droit_timbre
+// Calculate total amount for a facture including droit_timbre, pieces, prestations, and charges
 const calculateMontant = (facture: typeof props.factures[0]) => {
     const totalPieces = facture.pieces.reduce((total, piece) => {
         const subtotal = piece.prix_piece * piece.pivot.qte_f;
         return total + (subtotal * (1 + (piece.tva / 100)));
     }, 0);
+
+    const totalPrestations = facture.prestations.reduce((total, prestation) => {
+        const subtotal = prestation.prix_prest * prestation.pivot.qte_fpr;
+        return total + (subtotal * (1 + (prestation.tva / 100)));
+    }, 0);
+
+    const totalCharges = facture.charges.reduce((total, charge) => {
+        const subtotal = charge.prix_charge * charge.pivot.qte_fc;
+        return total + (subtotal * (1 + (charge.tva / 100)));
+    }, 0);
+
     const timbre = facture.droit_timbre ?? 0;
-    return totalPieces + timbre;
+    return totalPieces + totalPrestations + totalCharges + timbre;
 }
 
 const sortedFactures = computed(() => {
@@ -74,7 +103,9 @@ const sortedFactures = computed(() => {
             String(calculateMontant(facture)).toLowerCase().includes(query) ||
             facture.date_facture.toLowerCase().includes(query) ||
             facture.fournisseur?.nom_fourn?.toLowerCase().includes(query) ||
-            facture.pieces?.some(piece => piece.nom_piece.toLowerCase().includes(query))
+            facture.pieces?.some(piece => piece.nom_piece.toLowerCase().includes(query)) ||
+            facture.prestations?.some(prestation => prestation.nom_prest.toLowerCase().includes(query)) || // Include prestations in search
+            facture.charges?.some(charge => charge.nom_charge.toLowerCase().includes(query)) // Include charges in search
         );
     }
 
@@ -117,7 +148,7 @@ const sortedFactures = computed(() => {
                 <input
                     type="text"
                     v-model="searchQuery"
-                    placeholder="Rechercher par ID, montant, date ou fournisseur..."
+                    placeholder="Rechercher par ID, montant, date, fournisseur, pièce, prestation ou charge..."
                     class="w-full bg-gray-100 px-4 py-2 rounded-md border border-gray-200 dark:border-gray-700 dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
                 />
             </div>
@@ -155,38 +186,65 @@ const sortedFactures = computed(() => {
                             Fournisseur
                             <ArrowUpDown class="ml-2 h-4 w-4 inline-block" />
                         </TableHead>
-                        <TableHead>Libelle</TableHead>
+                        <TableHead>Libellé</TableHead>
                         <TableHead>Actions</TableHead>
                     </TableRow>
                 </TableHeader>
 
                 <TableBody>
-                    <TableRow
-                        v-for="facture in sortedFactures"
-                        :key="facture.n_facture"
-                        class="hover:bg-gray-300 dark:hover:bg-gray-900"
-                    >
-                        <TableCell>{{ facture.n_facture }}</TableCell>
-                        <TableCell>{{ calculateMontant(facture).toFixed(2) }}</TableCell>
-                        <TableCell>{{ new Date(facture.date_facture).toLocaleDateString() }}</TableCell>
-                        <TableCell>{{ facture.fournisseur?.nom_fourn }}</TableCell>
-                        <TableCell>
-                            <div v-for="piece in facture.pieces" :key="piece.id_piece" class="text-sm">
-                                {{ piece.nom_piece }} (x{{ piece.pivot.qte_f }})
-                            </div>
-                        </TableCell>
-                        <TableCell>
-                            <Link
-                                :href="route('scentre.dras.factures.edit', { dra: props.dra.n_dra, facture: facture.n_facture })"
-                                class="bg-green-600 text-white px-3 py-1 rounded-lg hover:bg-green-400 transition"
-                            >
-                                <span class="inline-flex items-center space-x-1">
-                                    <span>Modifier</span>
-                                    <Pencil class="w-4 h-4" />
-                                </span>
-                            </Link>
-                        </TableCell>
-                    </TableRow>
+                    <template v-if="sortedFactures.length > 0">
+                        <TableRow
+                            v-for="facture in sortedFactures"
+                            :key="facture.n_facture"
+                            class="hover:bg-gray-300 dark:hover:bg-gray-900"
+                        >
+                            <TableCell>{{ facture.n_facture }}</TableCell>
+                            <TableCell>{{ calculateMontant(facture).toFixed(2) }}</TableCell>
+                            <TableCell>{{ new Date(facture.date_facture).toLocaleDateString() }}</TableCell>
+                            <TableCell>{{ facture.fournisseur?.nom_fourn }}</TableCell>
+                            <TableCell>
+                                <div v-if="facture.pieces && facture.pieces.length > 0" class="mb-1">
+                                    <h4 class="font-semibold text-gray-800 dark:text-gray-200">Pièces:</h4>
+                                    <div v-for="piece in facture.pieces" :key="piece.id_piece" class="text-sm">
+                                        {{ piece.nom_piece }} (x{{ piece.pivot.qte_f }})
+                                    </div>
+                                </div>
+                                <div v-if="facture.prestations && facture.prestations.length > 0" class="mb-1">
+                                    <h4 class="font-semibold text-gray-800 dark:text-gray-200">Prestations:</h4>
+                                    <div v-for="prestation in facture.prestations" :key="prestation.id_prest" class="text-sm">
+                                        {{ prestation.nom_prest }} (x{{ prestation.pivot.qte_fpr }})
+                                    </div>
+                                </div>
+                                <div v-if="facture.charges && facture.charges.length > 0">
+                                    <h4 class="font-semibold text-gray-800 dark:text-gray-200">Charges:</h4>
+                                    <div v-for="charge in facture.charges" :key="charge.id_charge" class="text-sm">
+                                        {{ charge.nom_charge }} (x{{ charge.pivot.qte_fc }})
+                                    </div>
+                                </div>
+                                <div v-if="(!facture.pieces || facture.pieces.length === 0) && (!facture.prestations || facture.prestations.length === 0) && (!facture.charges || facture.charges.length === 0)" class="text-sm text-gray-500 dark:text-gray-400">
+                                    Aucune pièce, prestation ou charge
+                                </div>
+                            </TableCell>
+                            <TableCell>
+                                <Link
+                                    :href="route('scentre.dras.factures.edit', { dra: props.dra.n_dra, facture: facture.n_facture })"
+                                    class="bg-green-600 text-white px-3 py-1 rounded-lg hover:bg-green-400 transition"
+                                >
+                                    <span class="inline-flex items-center space-x-1">
+                                        <span>Modifier</span>
+                                        <Pencil class="w-4 h-4" />
+                                    </span>
+                                </Link>
+                            </TableCell>
+                        </TableRow>
+                    </template>
+                    <template v-else>
+                        <TableRow>
+                            <TableCell colspan="6" class="text-center py-4 text-gray-500">
+                                Aucune facture trouvée pour ce DRA.
+                            </TableCell>
+                        </TableRow>
+                    </template>
                 </TableBody>
             </Table>
 
