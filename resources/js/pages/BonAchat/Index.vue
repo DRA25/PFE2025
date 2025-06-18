@@ -17,7 +17,6 @@ const props = defineProps({
     dra: Object,
     bonAchats: Array<{
         n_ba: string
-        montant_ba: number
         date_ba: string
         id_fourn: number
         n_dra: string
@@ -32,6 +31,24 @@ const props = defineProps({
             tva: number
             pivot: {
                 qte_ba: number
+            }
+        }>
+        prestations: Array<{
+            id_prest: number
+            nom_prest: string
+            prix_prest: number
+            tva: number
+            pivot: {
+                qte_bapr: number
+            }
+        }>
+        charges: Array<{
+            id_charge: number
+            nom_charge: string
+            prix_charge: number
+            tva: number
+            pivot: {
+                qte_bac: number
             }
         }>
     }>(),
@@ -56,10 +73,22 @@ const requestSort = (column: string) => {
 }
 
 const calculateMontant = (bonAchat: typeof props.bonAchats[0]) => {
-    return bonAchat.pieces.reduce((total, piece) => {
+    const totalPieces = bonAchat.pieces.reduce((total, piece) => {
         const subtotal = piece.prix_piece * piece.pivot.qte_ba;
-        return total + subtotal * (1 + (piece.tva / 100));
+        return total + (subtotal * (1 + (piece.tva / 100)));
     }, 0);
+
+    const totalPrestations = bonAchat.prestations.reduce((total, prestation) => {
+        const subtotal = prestation.prix_prest * prestation.pivot.qte_bapr;
+        return total + (subtotal * (1 + (prestation.tva / 100)));
+    }, 0);
+
+    const totalCharges = bonAchat.charges.reduce((total, charge) => {
+        const subtotal = charge.prix_charge * charge.pivot.qte_bac;
+        return total + (subtotal * (1 + (charge.tva / 100)));
+    }, 0);
+
+    return totalPieces + totalPrestations + totalCharges;
 }
 
 const sortedBonAchats = computed(() => {
@@ -72,7 +101,9 @@ const sortedBonAchats = computed(() => {
             String(calculateMontant(bonAchat)).toLowerCase().includes(query) ||
             bonAchat.date_ba.toLowerCase().includes(query) ||
             bonAchat.fournisseur?.nom_fourn?.toLowerCase().includes(query) ||
-            bonAchat.pieces?.some(piece => piece.nom_piece.toLowerCase().includes(query))
+            bonAchat.pieces?.some(piece => piece.nom_piece.toLowerCase().includes(query)) ||
+            bonAchat.prestations?.some(prestation => prestation.nom_prest.toLowerCase().includes(query)) ||
+            bonAchat.charges?.some(charge => charge.nom_charge.toLowerCase().includes(query))
         );
     }
 
@@ -115,7 +146,7 @@ const sortedBonAchats = computed(() => {
                 <input
                     type="text"
                     v-model="searchQuery"
-                    placeholder="Rechercher par ID, montant, date ou fournisseur..."
+                    placeholder="Rechercher par ID, montant, date, fournisseur, pièce, prestation ou charge..."
                     class="w-full bg-gray-100 px-4 py-2 rounded-md border border-gray-200 dark:border-gray-700 dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
                 />
             </div>
@@ -159,32 +190,59 @@ const sortedBonAchats = computed(() => {
                 </TableHeader>
 
                 <TableBody>
-                    <TableRow
-                        v-for="bonAchat in sortedBonAchats"
-                        :key="bonAchat.n_ba"
-                        class="hover:bg-gray-300 dark:hover:bg-gray-900"
-                    >
-                        <TableCell>{{ bonAchat.n_ba }}</TableCell>
-                        <TableCell>{{ calculateMontant(bonAchat).toFixed(2) }}</TableCell>
-                        <TableCell>{{ new Date(bonAchat.date_ba).toLocaleDateString() }}</TableCell>
-                        <TableCell>{{ bonAchat.fournisseur?.nom_fourn }}</TableCell>
-                        <TableCell>
-                            <div v-for="piece in bonAchat.pieces" :key="piece.id_piece" class="text-sm">
-                                {{ piece.nom_piece }} (x{{ piece.pivot.qte_ba }})
-                            </div>
-                        </TableCell>
-                        <TableCell>
-                            <Link
-                                :href="route('scentre.dras.bon-achats.edit', { dra: props.dra.n_dra, bonAchat: bonAchat.n_ba })"
-                                class="bg-green-600 text-white px-3 py-1 rounded-lg hover:bg-green-400 transition"
-                            >
-                                <span class="inline-flex items-center space-x-1">
-                                    <span>Modifier</span>
-                                    <Pencil class="w-4 h-4" />
-                                </span>
-                            </Link>
-                        </TableCell>
-                    </TableRow>
+                    <template v-if="sortedBonAchats.length > 0">
+                        <TableRow
+                            v-for="bonAchat in sortedBonAchats"
+                            :key="bonAchat.n_ba"
+                            class="hover:bg-gray-300 dark:hover:bg-gray-900"
+                        >
+                            <TableCell>{{ bonAchat.n_ba }}</TableCell>
+                            <TableCell>{{ calculateMontant(bonAchat).toFixed(2) }}</TableCell>
+                            <TableCell>{{ new Date(bonAchat.date_ba).toLocaleDateString() }}</TableCell>
+                            <TableCell>{{ bonAchat.fournisseur?.nom_fourn }}</TableCell>
+                            <TableCell>
+                                <div v-if="bonAchat.pieces && bonAchat.pieces.length > 0" class="mb-1">
+                                    <h4 class="font-semibold text-gray-800 dark:text-gray-200">Pièces:</h4>
+                                    <div v-for="piece in bonAchat.pieces" :key="piece.id_piece" class="text-sm">
+                                        {{ piece.nom_piece }} (x{{ piece.pivot.qte_ba }})
+                                    </div>
+                                </div>
+                                <div v-if="bonAchat.prestations && bonAchat.prestations.length > 0" class="mb-1">
+                                    <h4 class="font-semibold text-gray-800 dark:text-gray-200">Prestations:</h4>
+                                    <div v-for="prestation in bonAchat.prestations" :key="prestation.id_prest" class="text-sm">
+                                        {{ prestation.nom_prest }} (x{{ prestation.pivot.qte_bapr }})
+                                    </div>
+                                </div>
+                                <div v-if="bonAchat.charges && bonAchat.charges.length > 0">
+                                    <h4 class="font-semibold text-gray-800 dark:text-gray-200">Charges:</h4>
+                                    <div v-for="charge in bonAchat.charges" :key="charge.id_charge" class="text-sm">
+                                        {{ charge.nom_charge }} (x{{ charge.pivot.qte_bac }})
+                                    </div>
+                                </div>
+                                <div v-if="(!bonAchat.pieces || bonAchat.pieces.length === 0) && (!bonAchat.prestations || bonAchat.prestations.length === 0) && (!bonAchat.charges || bonAchat.charges.length === 0)" class="text-sm text-gray-500 dark:text-gray-400">
+                                    Aucune pièce, prestation ou charge
+                                </div>
+                            </TableCell>
+                            <TableCell>
+                                <Link
+                                    :href="route('scentre.dras.bon-achats.edit', { dra: props.dra.n_dra, bonAchat: bonAchat.n_ba })"
+                                    class="bg-green-600 text-white px-3 py-1 rounded-lg hover:bg-green-400 transition"
+                                >
+                                    <span class="inline-flex items-center space-x-1">
+                                        <span>Modifier</span>
+                                        <Pencil class="w-4 h-4" />
+                                    </span>
+                                </Link>
+                            </TableCell>
+                        </TableRow>
+                    </template>
+                    <template v-else>
+                        <TableRow>
+                            <TableCell colspan="6" class="text-center py-4 text-gray-500">
+                                Aucun bon d'achat trouvé pour ce DRA.
+                            </TableCell>
+                        </TableRow>
+                    </template>
                 </TableBody>
             </Table>
 

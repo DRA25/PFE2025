@@ -6,6 +6,7 @@ use App\Models\Centre;
 use App\Models\Dra;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -69,7 +70,9 @@ class DraController extends Controller
         $bonAchats = $dra->bonAchats()
             ->with([
                 'fournisseur:id_fourn,nom_fourn',
-                'pieces:id_piece,nom_piece,prix_piece,tva'
+                'pieces:id_piece,nom_piece,prix_piece,tva',
+                'prestations:id_prest,nom_prest,desc_prest,prix_prest,tva',
+                'charges:id_charge,nom_charge,desc_change,prix_charge,tva'
             ])
             ->get()
             ->map(function ($bonAchat) {
@@ -298,7 +301,7 @@ return Inertia::render('Dra/Edit', [
         $allItems = collect();
         $centre = Centre::find($userCentreId);
         $centreType = $centre ? $centre->type_centre : 'Marine';
-        $centreCode = $centre ? $centre->code_centre : '1A80';
+        $centreCode = $centre ? $centre->code_centre : 'N/A';
         $centreSeuil = $centre ? (float) $centre->seuil_centre : 0.00;
 
         $dras = Dra::with([
@@ -308,6 +311,8 @@ return Inertia::render('Dra/Edit', [
             'factures.charges',
             'factures.fournisseur',
             'bonAchats.pieces',
+            'bonAchats.prestations', // Add prestations to bonAchats eager load
+            'bonAchats.charges',    // Add charges to bonAchats eager load
             'bonAchats.fournisseur',
             'remboursements.encaissements'
         ])
@@ -315,8 +320,8 @@ return Inertia::render('Dra/Edit', [
             ->orderBy('n_dra', 'asc')
             ->get();
 
-        $firstDate = $dras->first() ? $dras->first()->date_creation : now();
-        $lastDate = $dras->last() ? $dras->last()->date_creation : now();
+        $firstDate = $dras->first() ? Carbon::parse($dras->first()->date_creation) : now();
+        $lastDate = $dras->last() ? Carbon::parse($dras->last()->date_creation) : now();
 
         foreach ($dras as $dra) {
             $draItems = collect();
@@ -326,20 +331,20 @@ return Inertia::render('Dra/Edit', [
             // Process factures (decaissement)
             foreach ($dra->factures as $facture) {
                 // Calculate pieces total (HT + TVA)
-                $piecesTotal = $facture->pieces->sum(function ($piece) use ($facture) {
-                    $quantity = $facture->pieces->find($piece->id_piece)->pivot->qte_f ?? 1;
+                $piecesTotal = $facture->pieces->sum(function ($piece) {
+                    $quantity = $piece->pivot->qte_f ?? 1; // Direct pivot access
                     return ($piece->prix_piece * $quantity) * (1 + ($piece->tva ?? 0) / 100);
                 });
 
                 // Calculate prestations total (HT + TVA)
-                $prestationsTotal = $facture->prestations->sum(function ($prestation) use ($facture) {
-                    $quantity = $facture->prestations->find($prestation->id_prest)->pivot->qte_fpr ?? 1;
+                $prestationsTotal = $facture->prestations->sum(function ($prestation) {
+                    $quantity = $prestation->pivot->qte_fpr ?? 1; // Direct pivot access
                     return ($prestation->prix_prest * $quantity) * (1 + ($prestation->tva ?? 0) / 100);
                 });
 
                 // Calculate charges total (HT + TVA)
-                $chargesTotal = $facture->charges->sum(function ($charge) use ($facture) {
-                    $quantity = $facture->charges->find($charge->id_charge)->pivot->qte_fc ?? 1;
+                $chargesTotal = $facture->charges->sum(function ($charge) {
+                    $quantity = $charge->pivot->qte_fc ?? 1; // Direct pivot access
                     return ($charge->prix_charge * $quantity) * (1 + ($charge->tva ?? 0) / 100);
                 });
 
@@ -347,18 +352,18 @@ return Inertia::render('Dra/Edit', [
                 $totalAmount = $piecesTotal + $prestationsTotal + $chargesTotal + $droitTimbre;
 
                 // Combine all item names with quantities for the libelle
-                $pieceNames = $facture->pieces->map(function ($piece) use ($facture) {
-                    $quantity = $facture->pieces->find($piece->id_piece)->pivot->qte_f ?? 1;
+                $pieceNames = $facture->pieces->map(function ($piece) {
+                    $quantity = $piece->pivot->qte_f ?? 1;
                     return $piece->nom_piece . ' (x' . $quantity . ')';
                 })->implode(', ');
 
-                $prestationNames = $facture->prestations->map(function ($prestation) use ($facture) {
-                    $quantity = $facture->prestations->find($prestation->id_prest)->pivot->qte_fpr ?? 1;
+                $prestationNames = $facture->prestations->map(function ($prestation) {
+                    $quantity = $prestation->pivot->qte_fpr ?? 1;
                     return $prestation->nom_prest . ' (x' . $quantity . ')';
                 })->implode(', ');
 
-                $chargeNames = $facture->charges->map(function ($charge) use ($facture) {
-                    $quantity = $facture->charges->find($charge->id_charge)->pivot->qte_fc ?? 1;
+                $chargeNames = $facture->charges->map(function ($charge) {
+                    $quantity = $charge->pivot->qte_fc ?? 1;
                     return $charge->nom_charge . ' (x' . $quantity . ')';
                 })->implode(', ');
 
@@ -368,8 +373,8 @@ return Inertia::render('Dra/Edit', [
 
                 $draItems->push([
                     'n_dra' => $dra->n_dra,
-                    'n_bon' => '',
-                    'date_bon' => $dra->date_creation->format('d/m/Y'),
+                    'n_bon' => 'Facture ' . $facture->n_facture, // Indicate it's a facture
+                    'date_bon' => Carbon::parse($facture->date_facture)->format('d/m/Y'), // Use facture date
                     'libelle' => $libelle,
                     'fournisseur' => $fournisseurName,
                     'encaissement' => '',
@@ -381,34 +386,55 @@ return Inertia::render('Dra/Edit', [
                 $draTotalDecaissement += $totalAmount;
             }
 
-            // Process bonAchats (decaissement)
+            // Process bonAchats (decaissement) - UPDATED SECTION
             foreach ($dra->bonAchats as $bonAchat) {
-                $totalQuantity = 0;
-                $montantHT = $bonAchat->pieces->sum(function ($piece) use ($bonAchat, &$totalQuantity) {
-                    $quantity = $bonAchat->pieces->find($piece->id_piece)->pivot->qte_ba ?? 1;
-                    $totalQuantity += $quantity;
-                    return $piece->prix_piece * $quantity;
+                // Calculate pieces total (HT + TVA)
+                $baPiecesTotal = $bonAchat->pieces->sum(function ($piece) {
+                    $quantity = $piece->pivot->qte_ba ?? 1;
+                    return ($piece->prix_piece * $quantity) * (1 + ($piece->tva ?? 0) / 100);
                 });
 
-                $tva = $bonAchat->pieces->sum(function ($piece) use ($bonAchat) {
-                    $quantity = $bonAchat->pieces->find($piece->id_piece)->pivot->qte_ba ?? 1;
-                    return ($piece->prix_piece * $quantity) * ($piece->tva ?? 0) / 100;
+                // Calculate prestations total (HT + TVA) for Bon d'Achat
+                $baPrestationsTotal = $bonAchat->prestations->sum(function ($prestation) {
+                    // Assuming similar pivot structure for bonAchats_prestations
+                    $quantity = $prestation->pivot->qte_bapr ?? 1; // Adjust pivot column name if different
+                    return ($prestation->prix_prest * $quantity) * (1 + ($prestation->tva ?? 0) / 100);
                 });
 
-                $totalAmount = $montantHT + $tva;
+                // Calculate charges total (HT + TVA) for Bon d'Achat
+                $baChargesTotal = $bonAchat->charges->sum(function ($charge) {
+                    // Assuming similar pivot structure for bonAchats_charges
+                    $quantity = $charge->pivot->qte_bac ?? 1; // Adjust pivot column name if different
+                    return ($charge->prix_charge * $quantity) * (1 + ($charge->tva ?? 0) / 100);
+                });
 
-                $pieceNames = $bonAchat->pieces->map(function ($piece) use ($bonAchat) {
-                    $quantity = $bonAchat->pieces->find($piece->id_piece)->pivot->qte_ba ?? 1;
+                $totalAmount = $baPiecesTotal + $baPrestationsTotal + $baChargesTotal;
+
+                // Combine all item names with quantities for the libelle for Bon d'Achat
+                $baPieceNames = $bonAchat->pieces->map(function ($piece) {
+                    $quantity = $piece->pivot->qte_ba ?? 1;
                     return $piece->nom_piece . ' (x' . $quantity . ')';
                 })->implode(', ');
+
+                $baPrestationNames = $bonAchat->prestations->map(function ($prestation) {
+                    $quantity = $prestation->pivot->qte_bapr ?? 1; // Adjust pivot column name if different
+                    return $prestation->nom_prest . ' (x' . $quantity . ')';
+                })->implode(', ');
+
+                $baChargeNames = $bonAchat->charges->map(function ($charge) {
+                    $quantity = $charge->pivot->qte_bac ?? 1; // Adjust pivot column name if different
+                    return $charge->nom_charge . ' (x' . $quantity . ')';
+                })->implode(', ');
+
+                $libelle = implode(', ', array_filter([$baPieceNames, $baPrestationNames, $baChargeNames]));
 
                 $fournisseurName = $bonAchat->fournisseur ? $bonAchat->fournisseur->nom_fourn : 'Non spécifié';
 
                 $draItems->push([
                     'n_dra' => $dra->n_dra,
-                    'n_bon' => '',
-                    'date_bon' => $dra->date_creation->format('d/m/Y'),
-                    'libelle' => $pieceNames,
+                    'n_bon' => 'Bon Achat ' . $bonAchat->n_ba, // Indicate it's a bon d'achat
+                    'date_bon' => Carbon::parse($bonAchat->date_ba)->format('d/m/Y'), // Use bonAchat date
+                    'libelle' => $libelle,
                     'fournisseur' => $fournisseurName,
                     'encaissement' => '',
                     'decaissement' => number_format($totalAmount, 2, ',', ' '),

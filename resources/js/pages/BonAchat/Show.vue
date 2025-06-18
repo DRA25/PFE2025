@@ -31,7 +31,7 @@ const props = defineProps<{
                 qte_ba: number
             }
         }>,
-        montant: number // Calculated from controller
+        montant: number // Calculated from controller, but we'll also calculate on client-side for consistency
     }>
 }>()
 
@@ -49,13 +49,16 @@ function toggleDetails(n_ba: string) {
     expandedBonAchat.value = expandedBonAchat.value === n_ba ? null : n_ba
 }
 
-function calculatePieceTotal(piece: {
-    prix_piece: number,
-    tva: number,
-    pivot: { qte_ba: number }
-}) {
-    const subtotal = piece.prix_piece * piece.pivot.qte_ba
-    return subtotal * (1 + (piece.tva / 100))
+/**
+ * Calculates the total amount for a bon d'achat, including pieces with their TVA.
+ * This ensures consistency with how total amounts are displayed and searched.
+ */
+const calculateBonAchatTotal = (bonAchat: typeof props.bonAchats[0]) => {
+    const totalPieces = bonAchat.pieces.reduce((total, piece) => {
+        const subtotal = piece.prix_piece * piece.pivot.qte_ba;
+        return total + (subtotal * (1 + (piece.tva / 100)));
+    }, 0);
+    return totalPieces;
 }
 
 const filteredBonAchats = computed(() => {
@@ -64,9 +67,10 @@ const filteredBonAchats = computed(() => {
     const query = searchQuery.value.toLowerCase();
     return props.bonAchats.filter(bonAchat =>
         String(bonAchat.n_ba).toLowerCase().includes(query) ||
-        String(bonAchat.montant).toLowerCase().includes(query) ||
+        String(calculateBonAchatTotal(bonAchat)).toLowerCase().includes(query) || // Use calculated total for search
         bonAchat.date_ba.toLowerCase().includes(query) ||
-        bonAchat.fournisseur?.nom_fourn?.toLowerCase().includes(query)
+        bonAchat.fournisseur?.nom_fourn?.toLowerCase().includes(query) ||
+        bonAchat.pieces?.some(piece => piece.nom_piece.toLowerCase().includes(query)) // Search by piece name
     );
 });
 </script>
@@ -80,7 +84,7 @@ const filteredBonAchats = computed(() => {
                 <input
                     type="text"
                     v-model="searchQuery"
-                    placeholder="Rechercher par N° Bon d'achat, montant, date ou fournisseur..."
+                    placeholder="Rechercher par N° Bon d'achat, montant, date, fournisseur ou pièce..."
                     class="w-full bg-gray-100 px-4 py-2 rounded-md border border-gray-200 dark:border-gray-700 dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
                 />
             </div>
@@ -99,60 +103,81 @@ const filteredBonAchats = computed(() => {
                         <TableHead>N° Bon d'achat</TableHead>
                         <TableHead>Date</TableHead>
                         <TableHead>Fournisseur</TableHead>
+                        <TableHead>Libellé</TableHead>
                         <TableHead>Montant Total</TableHead>
                     </TableRow>
                 </TableHeader>
 
                 <TableBody>
-                    <template v-for="bonAchat in filteredBonAchats" :key="bonAchat.n_ba">
-                        <TableRow
-                            class="hover:bg-gray-300 dark:hover:bg-gray-900 cursor-pointer"
-                            @click="toggleDetails(bonAchat.n_ba)"
-                        >
-                            <TableCell>{{ bonAchat.n_ba }}</TableCell>
-                            <TableCell>{{ bonAchat.date_ba }}</TableCell>
-                            <TableCell>{{ bonAchat.fournisseur.nom_fourn }}</TableCell>
-                            <TableCell>{{ bonAchat.montant.toLocaleString('fr-FR') }} DA</TableCell>
-                        </TableRow>
-                        <TableRow v-if="expandedBonAchat === bonAchat.n_ba">
-                            <TableCell colspan="4" class="px-6 py-4 bg-gray-50 dark:bg-gray-800">
-                                <div class="space-y-4">
-                                    <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300">Détails des pièces</h3>
-                                    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-600">
-                                        <thead>
-                                        <tr>
-                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Pièce</th>
-                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Prix Unitaire</th>
-                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">TVA</th>
-                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Quantité</th>
-                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Sous-total</th>
-                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Total avec TVA</th>
-                                        </tr>
-                                        </thead>
-                                        <tbody>
-                                        <tr v-for="(piece, index) in bonAchat.pieces" :key="index">
-                                            <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
-                                                {{ piece.nom_piece }}
-                                            </td>
-                                            <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
-                                                {{ piece.prix_piece.toFixed(2) }} DA
-                                            </td>
-                                            <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
-                                                {{ piece.tva }}%
-                                            </td>
-                                            <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
-                                                {{ piece.pivot.qte_ba }}
-                                            </td>
-                                            <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
-                                                {{ (piece.prix_piece * piece.pivot.qte_ba).toFixed(2) }} DA
-                                            </td>
-                                            <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
-                                                {{ calculatePieceTotal(piece).toFixed(2) }} DA
-                                            </td>
-                                        </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
+                    <template v-if="filteredBonAchats.length > 0">
+                        <template v-for="bonAchat in filteredBonAchats" :key="bonAchat.n_ba">
+                            <TableRow
+                                class="hover:bg-gray-300 dark:hover:bg-gray-900 cursor-pointer"
+                                @click="toggleDetails(bonAchat.n_ba)"
+                            >
+                                <TableCell>{{ bonAchat.n_ba }}</TableCell>
+                                <TableCell>{{ new Date(bonAchat.date_ba).toLocaleDateString() }}</TableCell>
+                                <TableCell>{{ bonAchat.fournisseur.nom_fourn }}</TableCell>
+                                <TableCell>
+                                    <div v-if="bonAchat.pieces && bonAchat.pieces.length > 0" class="mb-1">
+                                        <h4 class="font-semibold text-gray-800 dark:text-gray-200">Pièces:</h4>
+                                        <div v-for="piece in bonAchat.pieces" :key="piece.id_piece" class="text-sm">
+                                            {{ piece.nom_piece }} (x{{ piece.pivot.qte_ba }})
+                                        </div>
+                                    </div>
+                                    <div v-if="!bonAchat.pieces || bonAchat.pieces.length === 0" class="text-sm text-gray-500 dark:text-gray-400">
+                                        Aucune pièce
+                                    </div>
+                                </TableCell>
+                                <TableCell>{{ calculateBonAchatTotal(bonAchat).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }} DA</TableCell>
+                            </TableRow>
+                            <TableRow v-if="expandedBonAchat === bonAchat.n_ba">
+                                <TableCell colspan="5" class="px-6 py-4 bg-gray-50 dark:bg-gray-800">
+                                    <div class="space-y-4">
+                                        <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300">Détails des pièces</h3>
+                                        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-600">
+                                            <thead>
+                                            <tr>
+                                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Pièce</th>
+                                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Prix Unitaire</th>
+                                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">TVA</th>
+                                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Quantité</th>
+                                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Sous-total (HT)</th>
+                                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Total (TTC)</th>
+                                            </tr>
+                                            </thead>
+                                            <tbody>
+                                            <tr v-for="(piece, index) in bonAchat.pieces" :key="index">
+                                                <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
+                                                    {{ piece.nom_piece }}
+                                                </td>
+                                                <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
+                                                    {{ piece.prix_piece.toFixed(2) }} DA
+                                                </td>
+                                                <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
+                                                    {{ piece.tva }}%
+                                                </td>
+                                                <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
+                                                    {{ piece.pivot.qte_ba }}
+                                                </td>
+                                                <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
+                                                    {{ (piece.prix_piece * piece.pivot.qte_ba).toFixed(2) }} DA
+                                                </td>
+                                                <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
+                                                    {{ (piece.prix_piece * piece.pivot.qte_ba * (1 + (piece.tva / 100))).toFixed(2) }} DA
+                                                </td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </TableCell>
+                            </TableRow>
+                        </template>
+                    </template>
+                    <template v-else>
+                        <TableRow>
+                            <TableCell colspan="5" class="text-center py-4 text-gray-500">
+                                Aucun bon d'achat trouvé.
                             </TableCell>
                         </TableRow>
                     </template>

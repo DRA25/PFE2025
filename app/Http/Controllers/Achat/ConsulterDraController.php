@@ -52,7 +52,11 @@ class ConsulterDraController extends Controller
 
         // Load bonAchats with related data
         $bonAchats = $dra->bonAchats()
-            ->with(['fournisseur:id_fourn,nom_fourn', 'pieces:id_piece,nom_piece,prix_piece,tva'])
+            ->with(['fournisseur:id_fourn,nom_fourn',
+                'pieces:id_piece,nom_piece,prix_piece,tva',
+                'prestations:id_prest,nom_prest,desc_prest,prix_prest,tva',
+                'charges:id_charge,nom_charge,desc_change,prix_charge,tva'
+            ])
             ->get()
             ->map(function ($bonAchat) {
                 $bonAchat->montant = $this->calculateMontant($bonAchat);
@@ -115,5 +119,8 @@ class ConsulterDraController extends Controller
 
         return $total;
     }
+
+
+
 
 }

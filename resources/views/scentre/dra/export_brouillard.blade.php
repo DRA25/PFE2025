@@ -175,7 +175,7 @@
     @foreach($items as $item)
         <tr class="{{ $item['is_total'] ? 'total-row' : '' }}">
             <td class="text-center">{{ $item['n_dra'] }}</td>
-            <td class="text-center">{{ $item['n_bon'] }}</td>
+            <td class="text-center"></td>
             <td class="text-center">{{ $item['date_bon'] }}</td>
             <td>{{ $item['libelle'] }}</td>
             <td class="text-center">{{ $item['fournisseur'] }}</td>

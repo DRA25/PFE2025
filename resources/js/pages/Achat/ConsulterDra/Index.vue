@@ -117,6 +117,7 @@ const requestSort = (column: string) => {
 <template>
     <Head title="Liste des DRAs" />
     <AppLayout :breadcrumbs="breadcrumbs">
+
         <div class="flex justify-start m-5 mb-0 gap-4 flex-wrap items-center">
             <div class="flex items-center gap-2 w-full md:w-1/3">
                 <Search class="w-4 h-4 text-gray-500 dark:text-gray-400" />

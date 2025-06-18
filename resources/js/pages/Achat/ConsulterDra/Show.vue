@@ -19,8 +19,22 @@ const props = defineProps<{
             etat?: string;
         };
     };
-    factures: Array<any>;
-    bonAchats: Array<any>;
+    factures: Array<{
+        id_facture: number;
+        fournisseur: { nom_fourn: string };
+        pieces: Array<{ id_piece: number; nom_piece: string; prix_piece: number; tva: number; pivot: { qte_f: number } }>;
+        prestations: Array<{ id_prest: number; nom_prest: string; prix_prest: number; tva: number; pivot: { qte_fpr: number } }>;
+        charges: Array<{ id_charge: number; nom_charge: string; prix_charge: number; tva: number; pivot: { qte_fc: number } }>;
+        droit_timbre?: number;
+    }>;
+    bonAchats: Array<{
+        id_bon: number;
+        fournisseur: { nom_fourn: string };
+        pieces: Array<{ id_piece: number; nom_piece: string; prix_piece: number; tva: number; pivot: { qte_ba: number } }>;
+        prestations: Array<{ id_prest: number; nom_prest: string; prix_prest: number; tva: number; pivot: { qte_bapr: number } }>; // Added for bonAchats
+        charges: Array<{ id_charge: number; nom_charge: string; prix_charge: number; tva: number; pivot: { qte_bac: number } }>;    // Added for bonAchats
+        // No 'montant' property here, as it will be calculated from pieces, prestations, and charges
+    }>;
 }>();
 
 // The form and submit function for updating DRA state are removed as per the target template
@@ -56,6 +70,101 @@ const breadcrumbs: BreadcrumbItem[] = [
 //     });
 // };
 
+// --- Helper Functions for Calculations ---
+
+// Helper function to calculate total HT for a specific item type (pieces, prestations, charges)
+const calculateItemTypeHtTotal = (items: any[], type: 'pieces' | 'prestations' | 'charges', isBonAchat: boolean = false) => {
+    return items.reduce((sum, item) => {
+        let price = 0;
+        let quantity = 0;
+        if (isBonAchat) {
+            if (type === 'pieces') {
+                price = item.prix_piece;
+                quantity = item.pivot?.qte_ba;
+            } else if (type === 'prestations') {
+                price = item.prix_prest;
+                quantity = item.pivot?.qte_bapr;
+            } else if (type === 'charges') {
+                price = item.prix_charge;
+                quantity = item.pivot?.qte_bac;
+            }
+        } else { // For Factures
+            if (type === 'pieces') {
+                price = item.prix_piece;
+                quantity = item.pivot?.qte_f;
+            } else if (type === 'prestations') {
+                price = item.prix_prest;
+                quantity = item.pivot?.qte_fpr;
+            } else if (type === 'charges') {
+                price = item.prix_charge;
+                quantity = item.pivot?.qte_fc;
+            }
+        }
+        return sum + (price * (quantity || 1));
+    }, 0);
+};
+
+// Helper function to calculate TVA for a specific item type
+const calculateItemTypeTVA = (items: any[], type: 'pieces' | 'prestations' | 'charges', isBonAchat: boolean = false) => {
+    return items.reduce((sum, item) => {
+        let price = 0;
+        let quantity = 0;
+        let tvaRate = 0;
+
+        if (isBonAchat) {
+            if (type === 'pieces') {
+                price = item.prix_piece;
+                quantity = item.pivot?.qte_ba;
+                tvaRate = item.tva || 0;
+            } else if (type === 'prestations') {
+                price = item.prix_prest;
+                quantity = item.pivot?.qte_bapr;
+                tvaRate = item.tva || 0;
+            } else if (type === 'charges') {
+                price = item.prix_charge;
+                quantity = item.pivot?.qte_bac;
+                tvaRate = item.tva || 0;
+            }
+        } else { // For Factures
+            if (type === 'pieces') {
+                price = item.prix_piece;
+                quantity = item.pivot?.qte_f;
+                tvaRate = item.tva || 0;
+            } else if (type === 'prestations') {
+                price = item.prix_prest;
+                quantity = item.pivot?.qte_fpr;
+                tvaRate = item.tva || 0;
+            } else if (type === 'charges') {
+                price = item.prix_charge;
+                quantity = item.pivot?.qte_fc;
+                tvaRate = item.tva || 0;
+            }
+        }
+        return sum + (price * (quantity || 1) * (tvaRate / 100));
+    }, 0);
+};
+
+// Function to calculate the total amount (HT + TVA) for a given set of items (pieces, prestations, charges)
+const calculateFullTotal = (items: { pieces: any[], prestations: any[], charges: any[], droit_timbre?: number }, isBonAchat: boolean = false) => {
+    let total = 0;
+
+    // Calculate pieces total (HT + TVA)
+    total += items.pieces.reduce((sum, piece) => sum + (piece.prix_piece * (isBonAchat ? (piece.pivot?.qte_ba || 1) : (piece.pivot?.qte_f || 1)) * (1 + (piece.tva || 0) / 100)), 0);
+
+    // Calculate prestations total (HT + TVA)
+    total += items.prestations.reduce((sum, prest) => sum + (prest.prix_prest * (isBonAchat ? (prest.pivot?.qte_bapr || 1) : (prest.pivot?.qte_fpr || 1)) * (1 + (prest.tva || 0) / 100)), 0);
+
+    // Calculate charges total (HT + TVA)
+    total += items.charges.reduce((sum, charge) => sum + (charge.prix_charge * (isBonAchat ? (charge.pivot?.qte_bac || 1) : (charge.pivot?.qte_fc || 1)) * (1 + (charge.tva || 0) / 100)), 0);
+
+    // Add droit_timbre if applicable (only for factures)
+    if (!isBonAchat && items.droit_timbre !== undefined) {
+        total += items.droit_timbre || 0;
+    }
+
+    return total;
+};
+
 </script>
 
 <template>
@@ -85,7 +194,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 
                     <div>
                         <p class="text-sm text-gray-500 dark:text-gray-400">Total DRA</p>
-                        <p class="text-gray-900 dark:text-gray-100">{{ Number(dra.total_dra).toFixed(2) }}</p>
+                        <p class="text-gray-900 dark:text-gray-100">{{ Number(dra.total_dra).toFixed(2) }} DA</p>
                     </div>
                 </div>
 
@@ -152,46 +261,29 @@ const breadcrumbs: BreadcrumbItem[] = [
                                 </TableCell>
                                 <TableCell>
                                     <div v-if="facture.pieces.length > 0" class="text-sm">
-                                        {{ facture.pieces.reduce((sum, piece) => sum + (piece.prix_piece * (piece.pivot.qte_f || 1)), 0).toFixed(2) }} DA
+                                        {{ calculateItemTypeHtTotal(facture.pieces, 'pieces').toFixed(2) }} DA
                                     </div>
                                     <div v-if="facture.prestations.length > 0" class="text-sm">
-                                        {{ facture.prestations.reduce((sum, prest) => sum + prest.prix_prest * (prest.pivot.qte_fpr || 1), 0).toFixed(2) }} DA
+                                        {{ calculateItemTypeHtTotal(facture.prestations, 'prestations').toFixed(2) }} DA
                                     </div>
                                     <div v-if="facture.charges.length > 0" class="text-sm">
-                                        {{ facture.charges.reduce((sum, charge) => sum + charge.prix_charge * (charge.pivot.qte_fc || 1), 0).toFixed(2) }} DA
+                                        {{ calculateItemTypeHtTotal(facture.charges, 'charges').toFixed(2) }} DA
                                     </div>
                                 </TableCell>
                                 <TableCell>
                                     <div v-if="facture.pieces.length > 0" class="text-sm">
-                                        {{ facture.pieces.reduce((sum, piece) => sum + (piece.prix_piece * (piece.pivot.qte_f || 1) * (piece.tva || 0) / 100), 0).toFixed(2) }} DA
+                                        {{ calculateItemTypeTVA(facture.pieces, 'pieces').toFixed(2) }} DA
                                     </div>
                                     <div v-if="facture.prestations.length > 0" class="text-sm">
-                                        {{ facture.prestations.reduce((sum, prest) => sum + (prest.prix_prest  * (prest.pivot.qte_fpr || 1) * (prest.tva || 0) / 100), 0).toFixed(2) }} DA
+                                        {{ calculateItemTypeTVA(facture.prestations, 'prestations').toFixed(2) }} DA
                                     </div>
                                     <div v-if="facture.charges.length > 0" class="text-sm">
-                                        {{ facture.charges.reduce((sum, charge) => sum + (charge.prix_charge * (charge.pivot.qte_fc || 1) * (charge.tva || 0) / 100), 0).toFixed(2) }} DA
+                                        {{ calculateItemTypeTVA(facture.charges, 'charges').toFixed(2) }} DA
                                     </div>
                                 </TableCell>
-                                <TableCell>{{ facture.droit_timbre || 0 }} DA</TableCell>
+                                <TableCell>{{ (facture.droit_timbre || 0).toFixed(2) }} DA</TableCell>
                                 <TableCell>
-                                    {{
-                                        (
-                                            // Pieces total (HT + TVA)
-                                            facture.pieces.reduce((sum, piece) => sum +
-                                                    (piece.prix_piece * (piece.pivot.qte_f || 1) * (1 + (piece.tva || 0) / 100)),
-                                                0) +
-                                            // Prestations total (HT + TVA)
-                                            facture.prestations.reduce((sum, prest) => sum +
-                                                    (prest.prix_prest * (prest.pivot.qte_fpr || 1)  * (1 + (prest.tva || 0) / 100)),
-                                                0) +
-                                            // Charges total (HT + TVA)
-                                            facture.charges.reduce((sum, charge) => sum +
-                                                    (charge.prix_charge * (charge.pivot.qte_fc || 1)  * (1 + (charge.tva || 0) / 100)),
-                                                0) +
-                                            // Droit timbre
-                                            (facture.droit_timbre || 0)
-                                        ).toFixed(2)
-                                    }} DA
+                                    {{ calculateFullTotal(facture).toFixed(2) }} DA
                                 </TableCell>
                             </TableRow>
                         </TableBody>
@@ -209,6 +301,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Fournisseur</TableHead>
+                                <TableHead>Type</TableHead>
                                 <TableHead>Libellé</TableHead>
                                 <TableHead>Montant HT</TableHead>
                                 <TableHead>TVA</TableHead>
@@ -223,17 +316,46 @@ const breadcrumbs: BreadcrumbItem[] = [
                             >
                                 <TableCell>{{ bon.fournisseur.nom_fourn }}</TableCell>
                                 <TableCell>
+                                    <span v-if="bon.pieces.length > 0" class="block">Pièces</span>
+                                    <span v-if="bon.prestations.length > 0" class="block">Prestations</span>
+                                    <span v-if="bon.charges.length > 0" class="block">Charges</span>
+                                </TableCell>
+                                <TableCell>
                                     <div v-for="piece in bon.pieces" :key="piece.id_piece" class="text-sm">
                                         {{ piece.nom_piece }} (x{{ piece.pivot.qte_ba }})
                                     </div>
+                                    <div v-for="prestation in bon.prestations" :key="prestation.id_prest" class="text-sm">
+                                        {{ prestation.nom_prest }} (x{{ prestation.pivot.qte_bapr }})
+                                    </div>
+                                    <div v-for="charge in bon.charges" :key="charge.id_charge" class="text-sm">
+                                        {{ charge.nom_charge }} (x{{ charge.pivot.qte_bac }})
+                                    </div>
                                 </TableCell>
                                 <TableCell>
-                                    {{ bon.pieces.reduce((sum, piece) => sum + (piece.prix_piece * (piece.pivot.qte_ba || 1)), 0).toFixed(2) }} DA
+                                    <div v-if="bon.pieces.length > 0" class="text-sm">
+                                        {{ calculateItemTypeHtTotal(bon.pieces, 'pieces', true).toFixed(2) }} DA
+                                    </div>
+                                    <div v-if="bon.prestations.length > 0" class="text-sm">
+                                        {{ calculateItemTypeHtTotal(bon.prestations, 'prestations', true).toFixed(2) }} DA
+                                    </div>
+                                    <div v-if="bon.charges.length > 0" class="text-sm">
+                                        {{ calculateItemTypeHtTotal(bon.charges, 'charges', true).toFixed(2) }} DA
+                                    </div>
                                 </TableCell>
                                 <TableCell>
-                                    {{ bon.pieces.reduce((sum, piece) => sum + (piece.prix_piece * (piece.pivot.qte_ba || 1) * (piece.tva || 0) / 100), 0).toFixed(2) }} DA
+                                    <div v-if="bon.pieces.length > 0" class="text-sm">
+                                        {{ calculateItemTypeTVA(bon.pieces, 'pieces', true).toFixed(2) }} DA
+                                    </div>
+                                    <div v-if="bon.prestations.length > 0" class="text-sm">
+                                        {{ calculateItemTypeTVA(bon.prestations, 'prestations', true).toFixed(2) }} DA
+                                    </div>
+                                    <div v-if="bon.charges.length > 0" class="text-sm">
+                                        {{ calculateItemTypeTVA(bon.charges, 'charges', true).toFixed(2) }} DA
+                                    </div>
                                 </TableCell>
-                                <TableCell>{{ Number(bon.montant).toFixed(2) }} DA</TableCell>
+                                <TableCell>
+                                    {{ calculateFullTotal(bon, true).toFixed(2) }} DA
+                                </TableCell>
                             </TableRow>
                         </TableBody>
                     </Table>

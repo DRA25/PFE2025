@@ -26,6 +26,19 @@ class BonAchat extends Model
             ->withPivot('qte_ba');
     }
 
+    public function prestations()
+    {
+        return $this->belongsToMany(Prestation::class, 'bon_achat_prestation', 'n_ba', 'id_prest')
+            ->withPivot('qte_bapr'); // Use the correct pivot column name here
+    }
+
+    // New: Relationship for Charges
+    public function charges()
+    {
+        return $this->belongsToMany(Charge::class, 'bon_achat_charge', 'n_ba', 'id_charge')
+            ->withPivot('qte_bac'); // Use the correct pivot column name here
+    }
+
     /**
      * Calculate the total amount of the bon d'achat.
      */
