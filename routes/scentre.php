@@ -14,6 +14,12 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth', 'role:service centre|admin'])->group(function () {
 
+    Route::get('/export/etat-trimestriel', [DraController::class, 'exportEtatTrimestriel'])
+        ->name('export.etat-trimestriel');
+
+    Route::get('/export/etat-trimestriel-all', [DraController::class, 'exportEtatTrimestrielAllCentres'])
+        ->name('export.etat-trimestriel-all');
+
     Route::resource('scentre/charges', ChargeController::class)
         ->names([
             'index' => 'scentre.charges.index',
@@ -28,8 +34,7 @@ Route::middleware(['auth', 'role:service centre|admin'])->group(function () {
     // Group all scentre-related routes under /scentre prefix
     Route::prefix('scentre')->name('scentre.')->group(function () {
 
-        Route::get('/dras/{n_dra}/etat-sortie', [DraController::class, 'generateEtatSortie'])
-            ->name('dras.etat-sortie');
+
 
         Route::get('/dras/export-all', [DraController::class, 'exportAllDras'])
             ->name('dras.export-all');

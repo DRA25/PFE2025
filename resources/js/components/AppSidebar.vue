@@ -13,7 +13,23 @@ import {
 } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/vue3';
-import { BookOpen, Folder, LayoutGrid,Info , Archive, Lock ,Contact,Wrench,Store,ShoppingCart,SearchCheck,Banknote,Building,User} from 'lucide-vue-next';
+import {
+    BookOpen,
+    Folder,
+    LayoutGrid,
+    Info,
+    Archive,
+    Lock,
+    Contact,
+    Wrench,
+    Store,
+    ShoppingCart,
+    SearchCheck,
+    Banknote,
+    Building,
+    User,
+    User2Icon
+} from 'lucide-vue-next';
 import AppLogo from './AppLogo.vue';
 
 import { computed } from 'vue';
@@ -56,12 +72,12 @@ if (user.value?.roles?.some((role: any) =>
     });
 }
 
-// Conditionally add "centre"
+
 if (user.value?.roles?.some((role: any) => role.name === 'admin' )) {
     mainNavItems.push({
         title: 'Espace Admin',
         href: '/espace-admin',
-        icon: Building,
+        icon: User2Icon,
     });
 }
 

@@ -2,8 +2,10 @@
 namespace App\Http\Controllers\Scentre;
 
 use App\Http\Controllers\Controller;
+use App\Models\BonAchat;
 use App\Models\Centre;
 use App\Models\Dra;
+use App\Models\Facture;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -512,4 +514,340 @@ return Inertia::render('Dra/Edit', [
 
         return $pdf->download('brouillard_caisse_regie.pdf');
     }
+
+
+    public function exportEtatTrimestriel()
+    {
+        $user = Auth::user();
+
+        if (!$user->id_centre) {
+            abort(403, 'User is not associated with any centre');
+        }
+
+        $centreCode = $user->id_centre;
+        $formattedCentreCode = '1' . $centreCode;
+
+        // 🟢 Fetch centre type
+        $centre = Centre::find($centreCode);
+        $centreType = $centre ? $centre->type_centre : 'Inconnu';
+
+        $startDate = Carbon::now()->startOfQuarter();
+        $endDate = Carbon::now()->endOfQuarter();
+        $items = collect();
+
+        $processDocument = function ($document, $isFacture = true) use (&$items, $formattedCentreCode) {
+            $date = $isFacture
+                ? Carbon::parse($document->date_facture)->format('d/m/Y')
+                : Carbon::parse($document->date_ba)->format('d/m/Y');
+
+            $addedTimbre = false;
+
+            foreach ($document->pieces as $piece) {
+                $quantity = $isFacture ? ($piece->pivot->qte_f ?? 1) : ($piece->pivot->qte_ba ?? 1);
+                $montant = ($piece->prix_piece * $quantity) * (1 + ($piece->tva ?? 0) / 100);
+                if ($isFacture && !$addedTimbre) {
+                    $montant += $document->droit_timbre ?? 0;
+                    $addedTimbre = true;
+                }
+
+                $items->push([
+                    'item' => $items->count() + 1,
+                    'libelle' => $piece->nom_piece,
+                    'compte_charge' => $piece->compteGeneral->code ?? 'N/A',
+                    'date' => $date,
+                    'fournisseur' => $document->fournisseur->nom_fourn ?? 'Non spécifié',
+                    'cds' => $formattedCentreCode,
+                    'fourniture_consommable' => number_format($montant, 2, ',', ' '),
+                    'travaux_prestations' => '',
+                    'autres' => ''
+                ]);
+            }
+
+            foreach ($document->prestations as $prestation) {
+                $quantity = $isFacture ? ($prestation->pivot->qte_fpr ?? 1) : ($prestation->pivot->qte_bapr ?? 1);
+                $montant = ($prestation->prix_prest * $quantity) * (1 + ($prestation->tva ?? 0) / 100);
+                if ($isFacture && !$addedTimbre) {
+                    $montant += $document->droit_timbre ?? 0;
+                    $addedTimbre = true;
+                }
+
+                $items->push([
+                    'item' => $items->count() + 1,
+                    'libelle' => $prestation->nom_prest,
+                    'compte_charge' => $prestation->compteGeneral->code ?? 'N/A',
+                    'date' => $date,
+                    'fournisseur' => $document->fournisseur->nom_fourn ?? 'Non spécifié',
+                    'cds' => $formattedCentreCode,
+                    'fourniture_consommable' => '',
+                    'travaux_prestations' => number_format($montant, 2, ',', ' '),
+                    'autres' => ''
+                ]);
+            }
+
+            foreach ($document->charges as $charge) {
+                $quantity = $isFacture ? ($charge->pivot->qte_fc ?? 1) : ($charge->pivot->qte_bac ?? 1);
+                $montant = ($charge->prix_charge * $quantity) * (1 + ($charge->tva ?? 0) / 100);
+                if ($isFacture && !$addedTimbre) {
+                    $montant += $document->droit_timbre ?? 0;
+                    $addedTimbre = true;
+                }
+
+                $items->push([
+                    'item' => $items->count() + 1,
+                    'libelle' => $charge->nom_charge,
+                    'compte_charge' => $charge->compteGeneral->code ?? 'N/A',
+                    'date' => $date,
+                    'fournisseur' => $document->fournisseur->nom_fourn ?? 'Non spécifié',
+                    'cds' => $formattedCentreCode,
+                    'fourniture_consommable' => '',
+                    'travaux_prestations' => '',
+                    'autres' => number_format($montant, 2, ',', ' ')
+                ]);
+            }
+        };
+
+        $factures = Facture::with([
+            'pieces.compteGeneral',
+            'prestations.compteGeneral',
+            'charges.compteGeneral',
+            'fournisseur',
+            'dra'
+        ])
+            ->whereHas('dra', fn($q) => $q->where('id_centre', $centreCode))
+            ->whereBetween('date_facture', [$startDate, $endDate])
+            ->get();
+
+        foreach ($factures as $facture) {
+            $processDocument($facture, true);
+        }
+
+        $bonAchats = BonAchat::with([
+            'pieces.compteGeneral',
+            'prestations.compteGeneral',
+            'charges.compteGeneral',
+            'fournisseur',
+            'dra'
+        ])
+            ->whereHas('dra', fn($q) => $q->where('id_centre', $centreCode))
+            ->whereBetween('date_ba', [$startDate, $endDate])
+            ->get();
+
+        foreach ($bonAchats as $bonAchat) {
+            $processDocument($bonAchat, false);
+        }
+
+        $calculateTotal = fn($field) =>
+        $items->sum(fn($item) =>
+        (float) str_replace([' ', ','], ['', '.'], $item[$field] ?? '0'));
+
+        $totalFourniture = $calculateTotal('fourniture_consommable');
+        $totalTravaux = $calculateTotal('travaux_prestations');
+        $totalAutres = $calculateTotal('autres');
+        $grandTotal = $totalFourniture + $totalTravaux + $totalAutres;
+
+        // 🟢 Pass centreType to the view
+        $pdf = PDF::loadView('exports.etat_trimestriel', [
+            'items' => $items,
+            'centreCode' => $formattedCentreCode,
+            'centreType' => $centreType,
+            'trimestre' => 'Du ' . $startDate->format('d/m/Y') . ' au ' . $endDate->format('d/m/Y'),
+            'totalFourniture' => number_format($totalFourniture, 2, ',', ' '),
+            'totalTravaux' => number_format($totalTravaux, 2, ',', ' '),
+            'totalAutres' => number_format($totalAutres, 2, ',', ' '),
+            'grandTotal' => number_format($grandTotal, 2, ',', ' '),
+            'currentDate' => Carbon::now()->format('d/m/Y H:i'),
+        ]);
+
+        return $pdf->download('etat_trimestriel_' . $formattedCentreCode . '_' . $startDate->format('Y-m') . '.pdf');
+    }
+
+    public function exportEtatTrimestrielAllCentres()
+    {
+        // Get all centers
+        $centres = Centre::all();
+
+        // Get current quarter dates
+        $startDate = Carbon::now()->startOfQuarter();
+        $endDate = Carbon::now()->endOfQuarter();
+
+        // Prepare data for all centers
+        $allCentreData = [];
+        $globalTotals = [
+            'totalFourniture' => 0,
+            'totalTravaux' => 0,
+            'totalAutres' => 0,
+            'grandTotal' => 0
+        ];
+
+        foreach ($centres as $centre) {
+            $centreCode = $centre->id_centre;
+            $formattedCentreCode = '1' . $centreCode;
+
+            $items = collect();
+
+            // Process documents for this center
+            $processDocuments = function ($documents, $isFacture = true) use (&$items, $formattedCentreCode) {
+                foreach ($documents as $document) {
+                    $date = $isFacture
+                        ? Carbon::parse($document->date_facture)->format('d/m/Y')
+                        : Carbon::parse($document->date_ba)->format('d/m/Y');
+                    $addedTimbre = false;
+
+                    // Process pieces
+                    foreach ($document->pieces as $piece) {
+                        $quantity = $isFacture
+                            ? ($piece->pivot->qte_f ?? 1)
+                            : ($piece->pivot->qte_ba ?? 1);
+                        $montant = ($piece->prix_piece * $quantity) * (1 + ($piece->tva ?? 0) / 100);
+
+                        if ($isFacture && !$addedTimbre) {
+                            $montant += $document->droit_timbre ?? 0;
+                            $addedTimbre = true;
+                        }
+
+                        $items->push([
+                            'item' => $items->count() + 1,
+                            'libelle' => $piece->nom_piece,
+                            'compte_charge' => $piece->compteGeneral->code ?? 'N/A',
+                            'date' => $date,
+                            'fournisseur' => $document->fournisseur->nom_fourn ?? 'Non spécifié',
+                            'cds' => $formattedCentreCode,
+                            'fourniture_consommable' => number_format($montant, 2, ',', ' '),
+                            'travaux_prestations' => '',
+                            'autres' => ''
+                        ]);
+                    }
+
+                    // Process prestations
+                    foreach ($document->prestations as $prestation) {
+                        $quantity = $isFacture
+                            ? ($prestation->pivot->qte_fpr ?? 1)
+                            : ($prestation->pivot->qte_bapr ?? 1);
+                        $montant = ($prestation->prix_prest * $quantity) * (1 + ($prestation->tva ?? 0) / 100);
+
+                        if ($isFacture && !$addedTimbre) {
+                            $montant += $document->droit_timbre ?? 0;
+                            $addedTimbre = true;
+                        }
+
+                        $items->push([
+                            'item' => $items->count() + 1,
+                            'libelle' => $prestation->nom_prest,
+                            'compte_charge' => $prestation->compteGeneral->code ?? 'N/A',
+                            'date' => $date,
+                            'fournisseur' => $document->fournisseur->nom_fourn ?? 'Non spécifié',
+                            'cds' => $formattedCentreCode,
+                            'fourniture_consommable' => '',
+                            'travaux_prestations' => number_format($montant, 2, ',', ' '),
+                            'autres' => ''
+                        ]);
+                    }
+
+                    // Process charges
+                    foreach ($document->charges as $charge) {
+                        $quantity = $isFacture
+                            ? ($charge->pivot->qte_fc ?? 1)
+                            : ($charge->pivot->qte_bac ?? 1);
+                        $montant = ($charge->prix_charge * $quantity) * (1 + ($charge->tva ?? 0) / 100);
+
+                        if ($isFacture && !$addedTimbre) {
+                            $montant += $document->droit_timbre ?? 0;
+                            $addedTimbre = true;
+                        }
+
+                        $items->push([
+                            'item' => $items->count() + 1,
+                            'libelle' => $charge->nom_charge,
+                            'compte_charge' => $charge->compteGeneral->code ?? 'N/A',
+                            'date' => $date,
+                            'fournisseur' => $document->fournisseur->nom_fourn ?? 'Non spécifié',
+                            'cds' => $formattedCentreCode,
+                            'fourniture_consommable' => '',
+                            'travaux_prestations' => '',
+                            'autres' => number_format($montant, 2, ',', ' ')
+                        ]);
+                    }
+                }
+            };
+
+            // Get factures for this center
+            $factures = Facture::with([
+                'pieces.compteGeneral',
+                'prestations.compteGeneral',
+                'charges.compteGeneral',
+                'fournisseur',
+                'dra'
+            ])
+                ->whereHas('dra', fn($q) => $q->where('id_centre', $centreCode))
+                ->whereBetween('date_facture', [$startDate, $endDate])
+                ->get();
+
+            // Get bonAchats for this center
+            $bonAchats = BonAchat::with([
+                'pieces.compteGeneral',
+                'prestations.compteGeneral',
+                'charges.compteGeneral',
+                'fournisseur',
+                'dra'
+            ])
+                ->whereHas('dra', fn($q) => $q->where('id_centre', $centreCode))
+                ->whereBetween('date_ba', [$startDate, $endDate])
+                ->get();
+
+            $processDocuments($factures, true);
+            $processDocuments($bonAchats, false);
+
+            // Calculate totals for this center
+            $calculateTotal = fn($field) => $items->sum(
+                fn($item) => (float) str_replace([' ', ','], ['', '.'], $item[$field] ?? '0')
+            );
+
+            $centreTotals = [
+                'totalFourniture' => $calculateTotal('fourniture_consommable'),
+                'totalTravaux' => $calculateTotal('travaux_prestations'),
+                'totalAutres' => $calculateTotal('autres'),
+                'grandTotal' => 0
+            ];
+
+            $centreTotals['grandTotal'] =
+                $centreTotals['totalFourniture'] +
+                $centreTotals['totalTravaux'] +
+                $centreTotals['totalAutres'];
+
+            // Add to global totals
+            $globalTotals['totalFourniture'] += $centreTotals['totalFourniture'];
+            $globalTotals['totalTravaux'] += $centreTotals['totalTravaux'];
+            $globalTotals['totalAutres'] += $centreTotals['totalAutres'];
+            $globalTotals['grandTotal'] += $centreTotals['grandTotal'];
+
+            // Format numbers for display
+            $centreTotals = array_map(function($value) {
+                return number_format($value, 2, ',', ' ');
+            }, $centreTotals);
+
+            // Store center data
+            $allCentreData[] = [
+                'centreCode' => $formattedCentreCode,
+                'centreType' => $centre->type_centre,
+                'items' => $items,
+                'totals' => $centreTotals
+            ];
+        }
+
+        // Format global totals
+        $globalTotals = array_map(function($value) {
+            return number_format($value, 2, ',', ' ');
+        }, $globalTotals);
+
+        // Generate PDF
+        $pdf = PDF::loadView('exports.etat_trimestriel_all_centres', [
+            'allCentreData' => $allCentreData,
+            'globalTotals' => $globalTotals,
+            'trimestre' => 'Du ' . $startDate->format('d/m/Y') . ' au ' . $endDate->format('d/m/Y'),
+            'currentDate' => Carbon::now()->format('d/m/Y H:i'),
+        ]);
+
+        return $pdf->download('etat_trimestriel_all_centres_' . $startDate->format('Y-m') . '.pdf');
+    }
+
 }
