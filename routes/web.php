@@ -11,6 +11,10 @@ Route::get('/', function () {
     return Inertia::render('auth/Login');
 })->name('home');
 
+Route::get('/espace-admin', function () {
+    return Inertia::render('Admin/Dashboard');
+})->name('espaceadmin');
+
 
 
 

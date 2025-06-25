@@ -301,7 +301,7 @@ return Inertia::render('Dra/Edit', [
         $allItems = collect();
         $centre = Centre::find($userCentreId);
         $centreType = $centre ? $centre->type_centre : 'Marine';
-        $centreCode = $centre ? $centre->code_centre : 'N/A';
+        $centreCode = $centre ? $centre->id_centre : 'N/A';
         $centreSeuil = $centre ? (float) $centre->seuil_centre : 0.00;
 
         $dras = Dra::with([

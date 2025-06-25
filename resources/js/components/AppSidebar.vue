@@ -59,29 +59,13 @@ if (user.value?.roles?.some((role: any) =>
 // Conditionally add "centre"
 if (user.value?.roles?.some((role: any) => role.name === 'admin' )) {
     mainNavItems.push({
-        title: 'Gestion des Centres',
-        href: '/centres',
+        title: 'Espace Admin',
+        href: '/espace-admin',
         icon: Building,
     });
 }
 
-// Conditionally add "atelier"
-if (user.value?.roles?.some((role: any) => role.name === 'admin' )) {
-    mainNavItems.push({
-        title: 'Gestion des Ateliers',
-        href: '/gestionatelier',
-        icon: Wrench,
-    });
-}
 
-// Conditionally add "magasin"
-if (user.value?.roles?.some((role: any) => role.name === 'admin' )) {
-    mainNavItems.push({
-        title: 'Gestion des Magasins',
-        href: '/gestionmagasin',
-        icon: Store,
-    });
-}
 
 // Conditionally add "fournisseurs"
 if (user.value?.roles?.some((role: any) => role.name === 'admin' || role.name === 'service achat' )) {
@@ -91,23 +75,7 @@ if (user.value?.roles?.some((role: any) => role.name === 'admin' || role.name ==
         icon: User,
     });
 }
-// Conditionally add "Users"
-if (user.value?.roles?.some((role: any) => role.name === 'admin')) {
-    mainNavItems.push({
-        title: 'Utilisateur',
-        href: '/users',
-        icon: Contact,
-    });
-}
 
-// Conditionally add "Roles"
-if (user.value?.roles?.some((role: any) => role.name === 'admin')) {
-    mainNavItems.push({
-        title: '\tRôles',
-        href: '/roles',
-        icon: Contact,
-    });
-}
 
 // Conditionally add "Atelier"
 if (user.value?.roles?.some((role: any) => role.name === 'admin' || role.name === 'service atelier')) {
