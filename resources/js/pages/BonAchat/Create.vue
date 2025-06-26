@@ -185,39 +185,8 @@ function submit() {
                     <div v-if="form.errors.id_fourn" class="text-red-500 text-sm">{{ form.errors.id_fourn }}</div>
                 </div>
 
-                <!-- Radio buttons for item type selection -->
-                <div class="space-y-2">
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Type d'article à ajouter</label>
-                    <div class="flex items-center space-x-4">
-                        <label class="flex items-center cursor-pointer">
-                            <input
-                                type="radio"
-                                v-model="selectedItemType"
-                                value="piece"
-                                class="form-radio h-4 w-4 text-[#042B62] dark:text-[#F3B21B]"
-                            />
-                            <span class="ml-2 text-gray-700 dark:text-gray-300">Pièce</span>
-                        </label>
-                        <label class="flex items-center cursor-pointer">
-                            <input
-                                type="radio"
-                                v-model="selectedItemType"
-                                value="prestation"
-                                class="form-radio h-4 w-4 text-[#042B62] dark:text-[#F3B21B]"
-                            />
-                            <span class="ml-2 text-gray-700 dark:text-gray-300">Prestation</span>
-                        </label>
-                        <label class="flex items-center cursor-pointer">
-                            <input
-                                type="radio"
-                                v-model="selectedItemType"
-                                value="charge"
-                                class="form-radio h-4 w-4 text-[#042B62] dark:text-[#F3B21B]"
-                            />
-                            <span class="ml-2 text-gray-700 dark:text-gray-300">Charge</span>
-                        </label>
-                    </div>
-                </div>
+
+
 
                 <!-- Conditional Input Section based on selectedItemType -->
                 <div class="space-y-4">
@@ -475,7 +444,7 @@ function submit() {
                     </div>
 
                     <div v-if="form.pieces.length === 0 && form.prestations.length === 0 && form.charges.length === 0" class="text-center py-4 text-gray-500 dark:text-gray-400">
-                        Aucun article sélectionné. Veuillez ajouter au moins une pièce, prestation ou charge.
+                        Aucun article sélectionné. Veuillez ajouter au moins une pièce.
                     </div>
                 </div>
 

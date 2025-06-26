@@ -112,7 +112,7 @@ function deleteDemande(id_dp: number) {
 </script>
 
 <template>
-    <Head title="Liste des Demandes de Pièces" />
+    <Head title="Liste des Demandes de Pièces par rupture" />
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex justify-between items-center m-5 mb-0 gap-4 flex-wrap">
             <div class="flex items-center gap-2 w-full md:w-1/3">
@@ -136,7 +136,7 @@ function deleteDemande(id_dp: number) {
         <div class="m-5 mr-2 bg-gray-100 dark:bg-gray-800 rounded-lg">
             <div class="flex justify-between items-center m-5">
                 <h1 class="text-lg font-bold text-left text-[#042B62FF] dark:text-[#BDBDBDFF]">
-                    Liste des Demandes de Pièces
+                    Liste des Demandes de Pièces par Rupture
                 </h1>
             </div>
 
