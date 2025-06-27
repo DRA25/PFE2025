@@ -3,7 +3,6 @@ import { useForm, Head, Link } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 
-// The target page does not have these props, so they are added here.
 const props = defineProps<{
     compteGenerals: Array<{ code: string; libelle: string }>,
     compteAnalytiques: Array<{ code: string; libelle: string }>,
@@ -16,14 +15,14 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 const form = useForm({
-    id_piece: null as number | null, // Added based on the example to match the target form
+    id_piece: null as number | null,
     nom_piece: '',
-    prix_piece: null as number | null,
-    tva: null as number | null, // Added based on the example to match the target form
+
+    tva: null as number | null,
     marque_piece: '',
     ref_piece: '',
-    compte_general_code: '', // Added based on the example to match the target form
-    compte_analytique_code: '', // Added based on the example to match the target form
+    compte_general_code: '',
+    compte_analytique_code: '',
 });
 
 function submit() {
@@ -64,18 +63,7 @@ function submit() {
                     <p v-if="form.errors.nom_piece" class="text-sm text-red-600">{{ form.errors.nom_piece }}</p>
                 </div>
 
-                <div class="space-y-2">
-                    <label for="prix_piece" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Prix</label>
-                    <input
-                        id="prix_piece"
-                        v-model="form.prix_piece"
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        class="w-full border border-gray-300 dark:border-gray-600 p-2 rounded focus:ring-2 focus:ring-[#042B62] dark:focus:ring-[#F3B21B] focus:border-transparent dark:bg-gray-800 dark:text-white"
-                    />
-                    <p v-if="form.errors.prix_piece" class="text-sm text-red-600">{{ form.errors.prix_piece }}</p>
-                </div>
+
 
                 <div class="space-y-2">
                     <label for="tva" class="block text-sm font-medium text-gray-700 dark:text-gray-300">TVA (%)</label>
@@ -150,19 +138,20 @@ function submit() {
                     <p v-if="form.errors.compte_analytique_code" class="text-sm text-red-600">{{ form.errors.compte_analytique_code }}</p>
                 </div>
 
-                <div class="flex justify-end mt-6 space-x-4">
+                <div class="flex justify-end space-x-4 pt-4 md:col-span-2">
                     <Link
                         :href="route('magasin.pieces.index')"
-                        class="px-4 py-2 text-sm font-medium text-gray-700 bg-white dark:bg-gray-600 dark:text-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#042B62]"
+                        class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition"
                     >
                         Annuler
                     </Link>
                     <button
                         type="submit"
                         :disabled="form.processing"
-                        class="px-4 py-2 text-sm font-medium text-white bg-[#042B62] dark:bg-[#F3B21B] dark:text-[#042B62] border border-transparent rounded-md shadow-sm hover:bg-blue-700 dark:hover:bg-yellow-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#042B62]"
+                        class="px-4 py-2 bg-[#042B62] dark:bg-[#F3B21B] text-white dark:text-[#042B62] rounded-lg hover:bg-blue-900 dark:hover:bg-yellow-200 transition flex items-center gap-2 disabled:opacity-50"
                     >
-                        Créer
+                        <span>Enregistrer</span>
+                        <span v-if="form.processing" class="animate-spin">↻</span>
                     </button>
                 </div>
             </form>

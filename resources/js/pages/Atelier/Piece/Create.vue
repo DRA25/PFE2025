@@ -17,7 +17,6 @@ const breadcrumbs: BreadcrumbItem[] = [
 const form = useForm({
     id_piece: null as number | null,
     nom_piece: '',
-    prix_piece: null as number | null,
     tva: null as number | null,
     marque_piece: '',
     ref_piece: '',
@@ -61,19 +60,6 @@ function submit() {
                         class="w-full border border-gray-300 dark:border-gray-600 p-2 rounded focus:ring-2 focus:ring-[#042B62] dark:focus:ring-[#F3B21B] focus:border-transparent dark:bg-gray-800 dark:text-white"
                     />
                     <p v-if="form.errors.nom_piece" class="text-sm text-red-600">{{ form.errors.nom_piece }}</p>
-                </div>
-
-                <div class="space-y-2">
-                    <label for="prix_piece" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Prix</label>
-                    <input
-                        id="prix_piece"
-                        v-model="form.prix_piece"
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        class="w-full border border-gray-300 dark:border-gray-600 p-2 rounded focus:ring-2 focus:ring-[#042B62] dark:focus:ring-[#F3B21B] focus:border-transparent dark:bg-gray-800 dark:text-white"
-                    />
-                    <p v-if="form.errors.prix_piece" class="text-sm text-red-600">{{ form.errors.prix_piece }}</p>
                 </div>
 
                 <div class="space-y-2">

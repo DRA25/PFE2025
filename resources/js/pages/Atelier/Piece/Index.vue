@@ -22,7 +22,6 @@ const props = defineProps<{
         id: number,
         id_piece: number,
         nom_piece: string,
-        prix_piece: number,
         marque_piece: string,
         ref_piece: string,
         tva?: number | null,
@@ -94,7 +93,7 @@ const sortedPieces = computed(() => {
                 <input
                     type="text"
                     v-model="searchQuery"
-                    placeholder="Rechercher par ID, nom, prix, marque, référence, compte général ou analytique..."
+                    placeholder="Rechercher par ID, nom, marque, référence, compte général ou analytique..."
                     class="w-full bg-gray-100 px-4 py-2 rounded-md border border-gray-200 dark:border-gray-700 dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
                 />
             </div>
@@ -131,10 +130,7 @@ const sortedPieces = computed(() => {
                             Nom
                             <ArrowUpDown class="ml-2 h-4 w-4 inline-block" />
                         </TableHead>
-                        <TableHead class="cursor-pointer" @click="requestSort('prix_piece')">
-                            Prix
-                            <ArrowUpDown class="ml-2 h-4 w-4 inline-block" />
-                        </TableHead>
+
                         <TableHead class="cursor-pointer" @click="requestSort('marque_piece')">
                             Marque
                             <ArrowUpDown class="ml-2 h-4 w-4 inline-block" />
@@ -167,7 +163,7 @@ const sortedPieces = computed(() => {
                     >
                         <TableCell>{{ piece.id_piece }}</TableCell>
                         <TableCell>{{ piece.nom_piece }}</TableCell>
-                        <TableCell>{{ piece.prix_piece }}</TableCell>
+
                         <TableCell>{{ piece.marque_piece }}</TableCell>
                         <TableCell>{{ piece.ref_piece }}</TableCell>
                         <TableCell>

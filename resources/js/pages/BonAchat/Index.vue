@@ -33,24 +33,7 @@ const props = defineProps({
                 qte_ba: number
             }
         }>
-        prestations: Array<{
-            id_prest: number
-            nom_prest: string
-            prix_prest: number
-            tva: number
-            pivot: {
-                qte_bapr: number
-            }
-        }>
-        charges: Array<{
-            id_charge: number
-            nom_charge: string
-            prix_charge: number
-            tva: number
-            pivot: {
-                qte_bac: number
-            }
-        }>
+        // prestations and charges are removed from here
     }>(),
 })
 
@@ -73,22 +56,13 @@ const requestSort = (column: string) => {
 }
 
 const calculateMontant = (bonAchat: typeof props.bonAchats[0]) => {
+    // Only calculate total for pieces
     const totalPieces = bonAchat.pieces.reduce((total, piece) => {
         const subtotal = piece.prix_piece * piece.pivot.qte_ba;
         return total + (subtotal * (1 + (piece.tva / 100)));
     }, 0);
 
-    const totalPrestations = bonAchat.prestations.reduce((total, prestation) => {
-        const subtotal = prestation.prix_prest * prestation.pivot.qte_bapr;
-        return total + (subtotal * (1 + (prestation.tva / 100)));
-    }, 0);
-
-    const totalCharges = bonAchat.charges.reduce((total, charge) => {
-        const subtotal = charge.prix_charge * charge.pivot.qte_bac;
-        return total + (subtotal * (1 + (charge.tva / 100)));
-    }, 0);
-
-    return totalPieces + totalPrestations + totalCharges;
+    return totalPieces;
 }
 
 const sortedBonAchats = computed(() => {
@@ -97,13 +71,12 @@ const sortedBonAchats = computed(() => {
     if (searchQuery.value) {
         const query = searchQuery.value.toLowerCase();
         data = data.filter(bonAchat =>
-            String(bonAchat.n_ba).toLowerCase().includes(query) ||
-            String(calculateMontant(bonAchat)).toLowerCase().includes(query) ||
-            bonAchat.date_ba.toLowerCase().includes(query) ||
-            bonAchat.fournisseur?.nom_fourn?.toLowerCase().includes(query) ||
-            bonAchat.pieces?.some(piece => piece.nom_piece.toLowerCase().includes(query)) ||
-            bonAchat.prestations?.some(prestation => prestation.nom_prest.toLowerCase().includes(query)) ||
-            bonAchat.charges?.some(charge => charge.nom_charge.toLowerCase().includes(query))
+                String(bonAchat.n_ba).toLowerCase().includes(query) ||
+                String(calculateMontant(bonAchat)).toLowerCase().includes(query) ||
+                bonAchat.date_ba.toLowerCase().includes(query) ||
+                bonAchat.fournisseur?.nom_fourn?.toLowerCase().includes(query) ||
+                bonAchat.pieces?.some(piece => piece.nom_piece.toLowerCase().includes(query))
+            // Removed search for prestations and charges
         );
     }
 
@@ -146,7 +119,7 @@ const sortedBonAchats = computed(() => {
                 <input
                     type="text"
                     v-model="searchQuery"
-                    placeholder="Rechercher par ID, montant, date, fournisseur, pièce, prestation ou charge..."
+                    placeholder="Rechercher par ID, montant, date, fournisseur, ou pièce..."
                     class="w-full bg-gray-100 px-4 py-2 rounded-md border border-gray-200 dark:border-gray-700 dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
                 />
             </div>
@@ -207,20 +180,9 @@ const sortedBonAchats = computed(() => {
                                         {{ piece.nom_piece }} (x{{ piece.pivot.qte_ba }})
                                     </div>
                                 </div>
-                                <div v-if="bonAchat.prestations && bonAchat.prestations.length > 0" class="mb-1">
-                                    <h4 class="font-semibold text-gray-800 dark:text-gray-200">Prestations:</h4>
-                                    <div v-for="prestation in bonAchat.prestations" :key="prestation.id_prest" class="text-sm">
-                                        {{ prestation.nom_prest }} (x{{ prestation.pivot.qte_bapr }})
-                                    </div>
-                                </div>
-                                <div v-if="bonAchat.charges && bonAchat.charges.length > 0">
-                                    <h4 class="font-semibold text-gray-800 dark:text-gray-200">Charges:</h4>
-                                    <div v-for="charge in bonAchat.charges" :key="charge.id_charge" class="text-sm">
-                                        {{ charge.nom_charge }} (x{{ charge.pivot.qte_bac }})
-                                    </div>
-                                </div>
-                                <div v-if="(!bonAchat.pieces || bonAchat.pieces.length === 0) && (!bonAchat.prestations || bonAchat.prestations.length === 0) && (!bonAchat.charges || bonAchat.charges.length === 0)" class="text-sm text-gray-500 dark:text-gray-400">
-                                    Aucune pièce, prestation ou charge
+                                <!-- Removed sections for prestations and charges -->
+                                <div v-if="!bonAchat.pieces || bonAchat.pieces.length === 0" class="text-sm text-gray-500 dark:text-gray-400">
+                                    Aucune pièce
                                 </div>
                             </TableCell>
                             <TableCell>
