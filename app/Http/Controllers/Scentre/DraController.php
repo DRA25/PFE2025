@@ -68,13 +68,11 @@ class DraController extends Controller
                 return $facture;
             });
 
-        // Load bonAchats with pieces
+        // Load bonAchats with pieces only
         $bonAchats = $dra->bonAchats()
             ->with([
                 'fournisseur:id_fourn,nom_fourn',
                 'pieces:id_piece,nom_piece,prix_piece,tva',
-                'prestations:id_prest,nom_prest,desc_prest,prix_prest,tva',
-                'charges:id_charge,nom_charge,desc_change,prix_charge,tva'
             ])
             ->get()
             ->map(function ($bonAchat) {
@@ -161,12 +159,12 @@ class DraController extends Controller
 
 
     public function edit(Dra $dra)
-{
+    {
 
-return Inertia::render('Dra/Edit', [
-'dra' => $dra,
-]);
-}
+        return Inertia::render('Dra/Edit', [
+            'dra' => $dra,
+        ]);
+    }
 
     public function update(Request $request, Dra $dra)
     {
@@ -188,7 +186,14 @@ return Inertia::render('Dra/Edit', [
 
         try {
             $userCentreId = Auth::user()->id_centre;
-            $dra = Dra::with(['bonAchats.pieces', 'factures.pieces', 'centre'])->where('n_dra', $n_dra)->firstOrFail();
+            // Load pieces, prestations, and charges for factures, and pieces for bonAchats
+            $dra = Dra::with([
+                'bonAchats.pieces',
+                'factures.pieces',
+                'factures.prestations',
+                'factures.charges',
+                'centre'
+            ])->where('n_dra', $n_dra)->firstOrFail();
 
             // Authorization: Ensure the DRA belongs to the user's center
             if ($dra->id_centre !== $userCentreId) {
@@ -203,11 +208,24 @@ return Inertia::render('Dra/Edit', [
             $montantToRestore = '0';
 
             foreach ($dra->bonAchats as $bonAchat) {
+                // calculateMontant for BonAchat now only considers pieces
                 $montantToRestore = bcadd($montantToRestore, (string)$this->calculateMontant($bonAchat), 2);
             }
 
             foreach ($dra->factures as $facture) {
+                // calculateMontant for Facture considers pieces, prestations, charges, and droit_timbre
                 $montantToRestore = bcadd($montantToRestore, (string)$this->calculateMontant($facture), 2);
+            }
+
+            // Detach pieces from bonAchats
+            foreach ($dra->bonAchats as $bonAchat) {
+                $bonAchat->pieces()->detach();
+            }
+            // Detach pieces, prestations, and charges from factures
+            foreach ($dra->factures as $facture) {
+                $facture->pieces()->detach();
+                $facture->prestations()->detach();
+                $facture->charges()->detach();
             }
 
             // Delete related factures and bonAchats
@@ -262,28 +280,40 @@ return Inertia::render('Dra/Edit', [
 
         // Calculate pieces total (HT + TVA)
         if ($model->relationLoaded('pieces')) {
-            $total += $model->pieces->sum(function ($piece) {
+            $total += $model->pieces->sum(function ($piece) use ($model) {
+                // Determine pivot quantity based on model type (BonAchat or Facture)
+                $quantity = 0;
+                if ($model instanceof \App\Models\BonAchat) {
+                    $pivotData = $piece->pivot->toArray();
+                    $quantity = $pivotData['qte_ba'] ?? 0;
+                } elseif ($model instanceof \App\Models\Facture) {
+                    $pivotData = $piece->pivot->toArray();
+                    $quantity = $pivotData['qte_f'] ?? 0;
+                }
+
                 $ht = $piece->prix_piece;
                 $tva = $piece->tva ?? 0;
-                return $ht * (1 + $tva / 100);
+                return ($ht * $quantity) * (1 + $tva / 100);
             });
         }
 
-        // Add prestations (HT + TVA)
-        if ($model->relationLoaded('prestations')) {
+        // Add prestations (HT + TVA) for Factures only
+        if ($model instanceof \App\Models\Facture && $model->relationLoaded('prestations')) {
             $total += $model->prestations->sum(function ($prestation) {
+                $quantity = $prestation->pivot->qte_fpr ?? 0; // Specific pivot for facture prestations
                 $ht = $prestation->prix_prest;
                 $tva = $prestation->tva ?? 0;
-                return $ht * (1 + $tva / 100);
+                return ($ht * $quantity) * (1 + $tva / 100);
             });
         }
 
-        // Add charges (HT + TVA)
-        if ($model->relationLoaded('charges')) {
+        // Add charges (HT + TVA) for Factures only
+        if ($model instanceof \App\Models\Facture && $model->relationLoaded('charges')) {
             $total += $model->charges->sum(function ($charge) {
+                $quantity = $charge->pivot->qte_fc ?? 0; // Specific pivot for facture charges
                 $ht = $charge->prix_charge;
                 $tva = $charge->tva ?? 0;
-                return $ht * (1 + $tva / 100);
+                return ($ht * $quantity) * (1 + $tva / 100);
             });
         }
 
@@ -294,7 +324,6 @@ return Inertia::render('Dra/Edit', [
 
         return $total;
     }
-
 
 
     public function exportAllDras()
@@ -309,12 +338,10 @@ return Inertia::render('Dra/Edit', [
         $dras = Dra::with([
             'centre',
             'factures.pieces',
-            'factures.prestations',
-            'factures.charges',
+            'factures.prestations', // Re-added for factures
+            'factures.charges',     // Re-added for factures
             'factures.fournisseur',
-            'bonAchats.pieces',
-            'bonAchats.prestations', // Add prestations to bonAchats eager load
-            'bonAchats.charges',    // Add charges to bonAchats eager load
+            'bonAchats.pieces',     // Only pieces for bonAchats
             'bonAchats.fournisseur',
             'remboursements.encaissements'
         ])
@@ -334,24 +361,24 @@ return Inertia::render('Dra/Edit', [
             foreach ($dra->factures as $facture) {
                 // Calculate pieces total (HT + TVA)
                 $piecesTotal = $facture->pieces->sum(function ($piece) {
-                    $quantity = $piece->pivot->qte_f ?? 1; // Direct pivot access
+                    $quantity = $piece->pivot->qte_f ?? 1;
                     return ($piece->prix_piece * $quantity) * (1 + ($piece->tva ?? 0) / 100);
                 });
 
-                // Calculate prestations total (HT + TVA)
+                // Calculate prestations total (HT + TVA) - Re-added for factures
                 $prestationsTotal = $facture->prestations->sum(function ($prestation) {
-                    $quantity = $prestation->pivot->qte_fpr ?? 1; // Direct pivot access
+                    $quantity = $prestation->pivot->qte_fpr ?? 1;
                     return ($prestation->prix_prest * $quantity) * (1 + ($prestation->tva ?? 0) / 100);
                 });
 
-                // Calculate charges total (HT + TVA)
+                // Calculate charges total (HT + TVA) - Re-added for factures
                 $chargesTotal = $facture->charges->sum(function ($charge) {
-                    $quantity = $charge->pivot->qte_fc ?? 1; // Direct pivot access
+                    $quantity = $charge->pivot->qte_fc ?? 1;
                     return ($charge->prix_charge * $quantity) * (1 + ($charge->tva ?? 0) / 100);
                 });
 
                 $droitTimbre = $facture->droit_timbre ?? 0;
-                $totalAmount = $piecesTotal + $prestationsTotal + $chargesTotal + $droitTimbre;
+                $totalAmount = $piecesTotal + $prestationsTotal + $chargesTotal + $droitTimbre; // Sum all three
 
                 // Combine all item names with quantities for the libelle
                 $pieceNames = $facture->pieces->map(function ($piece) {
@@ -375,8 +402,8 @@ return Inertia::render('Dra/Edit', [
 
                 $draItems->push([
                     'n_dra' => $dra->n_dra,
-                    'n_bon' => 'Facture ' . $facture->n_facture, // Indicate it's a facture
-                    'date_bon' => Carbon::parse($facture->date_facture)->format('d/m/Y'), // Use facture date
+                    'n_bon' => 'Facture ' . $facture->n_facture,
+                    'date_bon' => Carbon::parse($facture->date_facture)->format('d/m/Y'),
                     'libelle' => $libelle,
                     'fournisseur' => $fournisseurName,
                     'encaissement' => '',
@@ -388,7 +415,7 @@ return Inertia::render('Dra/Edit', [
                 $draTotalDecaissement += $totalAmount;
             }
 
-            // Process bonAchats (decaissement) - UPDATED SECTION
+            // Process bonAchats (decaissement) - Remains only pieces
             foreach ($dra->bonAchats as $bonAchat) {
                 // Calculate pieces total (HT + TVA)
                 $baPiecesTotal = $bonAchat->pieces->sum(function ($piece) {
@@ -396,46 +423,22 @@ return Inertia::render('Dra/Edit', [
                     return ($piece->prix_piece * $quantity) * (1 + ($piece->tva ?? 0) / 100);
                 });
 
-                // Calculate prestations total (HT + TVA) for Bon d'Achat
-                $baPrestationsTotal = $bonAchat->prestations->sum(function ($prestation) {
-                    // Assuming similar pivot structure for bonAchats_prestations
-                    $quantity = $prestation->pivot->qte_bapr ?? 1; // Adjust pivot column name if different
-                    return ($prestation->prix_prest * $quantity) * (1 + ($prestation->tva ?? 0) / 100);
-                });
+                $totalAmount = $baPiecesTotal; // Only pieces for bonAchat
 
-                // Calculate charges total (HT + TVA) for Bon d'Achat
-                $baChargesTotal = $bonAchat->charges->sum(function ($charge) {
-                    // Assuming similar pivot structure for bonAchats_charges
-                    $quantity = $charge->pivot->qte_bac ?? 1; // Adjust pivot column name if different
-                    return ($charge->prix_charge * $quantity) * (1 + ($charge->tva ?? 0) / 100);
-                });
-
-                $totalAmount = $baPiecesTotal + $baPrestationsTotal + $baChargesTotal;
-
-                // Combine all item names with quantities for the libelle for Bon d'Achat
+                // Combine only piece names for the libelle for Bon d'Achat
                 $baPieceNames = $bonAchat->pieces->map(function ($piece) {
                     $quantity = $piece->pivot->qte_ba ?? 1;
                     return $piece->nom_piece . ' (x' . $quantity . ')';
                 })->implode(', ');
 
-                $baPrestationNames = $bonAchat->prestations->map(function ($prestation) {
-                    $quantity = $prestation->pivot->qte_bapr ?? 1; // Adjust pivot column name if different
-                    return $prestation->nom_prest . ' (x' . $quantity . ')';
-                })->implode(', ');
-
-                $baChargeNames = $bonAchat->charges->map(function ($charge) {
-                    $quantity = $charge->pivot->qte_bac ?? 1; // Adjust pivot column name if different
-                    return $charge->nom_charge . ' (x' . $quantity . ')';
-                })->implode(', ');
-
-                $libelle = implode(', ', array_filter([$baPieceNames, $baPrestationNames, $baChargeNames]));
+                $libelle = implode(', ', array_filter([$baPieceNames]));
 
                 $fournisseurName = $bonAchat->fournisseur ? $bonAchat->fournisseur->nom_fourn : 'Non spécifié';
 
                 $draItems->push([
                     'n_dra' => $dra->n_dra,
-                    'n_bon' => 'Bon Achat ' . $bonAchat->n_ba, // Indicate it's a bon d'achat
-                    'date_bon' => Carbon::parse($bonAchat->date_ba)->format('d/m/Y'), // Use bonAchat date
+                    'n_bon' => 'Bon Achat ' . $bonAchat->n_ba,
+                    'date_bon' => Carbon::parse($bonAchat->date_ba)->format('d/m/Y'),
                     'libelle' => $libelle,
                     'fournisseur' => $fournisseurName,
                     'encaissement' => '',
@@ -535,12 +538,14 @@ return Inertia::render('Dra/Edit', [
         $endDate = Carbon::now()->endOfQuarter();
         $items = collect();
 
+        // Updated processDocument to handle pieces, prestations, and charges for Factures
+        // and only pieces for BonAchats
         $processDocument = function ($document, $isFacture = true) use (&$items, $formattedCentreCode) {
             $date = $isFacture
                 ? Carbon::parse($document->date_facture)->format('d/m/Y')
                 : Carbon::parse($document->date_ba)->format('d/m/Y');
 
-            $addedTimbre = false;
+            $addedTimbre = false; // Flag to ensure droit_timbre is added only once per facture
 
             foreach ($document->pieces as $piece) {
                 $quantity = $isFacture ? ($piece->pivot->qte_f ?? 1) : ($piece->pivot->qte_ba ?? 1);
@@ -563,53 +568,59 @@ return Inertia::render('Dra/Edit', [
                 ]);
             }
 
-            foreach ($document->prestations as $prestation) {
-                $quantity = $isFacture ? ($prestation->pivot->qte_fpr ?? 1) : ($prestation->pivot->qte_bapr ?? 1);
-                $montant = ($prestation->prix_prest * $quantity) * (1 + ($prestation->tva ?? 0) / 100);
-                if ($isFacture && !$addedTimbre) {
-                    $montant += $document->droit_timbre ?? 0;
-                    $addedTimbre = true;
-                }
+            // Only process prestations if it's a Facture
+            if ($isFacture && $document->relationLoaded('prestations')) {
+                foreach ($document->prestations as $prestation) {
+                    $quantity = $prestation->pivot->qte_fpr ?? 1;
+                    $montant = ($prestation->prix_prest * $quantity) * (1 + ($prestation->tva ?? 0) / 100);
+                    if ($isFacture && !$addedTimbre) { // Check for timbre again just in case, though it should be added with first item
+                        $montant += $document->droit_timbre ?? 0;
+                        $addedTimbre = true;
+                    }
 
-                $items->push([
-                    'item' => $items->count() + 1,
-                    'libelle' => $prestation->nom_prest,
-                    'compte_charge' => $prestation->compteGeneral->code ?? 'N/A',
-                    'date' => $date,
-                    'fournisseur' => $document->fournisseur->nom_fourn ?? 'Non spécifié',
-                    'cds' => $formattedCentreCode,
-                    'fourniture_consommable' => '',
-                    'travaux_prestations' => number_format($montant, 2, ',', ' '),
-                    'autres' => ''
-                ]);
+                    $items->push([
+                        'item' => $items->count() + 1,
+                        'libelle' => $prestation->nom_prest,
+                        'compte_charge' => $prestation->compteGeneral->code ?? 'N/A',
+                        'date' => $date,
+                        'fournisseur' => $document->fournisseur->nom_fourn ?? 'Non spécifié',
+                        'cds' => $formattedCentreCode,
+                        'fourniture_consommable' => '',
+                        'travaux_prestations' => number_format($montant, 2, ',', ' '),
+                        'autres' => ''
+                    ]);
+                }
             }
 
-            foreach ($document->charges as $charge) {
-                $quantity = $isFacture ? ($charge->pivot->qte_fc ?? 1) : ($charge->pivot->qte_bac ?? 1);
-                $montant = ($charge->prix_charge * $quantity) * (1 + ($charge->tva ?? 0) / 100);
-                if ($isFacture && !$addedTimbre) {
-                    $montant += $document->droit_timbre ?? 0;
-                    $addedTimbre = true;
-                }
+            // Only process charges if it's a Facture
+            if ($isFacture && $document->relationLoaded('charges')) {
+                foreach ($document->charges as $charge) {
+                    $quantity = $charge->pivot->qte_fc ?? 1;
+                    $montant = ($charge->prix_charge * $quantity) * (1 + ($charge->tva ?? 0) / 100);
+                    if ($isFacture && !$addedTimbre) { // Check for timbre again
+                        $montant += $document->droit_timbre ?? 0;
+                        $addedTimbre = true;
+                    }
 
-                $items->push([
-                    'item' => $items->count() + 1,
-                    'libelle' => $charge->nom_charge,
-                    'compte_charge' => $charge->compteGeneral->code ?? 'N/A',
-                    'date' => $date,
-                    'fournisseur' => $document->fournisseur->nom_fourn ?? 'Non spécifié',
-                    'cds' => $formattedCentreCode,
-                    'fourniture_consommable' => '',
-                    'travaux_prestations' => '',
-                    'autres' => number_format($montant, 2, ',', ' ')
-                ]);
+                    $items->push([
+                        'item' => $items->count() + 1,
+                        'libelle' => $charge->nom_charge,
+                        'compte_charge' => $charge->compteGeneral->code ?? 'N/A',
+                        'date' => $date,
+                        'fournisseur' => $document->fournisseur->nom_fourn ?? 'Non spécifié',
+                        'cds' => $formattedCentreCode,
+                        'fourniture_consommable' => '',
+                        'travaux_prestations' => '',
+                        'autres' => number_format($montant, 2, ',', ' ')
+                    ]);
+                }
             }
         };
 
         $factures = Facture::with([
             'pieces.compteGeneral',
-            'prestations.compteGeneral',
-            'charges.compteGeneral',
+            'prestations.compteGeneral', // Re-added for factures
+            'charges.compteGeneral',     // Re-added for factures
             'fournisseur',
             'dra'
         ])
@@ -623,8 +634,6 @@ return Inertia::render('Dra/Edit', [
 
         $bonAchats = BonAchat::with([
             'pieces.compteGeneral',
-            'prestations.compteGeneral',
-            'charges.compteGeneral',
             'fournisseur',
             'dra'
         ])
@@ -685,7 +694,7 @@ return Inertia::render('Dra/Edit', [
 
             $items = collect();
 
-            // Process documents for this center
+            // Process documents for this center - UPDATED
             $processDocuments = function ($documents, $isFacture = true) use (&$items, $formattedCentreCode) {
                 foreach ($documents as $document) {
                     $date = $isFacture
@@ -718,54 +727,54 @@ return Inertia::render('Dra/Edit', [
                         ]);
                     }
 
-                    // Process prestations
-                    foreach ($document->prestations as $prestation) {
-                        $quantity = $isFacture
-                            ? ($prestation->pivot->qte_fpr ?? 1)
-                            : ($prestation->pivot->qte_bapr ?? 1);
-                        $montant = ($prestation->prix_prest * $quantity) * (1 + ($prestation->tva ?? 0) / 100);
+                    // Process prestations for Factures only
+                    if ($isFacture && $document->relationLoaded('prestations')) {
+                        foreach ($document->prestations as $prestation) {
+                            $quantity = $prestation->pivot->qte_fpr ?? 1;
+                            $montant = ($prestation->prix_prest * $quantity) * (1 + ($prestation->tva ?? 0) / 100);
 
-                        if ($isFacture && !$addedTimbre) {
-                            $montant += $document->droit_timbre ?? 0;
-                            $addedTimbre = true;
+                            if ($isFacture && !$addedTimbre) {
+                                $montant += $document->droit_timbre ?? 0;
+                                $addedTimbre = true;
+                            }
+
+                            $items->push([
+                                'item' => $items->count() + 1,
+                                'libelle' => $prestation->nom_prest,
+                                'compte_charge' => $prestation->compteGeneral->code ?? 'N/A',
+                                'date' => $date,
+                                'fournisseur' => $document->fournisseur->nom_fourn ?? 'Non spécifié',
+                                'cds' => $formattedCentreCode,
+                                'fourniture_consommable' => '',
+                                'travaux_prestations' => number_format($montant, 2, ',', ' '),
+                                'autres' => ''
+                            ]);
                         }
-
-                        $items->push([
-                            'item' => $items->count() + 1,
-                            'libelle' => $prestation->nom_prest,
-                            'compte_charge' => $prestation->compteGeneral->code ?? 'N/A',
-                            'date' => $date,
-                            'fournisseur' => $document->fournisseur->nom_fourn ?? 'Non spécifié',
-                            'cds' => $formattedCentreCode,
-                            'fourniture_consommable' => '',
-                            'travaux_prestations' => number_format($montant, 2, ',', ' '),
-                            'autres' => ''
-                        ]);
                     }
 
-                    // Process charges
-                    foreach ($document->charges as $charge) {
-                        $quantity = $isFacture
-                            ? ($charge->pivot->qte_fc ?? 1)
-                            : ($charge->pivot->qte_bac ?? 1);
-                        $montant = ($charge->prix_charge * $quantity) * (1 + ($charge->tva ?? 0) / 100);
+                    // Process charges for Factures only
+                    if ($isFacture && $document->relationLoaded('charges')) {
+                        foreach ($document->charges as $charge) {
+                            $quantity = $charge->pivot->qte_fc ?? 1;
+                            $montant = ($charge->prix_charge * $quantity) * (1 + ($charge->tva ?? 0) / 100);
 
-                        if ($isFacture && !$addedTimbre) {
-                            $montant += $document->droit_timbre ?? 0;
-                            $addedTimbre = true;
+                            if ($isFacture && !$addedTimbre) {
+                                $montant += $document->droit_timbre ?? 0;
+                                $addedTimbre = true;
+                            }
+
+                            $items->push([
+                                'item' => $items->count() + 1,
+                                'libelle' => $charge->nom_charge,
+                                'compte_charge' => $charge->compteGeneral->code ?? 'N/A',
+                                'date' => $date,
+                                'fournisseur' => $document->fournisseur->nom_fourn ?? 'Non spécifié',
+                                'cds' => $formattedCentreCode,
+                                'fourniture_consommable' => '',
+                                'travaux_prestations' => '',
+                                'autres' => number_format($montant, 2, ',', ' ')
+                            ]);
                         }
-
-                        $items->push([
-                            'item' => $items->count() + 1,
-                            'libelle' => $charge->nom_charge,
-                            'compte_charge' => $charge->compteGeneral->code ?? 'N/A',
-                            'date' => $date,
-                            'fournisseur' => $document->fournisseur->nom_fourn ?? 'Non spécifié',
-                            'cds' => $formattedCentreCode,
-                            'fourniture_consommable' => '',
-                            'travaux_prestations' => '',
-                            'autres' => number_format($montant, 2, ',', ' ')
-                        ]);
                     }
                 }
             };
@@ -773,8 +782,8 @@ return Inertia::render('Dra/Edit', [
             // Get factures for this center
             $factures = Facture::with([
                 'pieces.compteGeneral',
-                'prestations.compteGeneral',
-                'charges.compteGeneral',
+                'prestations.compteGeneral', // Re-added for factures
+                'charges.compteGeneral',     // Re-added for factures
                 'fournisseur',
                 'dra'
             ])
@@ -785,8 +794,6 @@ return Inertia::render('Dra/Edit', [
             // Get bonAchats for this center
             $bonAchats = BonAchat::with([
                 'pieces.compteGeneral',
-                'prestations.compteGeneral',
-                'charges.compteGeneral',
                 'fournisseur',
                 'dra'
             ])
@@ -794,60 +801,47 @@ return Inertia::render('Dra/Edit', [
                 ->whereBetween('date_ba', [$startDate, $endDate])
                 ->get();
 
-            $processDocuments($factures, true);
-            $processDocuments($bonAchats, false);
+            foreach ($factures as $facture) {
+                $processDocuments($facture, true);
+            }
 
-            // Calculate totals for this center
-            $calculateTotal = fn($field) => $items->sum(
-                fn($item) => (float) str_replace([' ', ','], ['', '.'], $item[$field] ?? '0')
-            );
+            foreach ($bonAchats as $bonAchat) {
+                $processDocuments($bonAchat, false);
+            }
 
-            $centreTotals = [
-                'totalFourniture' => $calculateTotal('fourniture_consommable'),
-                'totalTravaux' => $calculateTotal('travaux_prestations'),
-                'totalAutres' => $calculateTotal('autres'),
-                'grandTotal' => 0
-            ];
+            // Assuming similar total calculations as exportEtatTrimestriel()
+            $calculateTotalCentre = fn($field) =>
+            $items->sum(fn($item) =>
+            (float) str_replace([' ', ','], ['', '.'], $item[$field] ?? '0'));
 
-            $centreTotals['grandTotal'] =
-                $centreTotals['totalFourniture'] +
-                $centreTotals['totalTravaux'] +
-                $centreTotals['totalAutres'];
+            $totalFournitureCentre = $calculateTotalCentre('fourniture_consommable');
+            $totalTravauxCentre = $calculateTotalCentre('travaux_prestations');
+            $totalAutresCentre = $calculateTotalCentre('autres');
+            $grandTotalCentre = $totalFournitureCentre + $totalTravauxCentre + $totalAutresCentre;
 
-            // Add to global totals
-            $globalTotals['totalFourniture'] += $centreTotals['totalFourniture'];
-            $globalTotals['totalTravaux'] += $centreTotals['totalTravaux'];
-            $globalTotals['totalAutres'] += $centreTotals['totalAutres'];
-            $globalTotals['grandTotal'] += $centreTotals['grandTotal'];
-
-            // Format numbers for display
-            $centreTotals = array_map(function($value) {
-                return number_format($value, 2, ',', ' ');
-            }, $centreTotals);
-
-            // Store center data
             $allCentreData[] = [
-                'centreCode' => $formattedCentreCode,
-                'centreType' => $centre->type_centre,
+                'centre' => $centre,
                 'items' => $items,
-                'totals' => $centreTotals
+                'totalFourniture' => number_format($totalFournitureCentre, 2, ',', ' '),
+                'totalTravaux' => number_format($totalTravauxCentre, 2, ',', ' '),
+                'totalAutres' => number_format($totalAutresCentre, 2, ',', ' '),
+                'grandTotal' => number_format($grandTotalCentre, 2, ',', ' '),
             ];
+
+            $globalTotals['totalFourniture'] += $totalFournitureCentre;
+            $globalTotals['totalTravaux'] += $totalTravauxCentre;
+            $globalTotals['totalAutres'] += $totalAutresCentre;
+            $globalTotals['grandTotal'] += $grandTotalCentre;
         }
 
-        // Format global totals
-        $globalTotals = array_map(function($value) {
-            return number_format($value, 2, ',', ' ');
-        }, $globalTotals);
-
-        // Generate PDF
+        // Generate PDF for all centres combined or separate PDFs.
         $pdf = PDF::loadView('exports.etat_trimestriel_all_centres', [
             'allCentreData' => $allCentreData,
-            'globalTotals' => $globalTotals,
+            'globalTotals' => array_map(fn($total) => number_format($total, 2, ',', ' '), $globalTotals),
             'trimestre' => 'Du ' . $startDate->format('d/m/Y') . ' au ' . $endDate->format('d/m/Y'),
             'currentDate' => Carbon::now()->format('d/m/Y H:i'),
         ]);
 
         return $pdf->download('etat_trimestriel_all_centres_' . $startDate->format('Y-m') . '.pdf');
     }
-
 }
