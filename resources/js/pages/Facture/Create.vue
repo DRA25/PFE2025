@@ -11,7 +11,7 @@ const props = defineProps({
     fournisseurs: Array,
     pieces: Array,
     prestations: Array,
-    charges: Array,
+    charges: Array, // This 'charges' prop now only contains static charge details (nom, tva, etc.), NOT prix_charge
 })
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -27,9 +27,9 @@ const form = useForm({
     date_facture: '',
     id_fourn: '',
     droit_timbre: 0,
-    pieces: [] as Array<{ id_piece: string, qte_f: number, prix_piece: number }>, // Added prix_piece
-    prestations: [] as Array<{ id_prest: string, qte_fpr: number, prix_prest: number }>, // Added prix_prest here
-    charges: [] as Array<{ id_charge: string, qte_fc: number }>,
+    pieces: [] as Array<{ id_piece: string, qte_f: number, prix_piece: number }>,
+    prestations: [] as Array<{ id_prest: string, qte_fpr: number, prix_prest: number }>,
+    charges: [] as Array<{ id_charge: string, qte_fc: number, prix_charge: number }>, // Added prix_charge here
 })
 
 // Ref to control which item type is currently selected for adding
@@ -38,14 +38,14 @@ const selectedItemType = ref<'piece' | 'prestation' | 'charge'>('piece'); // Def
 // Track selected item and quantity for the add form
 const selectedItemId = ref('');
 const quantity = ref(1);
-const unitPrice = ref(0); // Added unit price input for pieces and prestations
+const unitPrice = ref(0); // This will now apply to pieces, prestations, and charges
 
 // Calculate total amount including pieces, prestations, charges, and droit_timbre
 const totalAmount = computed(() => {
     const piecesTotal = form.pieces.reduce((total, item) => {
         const pieceDetails = props.pieces.find(p => p.id_piece == item.id_piece)
         if (!pieceDetails) return total
-        const subtotal = item.prix_piece * item.qte_f // Use item.prix_piece
+        const subtotal = item.prix_piece * item.qte_f // Use item.prix_piece from the form
         const totalWithTva = subtotal * (1 + (pieceDetails.tva / 100))
         return total + totalWithTva
     }, 0)
@@ -59,10 +59,10 @@ const totalAmount = computed(() => {
     }, 0)
 
     const chargesTotal = form.charges.reduce((total, item) => {
-        const charge = props.charges.find(c => c.id_charge == item.id_charge)
-        if (!charge) return total
-        const subtotal = charge.prix_charge * item.qte_fc
-        const totalWithTva = subtotal * (1 + (charge.tva / 100))
+        const chargeDetails = props.charges.find(c => c.id_charge == item.id_charge) // Get TVA from original charge details
+        if (!chargeDetails) return total
+        const subtotal = item.prix_charge * item.qte_fc // Use item.prix_charge from the form
+        const totalWithTva = subtotal * (1 + (chargeDetails.tva / 100)) // Use TVA from original charge
         return total + totalWithTva
     }, 0)
 
@@ -73,35 +73,35 @@ const totalAmount = computed(() => {
 function addItem() {
     if (!selectedItemId.value || quantity.value < 1) return;
 
-    if (selectedItemType.value === 'piece') {
-        if (unitPrice.value <= 0) return; // Ensure unit price is valid for pieces
+    if (unitPrice.value <= 0) { // All item types (piece, prestation, charge) now require a unitPrice
+        // You might want a more user-friendly message or visual indicator here
+        console.error("Le prix unitaire doit être supérieur à zéro.");
+        return;
+    }
 
+    if (selectedItemType.value === 'piece') {
         const existingIndex = form.pieces.findIndex(p => p.id_piece === selectedItemId.value);
         if (existingIndex >= 0) {
             form.pieces[existingIndex].qte_f += quantity.value;
-            // For now, we'll keep the price from the existing item if it already exists.
-            // If you want to update it to the new unitPrice.value, uncomment the line below:
-            // form.pieces[existingIndex].prix_piece = unitPrice.value;
+            // Optionally update price if desired: form.pieces[existingIndex].prix_piece = unitPrice.value;
         } else {
             form.pieces.push({ id_piece: selectedItemId.value, qte_f: quantity.value, prix_piece: unitPrice.value });
         }
     } else if (selectedItemType.value === 'prestation') {
-        if (unitPrice.value <= 0) return; // Ensure unit price is valid for prestations
-
         const existingIndex = form.prestations.findIndex(p => p.id_prest === selectedItemId.value);
         if (existingIndex >= 0) {
             form.prestations[existingIndex].qte_fpr += quantity.value;
-            // Similar to pieces, you might want to update the price here if needed
-            // form.prestations[existingIndex].prix_prest = unitPrice.value;
+            // Optionally update price if desired: form.prestations[existingIndex].prix_prest = unitPrice.value;
         } else {
-            form.prestations.push({ id_prest: selectedItemId.value, qte_fpr: quantity.value, prix_prest: unitPrice.value }); // Add prix_prest
+            form.prestations.push({ id_prest: selectedItemId.value, qte_fpr: quantity.value, prix_prest: unitPrice.value });
         }
     } else if (selectedItemType.value === 'charge') {
         const existingIndex = form.charges.findIndex(c => c.id_charge === selectedItemId.value);
         if (existingIndex >= 0) {
             form.charges[existingIndex].qte_fc += quantity.value;
+            // Optionally update price if desired: form.charges[existingIndex].prix_charge = unitPrice.value;
         } else {
-            form.charges.push({ id_charge: selectedItemId.value, qte_fc: quantity.value });
+            form.charges.push({ id_charge: selectedItemId.value, qte_fc: quantity.value, prix_charge: unitPrice.value }); // Add prix_charge
         }
     }
 
@@ -278,12 +278,12 @@ function submit() {
                                     :key="charge.id_charge"
                                     :value="charge.id_charge"
                                 >
-                                    {{ charge.nom_charge }} ({{ charge.prix_charge }} DA, TVA {{ charge.tva }}%)
+                                    {{ charge.nom_charge }} (TVA {{ charge.tva }}%)
                                 </option>
                             </select>
                         </div>
 
-                        <div v-if="selectedItemType === 'piece' || selectedItemType === 'prestation'" class="space-y-2">
+                        <div class="space-y-2">
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Prix Unitaire (DA)</label>
                             <input
                                 v-model.number="unitPrice"
@@ -307,7 +307,7 @@ function submit() {
                         <button
                             type="button"
                             @click="addItem"
-                            :disabled="!selectedItemId || quantity < 1 || ((selectedItemType === 'piece' || selectedItemType === 'prestation') && unitPrice <= 0)"
+                            :disabled="!selectedItemId || quantity < 1 || unitPrice <= 0"
                             class="px-4 py-2 rounded-lg transition flex items-center gap-1 bg-[#042B62] dark:bg-[#F3B21B] dark:text-[#042B62] text-white hover:bg-blue-900 dark:hover:bg-yellow-200 disabled:opacity-50"
                         >
                             <Plus class="w-4 h-4" />
@@ -471,7 +471,14 @@ function submit() {
                                         {{ props.charges.find(c => c.id_charge === item.id_charge)?.nom_charge }}
                                     </TableCell>
                                     <TableCell>
-                                        {{ props.charges.find(c => c.id_charge === item.id_charge)?.prix_charge }} DA
+                                        <input
+                                            v-model.number="item.prix_charge"
+                                            type="number"
+                                            min="0"
+                                            step="0.01"
+                                            class="w-24 border border-gray-300 dark:border-gray-600 p-1 rounded focus:ring-2 focus:ring-[#042B62] dark:focus:ring-[#F3B21B] focus:border-transparent dark:bg-gray-800 dark:text-white"
+                                        />
+                                        DA
                                     </TableCell>
                                     <TableCell>
                                         {{ props.charges.find(c => c.id_charge === item.id_charge)?.tva }}%
@@ -487,7 +494,7 @@ function submit() {
                                     <TableCell>
                                         {{
                                             (
-                                                (props.charges.find(c => c.id_charge === item.id_charge)?.prix_charge ?? 0) *
+                                                item.prix_charge * // Use item.prix_charge from the form
                                                 item.qte_fc *
                                                 (1 + ((props.charges.find(c => c.id_charge === item.id_charge)?.tva ?? 0) / 100))
                                             ).toFixed(2)

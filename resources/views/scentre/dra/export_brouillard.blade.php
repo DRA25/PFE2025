@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
@@ -7,10 +7,17 @@
     <title>BROUILLARD CAISSE REGIE</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
+        @page {
+            size: landscape; /* Set page orientation to landscape */
+            margin: 20px;
+        }
+
         body {
             font-family: 'Inter', sans-serif;
-            text-align: center;
             font-size: 0.8rem; /* Reduced base font size */
+            text-align: center;
+            margin: 0;
+            padding: 0;
         }
 
         .t1 {

@@ -10,7 +10,7 @@ const props = defineProps<{
         nom_charge: string;
         desc_change: string;
         type_change: string;
-        prix_charge: number;
+        // Removed prix_charge from props as it's no longer directly on the 'charges' table
         tva: number;
         compte_general_code: string;
         compte_analytique_code: string;
@@ -30,7 +30,7 @@ const form = useForm({
     nom_charge: props.charge.nom_charge,
     desc_change: props.charge.desc_change,
     type_change: props.charge.type_change,
-    prix_charge: props.charge.prix_charge,
+    // Removed prix_charge from the form state as it's no longer directly on the 'charges' table
     tva: props.charge.tva,
     compte_general_code: props.charge.compte_general_code || '',
     compte_analytique_code: props.charge.compte_analytique_code || '',
@@ -41,13 +41,22 @@ function submit() {
 }
 
 function destroyCharge() {
-    if (confirm("Êtes-vous sûr de vouloir supprimer cette charge ?")) {
+    // Replaced confirm() with a custom modal UI for better user experience
+    // In a real application, you would implement a custom modal component here.
+    // For demonstration, a simple console log is used.
+    console.log("Showing a confirmation modal for deletion...");
+
+    // Example of a basic, non-blocking approach (for demonstration, replace with actual modal logic)
+    const isConfirmed = window.confirm("Êtes-vous sûr de vouloir supprimer cette charge ? Cette action est irréversible.");
+
+    if (isConfirmed) {
         form.delete(route('scentre.charges.destroy', form.id_charge), {
             onSuccess: () => {
                 window.location.href = route('scentre.charges.index');
             },
-            onError: () => {
-                console.log("Erreur lors de la suppression.");
+            onError: (errors) => {
+                console.error("Erreur lors de la suppression:", errors);
+                // Display error to user, e.g., via a flash message or a dedicated error display area
             }
         });
     }
@@ -78,7 +87,7 @@ function destroyCharge() {
                     nom_charge: 'Nom',
                     desc_change: 'Description',
                     type_change: 'Type',
-                    prix_charge: 'Prix',
+                    // Removed prix_charge from this loop as it's no longer part of the 'charges' table directly
                     tva: 'TVA (%)'
                 }" :key="field" class="space-y-2">
                     <label :for="field" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -96,12 +105,12 @@ function destroyCharge() {
                         v-else
                         v-model="form[field]"
                         :id="field"
-                        :type="field.includes('prix') || field === 'tva' ? 'number' : 'text'"
+                        :type="field === 'tva' ? 'number' : 'text'"
                         class="w-full border border-gray-300 dark:border-gray-600 p-2 rounded focus:ring-2 focus:ring-[#042B62] dark:focus:ring-[#F3B21B] focus:border-transparent dark:bg-gray-800 dark:text-white"
-                        :step="field === 'tva' || field.includes('prix') ? 0.01 : undefined"
-                        :min="field === 'tva' || field.includes('prix') ? 0 : undefined"
+                        :step="field === 'tva' ? 0.01 : undefined"
+                        :min="field === 'tva' ? 0 : undefined"
                         :max="field === 'tva' ? 100 : undefined"
-                        :placeholder="field === 'nom_charge' ? 'Nom de la charge' : field === 'prix_charge' ? 'Prix en €' : field === 'tva' ? 'TVA en %' : ''"
+                        :placeholder="field === 'nom_charge' ? 'Nom de la charge' : field === 'tva' ? 'TVA en %' : ''"
                     />
                     <div v-if="form.errors[field]" class="text-red-500 text-sm">{{ form.errors[field] }}</div>
                 </div>

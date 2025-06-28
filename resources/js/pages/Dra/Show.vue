@@ -4,6 +4,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { TableBody, TableCell, TableHead, TableHeader, TableRow, Table } from '@/components/ui/table';
 import { ArrowLeft, FileText, Lock, Trash2 } from 'lucide-vue-next';
+import { ref } from 'vue'; // Import ref for reactive state
 
 const props = defineProps<{
     dra: {
@@ -41,22 +42,34 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: `Détails de DRA ${props.dra.n_dra}`, href: route('scentre.dras.show', { dra: props.dra.n_dra }) },
 ];
 
+// Reactive state for the confirmation modal
+const showCloseDraConfirmModal = ref(false);
+
 const closeDra = (draId: string, currentEtat: string) => {
     const normalizedEtat = currentEtat.toLowerCase();
     if (normalizedEtat !== 'refuse' && normalizedEtat !== 'actif') {
         console.warn('Seuls les DRAs actifs ou refusés peuvent être clôturés');
         return;
     }
+    showCloseDraConfirmModal.value = true; // Show the custom confirmation modal
+};
 
-    if (confirm('Êtes-vous sûr de vouloir clôturer ce DRA ?')) {
-        router.put(route('scentre.dras.close', { dra: draId }), {
-            preserveScroll: true,
-            onError: (errors) => {
-                console.error('Erreur lors de la clôture du DRA:', errors);
-                alert('Erreur lors de la clôture du DRA: ' + (errors.message || 'Une erreur est survenue'));
-            },
-        });
-    }
+const executeCloseDra = () => {
+    router.put(route('scentre.dras.close', { dra: props.dra.n_dra }), {
+        preserveScroll: true,
+        onSuccess: () => {
+            // Optionally, refresh the page or update local state if needed
+            // For example, if 'dra.etat' is reactive and updated by the backend
+            // Inertia will automatically re-render with new props if data changes.
+            showCloseDraConfirmModal.value = false; // Close modal on success
+        },
+        onError: (errors) => {
+            console.error('Erreur lors de la clôture du DRA:', errors);
+            // Display error to user via a message box or a dedicated error display area
+            alert('Erreur lors de la clôture du DRA: ' + (errors.message || 'Une erreur est survenue'));
+            showCloseDraConfirmModal.value = false; // Close modal on error
+        },
+    });
 };
 
 // Helper function to get the price from the correct location (pivot or direct)
@@ -171,7 +184,7 @@ const calculateFactureFullTotal = (facture: typeof props.factures[0]) => {
 
                     <div>
                         <p class="text-sm text-gray-500 dark:text-gray-400">Date de création</p>
-                        <p class="text-gray-900 dark:text-gray-100">{{ dra.date_creation }}</p>
+                        <p class="text-900 dark:text-100">{{ dra.date_creation }}</p>
                     </div>
 
                     <div>
@@ -358,6 +371,28 @@ const calculateFactureFullTotal = (facture: typeof props.factures[0]) => {
                     <ArrowLeft class="w-4 h-4" />
                     <span>Retourner à la liste des DRAs</span>
                 </Link>
+            </div>
+        </div>
+
+        <!-- Custom Confirmation Modal for closing DRA -->
+        <div v-if="showCloseDraConfirmModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl text-center">
+                <p class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">Êtes-vous sûr de vouloir clôturer ce DRA ?</p>
+                <p class="text-sm text-gray-600 dark:text-gray-400 mb-6">Cette action peut modifier l'état du DRA.</p>
+                <div class="flex justify-center space-x-4">
+                    <button
+                        @click="showCloseDraConfirmModal = false"
+                        class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+                    >
+                        Annuler
+                    </button>
+                    <button
+                        @click="executeCloseDra"
+                        class="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg transition"
+                    >
+                        Confirmer la clôture
+                    </button>
+                </div>
             </div>
         </div>
     </AppLayout>

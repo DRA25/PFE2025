@@ -20,9 +20,7 @@ const props = defineProps<{
         id_facture: number;
         fournisseur?: { nom_fourn: string };
         pieces?: Array<{ id_piece: number; nom_piece: string; tva: number; pivot: { qte_f: number; prix_piece: number } }>;
-        // Updated: prix_prest is on pivot
         prestations?: Array<{ id_prest: number; nom_prest: string; tva: number; pivot: { qte_fpr: number; prix_prest: number } }>;
-        // Updated: prix_charge is on pivot
         charges?: Array<{ id_charge: number; nom_charge: string; tva: number; pivot: { qte_fc: number; prix_charge: number } }>;
         droit_timbre?: number;
     }>;
@@ -30,7 +28,7 @@ const props = defineProps<{
         id_bon: number;
         fournisseur?: { nom_fourn: string };
         pieces?: Array<{ id_piece: number; nom_piece: string; tva: number; pivot: { qte_ba: number; prix_piece: number } }>;
-        // Removed prestations and charges from BonAchat type definition
+        // Removed prestations and charges from BonAchat type definition as they are no longer direct relations
     }>;
 }>();
 
@@ -52,7 +50,7 @@ const getItemPrice = (item: any, type: 'pieces' | 'prestations' | 'charges') => 
 const getItemQuantity = (item: any, type: 'pieces' | 'prestations' | 'charges', isBonAchat: boolean) => {
     if (isBonAchat) {
         if (type === 'pieces') return item.pivot?.qte_ba || 0;
-        // BonAchat no longer has prestations or charges, so these cases are excluded
+        // For BonAchat, prestations and charges are not relevant for quantity here
     } else { // For Facture
         if (type === 'pieces') return item.pivot?.qte_f || 0;
         if (type === 'prestations') return item.pivot?.qte_fpr || 0;
@@ -66,7 +64,7 @@ const calculateItemTypeHtTotal = (items: any[] = [], type: 'pieces' | 'prestatio
     if (!items || items.length === 0) return 0;
 
     return items.reduce((sum, item) => {
-        // Skip if it's a BonAchat and type is not pieces
+        // If it's a BonAchat and type is not pieces, skip the calculation
         if (isBonAchat && (type === 'prestations' || type === 'charges')) return sum;
 
         const price = getItemPrice(item, type);
@@ -81,7 +79,7 @@ const calculateItemTypeTVA = (items: any[] = [], type: 'pieces' | 'prestations' 
     if (!items || items.length === 0) return 0;
 
     return items.reduce((sum, item) => {
-        // Skip if it's a BonAchat and type is not pieces
+        // If it's a BonAchat and type is not pieces, skip the calculation
         if (isBonAchat && (type === 'prestations' || type === 'charges')) return sum;
 
         const price = getItemPrice(item, type);
@@ -185,8 +183,6 @@ const calculateFullTotal = (items: {
                 </div>
             </div>
 
-
-
             <div class="mt-10">
                 <h2 class="text-xl font-semibold text-[#042B62FF] dark:text-[#F3B21B] mb-4">Factures liées</h2>
                 <div v-if="factures && factures.length > 0" class="space-y-2">
@@ -257,8 +253,6 @@ const calculateFullTotal = (items: {
                 </div>
                 <p v-else class="text-gray-600 dark:text-gray-400">Aucune facture liée à ce DRA.</p>
             </div>
-
-
 
             <div class="mt-10">
                 <h2 class="text-xl font-semibold text-[#042B62FF] dark:text-[#F3B21B] mb-4">Bons d'Achat liés</h2>

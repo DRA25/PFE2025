@@ -19,7 +19,7 @@ const form = useForm({
     nom_charge: '',
     desc_change: '',
     type_change: '',
-    prix_charge: null as number | null,
+    // Removed prix_charge as it is no longer directly on the 'charges' table
     tva: null as number | null,
     compte_general_code: '',
     compte_analytique_code: '',
@@ -87,7 +87,8 @@ function submit() {
                     <p v-if="form.errors.type_change" class="text-sm text-red-600">{{ form.errors.type_change }}</p>
                 </div>
 
-                <div class="space-y-2">
+                <!-- Removed the prix_charge input field as it's no longer part of the 'charges' table -->
+                <!-- <div class="space-y-2">
                     <label for="prix_charge" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Prix</label>
                     <input
                         id="prix_charge"
@@ -98,7 +99,7 @@ function submit() {
                         class="w-full border border-gray-300 dark:border-gray-600 p-2 rounded focus:ring-2 focus:ring-[#042B62] dark:focus:ring-[#F3B21B] focus:border-transparent dark:bg-gray-800 dark:text-white"
                     />
                     <p v-if="form.errors.prix_charge" class="text-sm text-red-600">{{ form.errors.prix_charge }}</p>
-                </div>
+                </div> -->
 
                 <div class="space-y-2">
                     <label for="tva" class="block text-sm font-medium text-gray-700 dark:text-gray-300">TVA (%)</label>

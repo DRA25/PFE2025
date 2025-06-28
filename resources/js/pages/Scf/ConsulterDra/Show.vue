@@ -23,7 +23,6 @@ const props = defineProps<{
         id_facture: number;
         fournisseur: { nom_fourn: string };
         pieces: Array<{ id_piece: number; nom_piece: string; tva: number; pivot: { qte_f: number; prix_piece: number } }>;
-        // prix_prest is now on the pivot for prestations
         prestations: Array<{ id_prest: number; nom_prest: string; tva: number; pivot: { qte_fpr: number; prix_prest: number } }>;
         charges: Array<{ id_charge: number; nom_charge: string; tva: number; pivot: { qte_fc: number; prix_charge: number } }>;
         droit_timbre?: number;
@@ -32,9 +31,7 @@ const props = defineProps<{
         id_bon: number;
         fournisseur: { nom_fourn: string };
         pieces: Array<{ id_piece: number; nom_piece: string; tva: number; pivot: { qte_ba: number; prix_piece: number } }>;
-        // prix_prest is now on the pivot for bonAchats prestations
-        prestations: Array<{ id_prest: number; nom_prest: string; tva: number; pivot: { qte_bapr: number; prix_prest: number } }>;
-        charges: Array<{ id_charge: number; nom_charge: string; tva: number; pivot: { qte_bac: number; prix_charge: number } }>;
+        // Removed prestations and charges from BonAchat type as per new schema
     }>;
 }>();
 
@@ -69,16 +66,16 @@ const submit = () => {
 // Updated calculation functions to correctly get prices and quantities from pivot
 const getItemPrice = (item: any, type: 'pieces' | 'prestations' | 'charges') => {
     if (type === 'pieces') return item.pivot?.prix_piece || 0;
-    if (type === 'prestations') return item.pivot?.prix_prest || 0; // Corrected: prix_prest is on pivot
+    if (type === 'prestations') return item.pivot?.prix_prest || 0;
     return item.pivot?.prix_charge || 0; // Corrected: prix_charge is on pivot
 };
 
 const getItemQuantity = (item: any, type: 'pieces' | 'prestations' | 'charges', isBonAchat: boolean) => {
     if (isBonAchat) {
         if (type === 'pieces') return item.pivot?.qte_ba || 0;
-        if (type === 'prestations') return item.pivot?.qte_bapr || 0;
-        return item.pivot?.qte_bac || 0;
-    } else {
+        // BonAchat no longer has prestations or charges, so these cases are simplified
+        return 0; // Should not be reached for bonAchats type 'prestations' or 'charges'
+    } else { // For Facture
         if (type === 'pieces') return item.pivot?.qte_f || 0;
         if (type === 'prestations') return item.pivot?.qte_fpr || 0;
         return item.pivot?.qte_fc || 0;
@@ -122,21 +119,25 @@ const calculateFullTotal = (items: {
         return sum + (price * quantity * (1 + (tvaRate / 100)));
     }, 0);
 
-    // Prestations (using pivot price) - Corrected: get price from pivot
-    total += (items.prestations || []).reduce((sum, item) => {
-        const price = getItemPrice(item, 'prestations'); // Now correctly gets from pivot
-        const quantity = getItemQuantity(item, 'prestations', isBonAchat);
-        const tvaRate = item.tva || 0;
-        return sum + (price * quantity * (1 + (tvaRate / 100)));
-    }, 0);
+    // Prestations (using pivot price) - Only for Facture
+    if (!isBonAchat && items.prestations) {
+        total += items.prestations.reduce((sum, item) => {
+            const price = getItemPrice(item, 'prestations');
+            const quantity = getItemQuantity(item, 'prestations', isBonAchat);
+            const tvaRate = item.tva || 0;
+            return sum + (price * quantity * (1 + (tvaRate / 100)));
+        }, 0);
+    }
 
-    // Charges (using pivot price) - Corrected: get price from pivot
-    total += (items.charges || []).reduce((sum, item) => {
-        const price = getItemPrice(item, 'charges'); // Now correctly gets from pivot
-        const quantity = getItemQuantity(item, 'charges', isBonAchat);
-        const tvaRate = item.tva || 0;
-        return sum + (price * quantity * (1 + (tvaRate / 100)));
-    }, 0);
+    // Charges (using pivot price) - Only for Facture
+    if (!isBonAchat && items.charges) {
+        total += items.charges.reduce((sum, item) => {
+            const price = getItemPrice(item, 'charges');
+            const quantity = getItemQuantity(item, 'charges', isBonAchat);
+            const tvaRate = item.tva || 0;
+            return sum + (price * quantity * (1 + (tvaRate / 100)));
+        }, 0);
+    }
 
     // Droit timbre (only for factures)
     if (!isBonAchat && items.droit_timbre !== undefined) {
@@ -354,12 +355,7 @@ const calculateFullTotal = (items: {
                                     <template v-if="bon.pieces?.length > 0">
                                         <span class="block">Pièces</span>
                                     </template>
-                                    <template v-if="bon.prestations?.length > 0">
-                                        <span class="block">Prestations</span>
-                                    </template>
-                                    <template v-if="bon.charges?.length > 0">
-                                        <span class="block">Charges</span>
-                                    </template>
+                                    <!-- Removed prestations and charges templates for BonAchat -->
                                 </TableCell>
                                 <TableCell>
                                     <template v-if="bon.pieces">
@@ -367,16 +363,7 @@ const calculateFullTotal = (items: {
                                             {{ piece.nom_piece }} (x{{ piece.pivot?.qte_ba || 0 }})
                                         </div>
                                     </template>
-                                    <template v-if="bon.prestations">
-                                        <div v-for="prestation in bon.prestations" :key="prestation.id_prest" class="text-sm">
-                                            {{ prestation.nom_prest }} (x{{ prestation.pivot?.qte_bapr || 0 }})
-                                        </div>
-                                    </template>
-                                    <template v-if="bon.charges">
-                                        <div v-for="charge in bon.charges" :key="charge.id_charge" class="text-sm">
-                                            {{ charge.nom_charge }} (x{{ charge.pivot?.qte_bac || 0 }})
-                                        </div>
-                                    </template>
+                                    <!-- Removed prestations and charges content for BonAchat -->
                                 </TableCell>
                                 <TableCell>
                                     <template v-if="bon.pieces?.length > 0">
@@ -384,16 +371,7 @@ const calculateFullTotal = (items: {
                                             {{ calculateItemTypeHtTotal(bon.pieces, 'pieces', true).toFixed(2) }} DA
                                         </div>
                                     </template>
-                                    <template v-if="bon.prestations?.length > 0">
-                                        <div class="text-sm">
-                                            {{ calculateItemTypeHtTotal(bon.prestations, 'prestations', true).toFixed(2) }} DA
-                                        </div>
-                                    </template>
-                                    <template v-if="bon.charges?.length > 0">
-                                        <div class="text-sm">
-                                            {{ calculateItemTypeHtTotal(bon.charges, 'charges', true).toFixed(2) }} DA
-                                        </div>
-                                    </template>
+                                    <!-- Removed HT totals for prestations and charges for BonAchat -->
                                 </TableCell>
                                 <TableCell>
                                     <template v-if="bon.pieces?.length > 0">
@@ -401,16 +379,7 @@ const calculateFullTotal = (items: {
                                             {{ calculateItemTypeTVA(bon.pieces, 'pieces', true).toFixed(2) }} DA
                                         </div>
                                     </template>
-                                    <template v-if="bon.prestations?.length > 0">
-                                        <div class="text-sm">
-                                            {{ calculateItemTypeTVA(bon.prestations, 'prestations', true).toFixed(2) }} DA
-                                        </div>
-                                    </template>
-                                    <template v-if="bon.charges?.length > 0">
-                                        <div class="text-sm">
-                                            {{ calculateItemTypeTVA(bon.charges, 'charges', true).toFixed(2) }} DA
-                                        </div>
-                                    </template>
+                                    <!-- Removed TVA totals for prestations and charges for BonAchat -->
                                 </TableCell>
                                 <TableCell>
                                     {{ calculateFullTotal(bon, true).toFixed(2) }} DA

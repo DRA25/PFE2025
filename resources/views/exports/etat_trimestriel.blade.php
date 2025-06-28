@@ -7,6 +7,10 @@
     <title>État Trimestriel</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
+        @page {
+            size: landscape; /* Set page orientation to landscape */
+        }
+
         body {
             font-family: 'Inter', sans-serif;
             font-size: 0.8rem;

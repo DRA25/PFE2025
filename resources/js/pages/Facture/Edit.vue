@@ -55,6 +55,7 @@ const props = defineProps<{
         nom_prest: string,
         tva: number
     }>,
+    // The allCharges prop now correctly reflects that prix_charge is not directly on the Charge model
     allCharges: Array<{
         id_charge: number,
         nom_charge: string,
@@ -84,6 +85,7 @@ const form = useForm({
         qte_fpr: pr.pivot.qte_fpr,
         prix_prest: pr.pivot.prix_prest
     })),
+    // Map existing charges, ensuring prix_charge from pivot is included
     charges: props.facture.charges.map(ch => ({
         id_charge: ch.id_charge.toString(),
         qte_fc: ch.pivot.qte_fc,
@@ -106,7 +108,7 @@ const selectedItemType = ref<'piece' | 'prestation' | 'charge'>(initialSelectedI
 // Track selected item, quantity and unit price for the add form
 const selectedItemId = ref('');
 const quantity = ref(1);
-const unitPrice = ref('');
+const unitPrice = ref(''); // Can be string initially for placeholder, converted to number on add
 
 // Calculate total amount
 const totalAmount = computed(() => {
@@ -129,11 +131,12 @@ const totalAmount = computed(() => {
     }, 0)
 
     const chargesTotal = form.charges.reduce((total, item) => {
+        // Get TVA from allCharges, as prix_charge is now on the item itself (from the pivot)
         const charge = props.allCharges.find(ch => ch.id_charge == item.id_charge)
         if (!charge) return total
 
-        const subtotal = item.prix_charge * item.qte_fc
-        const totalWithTva = subtotal * (1 + (charge.tva / 100))
+        const subtotal = item.prix_charge * item.qte_fc // Use item.prix_charge from the form's charges array
+        const totalWithTva = subtotal * (1 + (charge.tva / 100)) // Use TVA from allCharges
         return total + totalWithTva
     }, 0)
 
@@ -144,44 +147,53 @@ const totalAmount = computed(() => {
 function addItem() {
     if (!selectedItemId.value || quantity.value < 1) return;
 
+    // Ensure unit price is valid for all types (now including charges)
+    if (Number(unitPrice.value) <= 0) {
+        console.error("Le prix unitaire doit être supérieur à zéro.");
+        return;
+    }
+
     if (selectedItemType.value === 'piece') {
-        const existingIndex = form.pieces.findIndex(p => p.id_piece === selectedItemId.value);
+        const existingIndex = form.pieces.findIndex(p => p.id_piece.toString() === selectedItemId.value);
         if (existingIndex >= 0) {
             form.pieces[existingIndex].qte_f += quantity.value;
+            // Optionally update price if desired: form.pieces[existingIndex].prix_piece = Number(unitPrice.value);
         } else {
             form.pieces.push({
                 id_piece: selectedItemId.value,
                 qte_f: quantity.value,
-                prix_piece: unitPrice.value ? Number(unitPrice.value) : 0
+                prix_piece: Number(unitPrice.value)
             });
         }
     } else if (selectedItemType.value === 'prestation') {
-        const existingIndex = form.prestations.findIndex(p => p.id_prest === selectedItemId.value);
+        const existingIndex = form.prestations.findIndex(p => p.id_prest.toString() === selectedItemId.value);
         if (existingIndex >= 0) {
             form.prestations[existingIndex].qte_fpr += quantity.value;
+            // Optionally update price if desired: form.prestations[existingIndex].prix_prest = Number(unitPrice.value);
         } else {
             form.prestations.push({
                 id_prest: selectedItemId.value,
                 qte_fpr: quantity.value,
-                prix_prest: unitPrice.value ? Number(unitPrice.value) : 0
+                prix_prest: Number(unitPrice.value)
             });
         }
     } else if (selectedItemType.value === 'charge') {
-        const existingIndex = form.charges.findIndex(c => c.id_charge === selectedItemId.value);
+        const existingIndex = form.charges.findIndex(c => c.id_charge.toString() === selectedItemId.value);
         if (existingIndex >= 0) {
             form.charges[existingIndex].qte_fc += quantity.value;
+            // Optionally update price if desired: form.charges[existingIndex].prix_charge = Number(unitPrice.value);
         } else {
             form.charges.push({
                 id_charge: selectedItemId.value,
                 qte_fc: quantity.value,
-                prix_charge: unitPrice.value ? Number(unitPrice.value) : 0
+                prix_charge: Number(unitPrice.value)
             });
         }
     }
 
     selectedItemId.value = '';
     quantity.value = 1;
-    unitPrice.value = '';
+    unitPrice.value = ''; // Reset unit price after adding
 }
 
 // Generic function to remove any item type
@@ -206,20 +218,29 @@ function submit() {
     })
 }
 
-function destroyFacture() {
-    if (confirm("Êtes-vous sûr de vouloir supprimer cette facture ?")) {
-        form.delete(route('scentre.dras.factures.destroy', {
-            dra: props.dra.n_dra,
-            facture: props.facture.n_facture
-        }), {
-            onSuccess: () => {
-                window.location.href = route('scentre.dras.factures.index', { dra: props.dra.n_dra });
-            },
-            onError: () => {
-                console.log("Erreur lors de la suppression.");
-            }
-        });
-    }
+// Placeholder for custom modal confirmation
+const showDeleteConfirmModal = ref(false);
+
+function confirmDelete() {
+    showDeleteConfirmModal.value = true;
+}
+
+function executeDelete() {
+    form.delete(route('scentre.dras.factures.destroy', {
+        dra: props.dra.n_dra,
+        facture: props.facture.n_facture
+    }), {
+        onSuccess: () => {
+            window.location.href = route('scentre.dras.factures.index', { dra: props.dra.n_dra });
+        },
+        onError: (errors) => {
+            console.error("Erreur lors de la suppression:", errors);
+            // You might want to display these errors in a more user-friendly way
+        },
+        onFinish: () => {
+            showDeleteConfirmModal.value = false; // Close modal regardless of success/failure
+        }
+    });
 }
 </script>
 
@@ -375,6 +396,7 @@ function destroyFacture() {
                             </select>
                         </div>
 
+                        <!-- unitPrice input is now visible for all item types -->
                         <div class="space-y-2">
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Prix Unitaire</label>
                             <input
@@ -400,7 +422,7 @@ function destroyFacture() {
                         <button
                             type="button"
                             @click="addItem"
-                            :disabled="!selectedItemId || quantity < 1"
+                            :disabled="!selectedItemId || quantity < 1 || Number(unitPrice) <= 0"
                             class="px-4 py-2 rounded-lg transition flex items-center gap-1 bg-[#042B62] dark:bg-[#F3B21B] dark:text-[#042B62] text-white hover:bg-blue-900 dark:hover:bg-yellow-200 disabled:opacity-50"
                         >
                             <Plus class="w-4 h-4" />
@@ -614,7 +636,6 @@ function destroyFacture() {
                     </div>
                 </div>
 
-                <!-- Droit Timbre Input -->
                 <div class="flex justify-end items-center space-x-2">
                     <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Droit Timbre (DA):</label>
                     <input
@@ -626,40 +647,59 @@ function destroyFacture() {
                     />
                 </div>
 
-                <!-- Total Amount -->
                 <div class="flex justify-end">
                     <div class="text-lg font-semibold text-gray-700 dark:text-gray-300">
                         Montant Total: {{ totalAmount.toFixed(2) }} DA
                     </div>
                 </div>
 
-                <div class="flex justify-between items-center pt-4">
+                <div class="flex justify-end space-x-4 pt-4">
                     <button
                         type="button"
-                        @click="destroyFacture"
+                        @click="confirmDelete"
                         class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg flex items-center gap-2"
                     >
                         <Trash2 class="w-4 h-4" />
                         Supprimer
                     </button>
-                    <div class="flex gap-4">
-                        <Link
-                            :href="route('scentre.dras.factures.index', { dra: props.dra.n_dra })"
-                            class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition"
-                        >
-                            Annuler
-                        </Link>
-                        <button
-                            type="submit"
-                            :disabled="form.processing || (form.pieces.length === 0 && form.prestations.length === 0 && form.charges.length === 0)"
-                            class="px-4 py-2 bg-[#042B62] dark:bg-[#F3B21B] text-white dark:text-[#042B62] rounded-lg hover:bg-blue-900 dark:hover:bg-yellow-200 transition flex items-center gap-2 disabled:opacity-50"
-                        >
-                            <span v-if="!form.processing">Enregistrer les modifications</span>
-                            <span v-else class="animate-spin">↻</span>
-                        </button>
-                    </div>
+                    <Link
+                        :href="route('scentre.dras.factures.index', { dra: props.dra.n_dra })"
+                        class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+                    >
+                        Annuler
+                    </Link>
+                    <button
+                        type="submit"
+                        :disabled="form.processing || (form.pieces.length === 0 && form.prestations.length === 0 && form.charges.length === 0)"
+                        class="px-4 py-2 bg-[#042B62] dark:bg-[#F3B21B] text-white dark:text-[#042B62] rounded-lg hover:bg-blue-900 dark:hover:bg-yellow-200 transition flex items-center gap-2 disabled:opacity-50"
+                    >
+                        <span>Enregistrer les modifications</span>
+                        <span v-if="form.processing" class="animate-spin">↻</span>
+                    </button>
                 </div>
             </form>
+        </div>
+
+        <!-- Custom Confirmation Modal (basic example) -->
+        <div v-if="showDeleteConfirmModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl text-center">
+                <p class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">Êtes-vous sûr de vouloir supprimer cette facture ?</p>
+                <p class="text-sm text-gray-600 dark:text-gray-400 mb-6">Cette action est irréversible.</p>
+                <div class="flex justify-center space-x-4">
+                    <button
+                        @click="showDeleteConfirmModal = false"
+                        class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+                    >
+                        Annuler
+                    </button>
+                    <button
+                        @click="executeDelete"
+                        class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition"
+                    >
+                        Supprimer
+                    </button>
+                </div>
+            </div>
         </div>
     </AppLayout>
 </template>

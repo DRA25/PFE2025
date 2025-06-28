@@ -39,7 +39,7 @@ protected $fillable = [
     public function charges()
     {
         return $this->belongsToMany(Charge::class, 'facture_charge', 'n_facture', 'id_charge')
-            ->withPivot('qte_fc'); // Use the correct pivot column name here
+            ->withPivot('qte_fc','prix_charge'); // Use the correct pivot column name here
     }
 
     /**

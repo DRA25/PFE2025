@@ -21,7 +21,7 @@ const props = defineProps<{
     charges: Array<{
         id_charge: number,
         nom_charge: string,
-        prix_charge: number,
+        // Removed prix_charge from props as it's no longer directly on the 'charges' table
         type_change: string,
         tva: number,
         compte_general: { code: string; libelle: string } | null,
@@ -49,7 +49,7 @@ const sortedCharges = computed(() => {
         data = data.filter(charge =>
             charge.nom_charge.toLowerCase().includes(query) ||
             charge.type_change.toLowerCase().includes(query) ||
-            String(charge.prix_charge).toLowerCase().includes(query) ||
+            // Removed prix_charge from search query as it's no longer directly on the 'charges' table
             String(charge.tva).toLowerCase().includes(query) ||
             (charge.compte_general?.libelle.toLowerCase().includes(query) ?? false) ||
             (charge.compte_analytique?.libelle.toLowerCase().includes(query) ?? false
@@ -69,6 +69,8 @@ const sortedCharges = computed(() => {
                 valA = a.compte_analytique?.libelle ?? '';
                 valB = b.compte_analytique?.libelle ?? '';
             }
+            // Removed specific handling for prix_charge sorting as it's no longer in 'charges'
+            // and the generic string comparison will suffice for other fields.
 
             return direction === 'asc'
                 ? String(valA).localeCompare(String(valB))
@@ -89,7 +91,7 @@ const sortedCharges = computed(() => {
                 <input
                     type="text"
                     v-model="searchQuery"
-                    placeholder="Rechercher par nom, type, prix, TVA, compte général ou analytique..."
+                    placeholder="Rechercher par nom, type, TVA, compte général ou analytique..."
                     class="w-full bg-gray-100 px-4 py-2 rounded-md border border-gray-200 dark:border-gray-700 dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
                 />
             </div>
@@ -126,10 +128,11 @@ const sortedCharges = computed(() => {
                             Type
                             <ArrowUpDown class="ml-2 h-4 w-4 inline-block" />
                         </TableHead>
-                        <TableHead class="cursor-pointer" @click="requestSort('prix_charge')">
+                        <!-- Removed Prix TableHead as prix_charge is no longer on the 'charges' table -->
+                        <!-- <TableHead class="cursor-pointer" @click="requestSort('prix_charge')">
                             Prix
                             <ArrowUpDown class="ml-2 h-4 w-4 inline-block" />
-                        </TableHead>
+                        </TableHead> -->
                         <TableHead class="cursor-pointer" @click="requestSort('tva')">
                             TVA
                             <ArrowUpDown class="ml-2 h-4 w-4 inline-block" />
@@ -154,7 +157,8 @@ const sortedCharges = computed(() => {
                     >
                         <TableCell>{{ charge.nom_charge }}</TableCell>
                         <TableCell>{{ charge.type_change }}</TableCell>
-                        <TableCell>{{ charge.prix_charge }} DA</TableCell>
+                        <!-- Removed Prix TableCell as prix_charge is no longer on the 'charges' table -->
+                        <!-- <TableCell>{{ charge.prix_charge }} DA</TableCell> -->
                         <TableCell>{{ charge.tva }} %</TableCell>
                         <TableCell>{{ charge.compte_general?.code || 'N/A' }}</TableCell>
                         <TableCell>{{ charge.compte_analytique?.code || 'N/A' }}</TableCell>
@@ -169,7 +173,7 @@ const sortedCharges = computed(() => {
                         </TableCell>
                     </TableRow>
                     <TableRow v-if="sortedCharges.length === 0">
-                        <TableCell colspan="7" class="text-center py-4">
+                        <TableCell colspan="6" class="text-center py-4">
                             No charges found.
                         </TableCell>
                     </TableRow>

@@ -46,10 +46,11 @@ const props = defineProps({
         charges: Array<{
             id_charge: number
             nom_charge: string
-            prix_charge: number
+            // Removed prix_charge directly from charge object in type definition, as it's in pivot
             tva: number
             pivot: {
-                qte_fc: number
+                qte_fc: number,
+                prix_charge: number // prix_charge is now here in the pivot
             }
         }>,
     }>(),
@@ -101,9 +102,10 @@ const calculateMontant = (facture: typeof props.factures[0]) => {
     // Ensure facture.charges is an array; default to empty if null/undefined
     const totalCharges = (facture.charges ?? []).reduce((total, charge) => {
         // Use nullish coalescing to default to 0 if any value is null or undefined
-        const prixCharge = charge.prix_charge ?? 0;
+        // *** IMPORTANT CHANGE HERE: prix_charge is now accessed from charge.pivot.prix_charge ***
+        const prixCharge = charge.pivot.prix_charge ?? 0;
         const qteFc = charge.pivot.qte_fc ?? 0;
-        const tva = charge.tva ?? 0;
+        const tva = charge.tva ?? 0; // TVA is still on the main charge object
 
         const subtotal = prixCharge * qteFc;
         return total + (subtotal * (1 + (tva / 100)));

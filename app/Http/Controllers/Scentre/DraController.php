@@ -18,6 +18,11 @@ use Inertia\Inertia;
 
 class DraController extends Controller
 {
+    /**
+     * Display a listing of DRAs for the authenticated user's center.
+     *
+     * @return \Inertia\Response
+     */
     public function index()
     {
         $userCentreId = Auth::user()->id_centre;
@@ -46,21 +51,35 @@ class DraController extends Controller
         ]);
     }
 
+    /**
+     * Display the specified DRA and its associated factures and bonAchats.
+     *
+     * @param string $n_dra The unique identifier of the DRA.
+     * @return \Inertia\Response
+     */
     public function show($n_dra)
     {
         $userCentreId = Auth::user()->id_centre;
         $dra = Dra::with('centre')->where('n_dra', $n_dra)->firstOrFail();
 
+        // Ensure the user is authorized to view this DRA
         if ($dra->id_centre !== $userCentreId) {
             abort(403, 'Unauthorized action.');
         }
 
+        // Load factures with related data and pivot prices.
         $factures = $dra->factures()
             ->with([
                 'fournisseur:id_fourn,nom_fourn',
-                'pieces:id_piece,nom_piece,tva',
-                'prestations:id_prest,nom_prest,tva',
-                'charges:id_charge,nom_charge,tva'
+                'pieces' => function ($query) {
+                    $query->withPivot('qte_f', 'prix_piece');
+                },
+                'prestations' => function ($query) {
+                    $query->withPivot('qte_fpr', 'prix_prest');
+                },
+                'charges' => function ($query) {
+                    $query->withPivot('qte_fc', 'prix_charge');
+                }
             ])
             ->get()
             ->map(function ($facture) {
@@ -68,10 +87,13 @@ class DraController extends Controller
                 return $facture;
             });
 
+        // Load bonAchats with related data and pivot prices.
         $bonAchats = $dra->bonAchats()
             ->with([
                 'fournisseur:id_fourn,nom_fourn',
-                'pieces:id_piece,nom_piece,tva',
+                'pieces' => function ($query) {
+                    $query->withPivot('qte_ba', 'prix_piece');
+                },
             ])
             ->get()
             ->map(function ($bonAchat) {
@@ -97,6 +119,12 @@ class DraController extends Controller
         ]);
     }
 
+    /**
+     * Automatically creates a new DRA for the authenticated user's center.
+     *
+     * @param \Illuminate\Http\Request $request
+     * @return \Illuminate\Http\RedirectResponse
+     */
     public function autocreate(Request $request)
     {
         $user = Auth::user();
@@ -116,6 +144,12 @@ class DraController extends Controller
         return redirect()->route('scentre.dras.index');
     }
 
+    /**
+     * Stores a new DRA (though autocreate is used, this method might be for manual creation).
+     *
+     * @param \Illuminate\Http\Request $request
+     * @return \Illuminate\Http\RedirectResponse
+     */
     public function store(Request $request)
     {
         $centreId = Auth::user()->id_centre;
@@ -123,8 +157,11 @@ class DraController extends Controller
 
         $count = Dra::where('id_centre', $centreId)->count();
         $n_dra = $centreId . str_pad($count + 1, 3, '0', STR_PAD_LEFT);
-        $totalDra = 0;
+        $totalDra = 0; // Initialize totalDra for new DRA
 
+        // This condition is likely intended to check if the *initial* DRA creation exceeds threshold
+        // but since totalDra is 0, it won't prevent creation. Logic might need adjustment if totalDra
+        // is supposed to be calculated from initial items in a single form.
         if ($centre->montant_disponible < $totalDra) {
             return back()->withErrors(['montant_disponible' => 'Fonds insuffisants pour créer une nouvelle DRA.']);
         }
@@ -137,13 +174,19 @@ class DraController extends Controller
         $dra->total_dra = $totalDra;
         $dra->save();
 
-        if ($totalDra > 0) {
+        if ($totalDra > 0) { // This will not run as totalDra is 0
             $centre->decrement('montant_disponible', $totalDra);
         }
 
         return redirect()->route('scentre.dras.index')->with('success', 'DRA créé avec succès.');
     }
 
+    /**
+     * Show the form for editing the specified DRA.
+     *
+     * @param \App\Models\Dra $dra
+     * @return \Inertia\Response
+     */
     public function edit(Dra $dra)
     {
         return Inertia::render('Dra/Edit', [
@@ -151,6 +194,13 @@ class DraController extends Controller
         ]);
     }
 
+    /**
+     * Update the specified DRA's state.
+     *
+     * @param \Illuminate\Http\Request $request
+     * @param \App\Models\Dra $dra
+     * @return \Illuminate\Http\RedirectResponse
+     */
     public function update(Request $request, Dra $dra)
     {
         $validated = $request->validate([
@@ -162,6 +212,12 @@ class DraController extends Controller
         return redirect()->back()->with('success', 'État du DRA mis à jour avec succès.');
     }
 
+    /**
+     * Remove the specified DRA from storage.
+     *
+     * @param string $n_dra The unique identifier of the DRA to destroy.
+     * @return \Illuminate\Http\RedirectResponse
+     */
     public function destroy($n_dra)
     {
         DB::beginTransaction();
@@ -169,10 +225,10 @@ class DraController extends Controller
         try {
             $userCentreId = Auth::user()->id_centre;
             $dra = Dra::with([
-                'bonAchats.pieces',
-                'factures.pieces',
-                'factures.prestations',
-                'factures.charges',
+                'bonAchats.pieces' => fn($query) => $query->withPivot('qte_ba', 'prix_piece'), // Load pivot for BA pieces
+                'factures.pieces' => fn($query) => $query->withPivot('qte_f', 'prix_piece'),   // Load pivot for Facture pieces
+                'factures.prestations' => fn($query) => $query->withPivot('qte_fpr', 'prix_prest'), // Load pivot for Facture prestations
+                'factures.charges' => fn($query) => $query->withPivot('qte_fc', 'prix_charge'),   // Load pivot for Facture charges
                 'centre'
             ])->where('n_dra', $n_dra)->firstOrFail();
 
@@ -186,14 +242,17 @@ class DraController extends Controller
 
             $montantToRestore = '0';
 
+            // Calculate total montant to restore from associated bonAchats
             foreach ($dra->bonAchats as $bonAchat) {
                 $montantToRestore = bcadd($montantToRestore, (string)$this->calculateMontant($bonAchat), 2);
             }
 
+            // Calculate total montant to restore from associated factures
             foreach ($dra->factures as $facture) {
                 $montantToRestore = bcadd($montantToRestore, (string)$this->calculateMontant($facture), 2);
             }
 
+            // Detach related items before deleting
             foreach ($dra->bonAchats as $bonAchat) {
                 $bonAchat->pieces()->detach();
             }
@@ -207,7 +266,8 @@ class DraController extends Controller
             $dra->bonAchats()->delete();
             $dra->delete();
 
-            $dra->centre->increment('montant_disponible', $montantToRestore);
+            // Restore the total amount to the centre's available montant_disponible
+            $dra->centre->increment('montant_disponible', (float)$montantToRestore);
 
             DB::commit();
 
@@ -216,10 +276,17 @@ class DraController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
+            Log::error('Error deleting DRA: ' . $e->getMessage(), ['n_dra' => $n_dra, 'error' => $e]);
             return back()->withErrors(['error' => 'Erreur lors de la suppression: ' . $e->getMessage()]);
         }
     }
 
+    /**
+     * Close the specified DRA. Only active or refused DRAs can be closed.
+     *
+     * @param \App\Models\Dra $dra
+     * @return \Illuminate\Http\RedirectResponse
+     */
     public function close(Dra $dra)
     {
         $userCentreId = Auth::user()->id_centre;
@@ -242,10 +309,18 @@ class DraController extends Controller
             ->with('success', 'DRA clôturé avec succès');
     }
 
-    protected function calculateMontant($model)
+    /**
+     * Calculate the total amount for a given model (Facture or BonAchat).
+     * This function dynamically determines the correct pivot fields based on the model type.
+     *
+     * @param \App\Models\Facture|\App\Models\BonAchat $model The model instance (Facture or BonAchat).
+     * @return float The calculated total amount including VAT and droit_timbre (for Factures).
+     */
+    protected function calculateMontant($model): float
     {
         $total = 0;
 
+        // Calculate pieces total (HT + TVA) using pivot prices
         if ($model->relationLoaded('pieces')) {
             $total += $model->pieces->sum(function ($piece) use ($model) {
                 $quantity = 0;
@@ -264,6 +339,7 @@ class DraController extends Controller
             });
         }
 
+        // Add prestations (HT + TVA) using pivot prices - Only for Facture
         if ($model instanceof \App\Models\Facture && $model->relationLoaded('prestations')) {
             $total += $model->prestations->sum(function ($prestation) {
                 $quantity = $prestation->pivot->qte_fpr ?? 0;
@@ -273,22 +349,29 @@ class DraController extends Controller
             });
         }
 
+        // Add charges (HT + TVA) using pivot prices - Only for Facture
         if ($model instanceof \App\Models\Facture && $model->relationLoaded('charges')) {
             $total += $model->charges->sum(function ($charge) {
                 $quantity = $charge->pivot->qte_fc ?? 0;
-                $ht = $charge->prix_charge;
+                $price = $charge->pivot->prix_charge ?? 0; // Corrected to get price from pivot
                 $tva = $charge->tva ?? 0;
-                return ($ht * $quantity) * (1 + $tva / 100);
+                return ($price * $quantity) * (1 + $tva / 100);
             });
         }
 
+        // If it's a Facture, add droit_timbre
         if ($model instanceof \App\Models\Facture) {
             $total += $model->droit_timbre ?? 0;
         }
 
-        return $total;
+        return (float) $total;
     }
 
+    /**
+     * Export all DRAs for the user's centre to a PDF Brouillard de Caisse Régie.
+     *
+     * @return \Illuminate\Http\Response
+     */
     public function exportAllDras()
     {
         $userCentreId = Auth::user()->id_centre;
@@ -300,11 +383,11 @@ class DraController extends Controller
 
         $dras = Dra::with([
             'centre',
-            'factures.pieces',
-            'factures.prestations',
-            'factures.charges',
+            'factures.pieces' => fn($query) => $query->withPivot('qte_f', 'prix_piece'),
+            'factures.prestations' => fn($query) => $query->withPivot('qte_fpr', 'prix_prest'),
+            'factures.charges' => fn($query) => $query->withPivot('qte_fc', 'prix_charge'),
             'factures.fournisseur',
-            'bonAchats.pieces',
+            'bonAchats.pieces' => fn($query) => $query->withPivot('qte_ba', 'prix_piece'),
             'bonAchats.fournisseur',
             'remboursements.encaissements'
         ])
@@ -335,7 +418,8 @@ class DraController extends Controller
 
                 $chargesTotal = $facture->charges->sum(function ($charge) {
                     $quantity = $charge->pivot->qte_fc ?? 1;
-                    return ($charge->prix_charge * $quantity) * (1 + ($charge->tva ?? 0) / 100);
+                    $price = $charge->pivot->prix_charge ?? 0; // Corrected to get price from pivot
+                    return ($price * $quantity) * (1 + ($charge->tva ?? 0) / 100);
                 });
 
                 $droitTimbre = $facture->droit_timbre ?? 0;
@@ -343,7 +427,6 @@ class DraController extends Controller
 
                 $pieceNames = $facture->pieces->map(function ($piece) {
                     $quantity = $piece->pivot->qte_f ?? 1;
-                    $price = $piece->pivot->prix_piece ?? 0;
                     return $piece->nom_piece . ' (x' . $quantity.')';
                 })->implode(', ');
 
@@ -385,7 +468,6 @@ class DraController extends Controller
                 $totalAmount = $baPiecesTotal;
                 $baPieceNames = $bonAchat->pieces->map(function ($piece) {
                     $quantity = $piece->pivot->qte_ba ?? 1;
-                    $price = $piece->pivot->prix_piece ?? 0;
                     return $piece->nom_piece . ' (x' . $quantity . ')';
                 })->implode(', ');
 
@@ -471,6 +553,11 @@ class DraController extends Controller
         return $pdf->download('brouillard_caisse_regie.pdf');
     }
 
+    /**
+     * Export the quarterly statement for the user's centre.
+     *
+     * @return \Illuminate\Http\Response
+     */
     public function exportEtatTrimestriel()
     {
         $user = Auth::user();
@@ -491,35 +578,20 @@ class DraController extends Controller
                 ? Carbon::parse($document->date_facture)->format('d/m/Y')
                 : Carbon::parse($document->date_ba)->format('d/m/Y');
 
-            $addedTimbre = false;
+            $addedTimbre = false; // Flag to ensure droit_timbre is added only once per facture
 
-            foreach ($document->pieces as $piece) {
-                $quantity = $isFacture ? ($piece->pivot->qte_f ?? 1) : ($piece->pivot->qte_ba ?? 1);
-                $price = $piece->pivot->prix_piece ?? 0;
-                $montant = ($price * $quantity) * (1 + ($piece->tva ?? 0) / 100);
-                if ($isFacture && !$addedTimbre) {
-                    $montant += $document->droit_timbre ?? 0;
-                    $addedTimbre = true;
-                }
+            // Process pieces
+            if ($document->relationLoaded('pieces')) {
+                foreach ($document->pieces as $piece) {
+                    if (!$piece) {
+                        continue;
+                    }
 
-                $items->push([
-                    'item' => $items->count() + 1,
-                    'libelle' => $piece->nom_piece,
-                    'compte_charge' => $piece->compteGeneral->code ?? 'N/A',
-                    'date' => $date,
-                    'fournisseur' => $document->fournisseur->nom_fourn ?? 'Non spécifié',
-                    'cds' => $formattedCentreCode,
-                    'fourniture_consommable' => number_format($montant, 2, ',', ' '),
-                    'travaux_prestations' => '',
-                    'autres' => ''
-                ]);
-            }
+                    $quantity = $isFacture ? ($piece->pivot->qte_f ?? 1) : ($piece->pivot->qte_ba ?? 1);
+                    $price = $piece->pivot->prix_piece ?? 0;
+                    $montant = ($price * $quantity) * (1 + ($piece->tva ?? 0) / 100);
 
-            if ($isFacture && $document->relationLoaded('prestations')) {
-                foreach ($document->prestations as $prestation) {
-                    $quantity = $prestation->pivot->qte_fpr ?? 1;
-                    $price = $prestation->pivot->prix_prest ?? 0;
-                    $montant = ($price * $quantity) * (1 + ($prestation->tva ?? 0) / 100);
+                    // Add droit_timbre to the first item processed for a Facture
                     if ($isFacture && !$addedTimbre) {
                         $montant += $document->droit_timbre ?? 0;
                         $addedTimbre = true;
@@ -527,7 +599,38 @@ class DraController extends Controller
 
                     $items->push([
                         'item' => $items->count() + 1,
-                        'libelle' => $prestation->nom_prest,
+                        'libelle' => $piece->nom_piece ?? 'Pièce sans nom',
+                        'compte_charge' => $piece->compteGeneral->code ?? 'N/A',
+                        'date' => $date,
+                        'fournisseur' => $document->fournisseur->nom_fourn ?? 'Non spécifié',
+                        'cds' => $formattedCentreCode,
+                        'fourniture_consommable' => number_format($montant, 2, ',', ' '),
+                        'travaux_prestations' => '',
+                        'autres' => ''
+                    ]);
+                }
+            }
+
+            // Process prestations
+            if ($isFacture && $document->relationLoaded('prestations')) {
+                foreach ($document->prestations as $prestation) {
+                    if (!$prestation) {
+                        continue;
+                    }
+
+                    $quantity = $prestation->pivot->qte_fpr ?? 1;
+                    $price = $prestation->pivot->prix_prest ?? 0;
+                    $montant = ($price * $quantity) * (1 + ($prestation->tva ?? 0) / 100);
+
+                    // Add droit_timbre if it hasn't been added yet (i.e., no pieces were processed)
+                    if ($isFacture && !$addedTimbre) {
+                        $montant += $document->droit_timbre ?? 0;
+                        $addedTimbre = true;
+                    }
+
+                    $items->push([
+                        'item' => $items->count() + 1,
+                        'libelle' => $prestation->nom_prest ?? 'Prestation sans nom',
                         'compte_charge' => $prestation->compteGeneral->code ?? 'N/A',
                         'date' => $date,
                         'fournisseur' => $document->fournisseur->nom_fourn ?? 'Non spécifié',
@@ -539,10 +642,18 @@ class DraController extends Controller
                 }
             }
 
+            // Process charges
             if ($isFacture && $document->relationLoaded('charges')) {
                 foreach ($document->charges as $charge) {
+                    if (!$charge) {
+                        continue;
+                    }
+
                     $quantity = $charge->pivot->qte_fc ?? 1;
-                    $montant = ($charge->prix_charge * $quantity) * (1 + ($charge->tva ?? 0) / 100);
+                    $price = $charge->pivot->prix_charge ?? 0; // Corrected to use pivot price
+                    $montant = ($price * $quantity) * (1 + ($charge->tva ?? 0) / 100);
+
+                    // Add droit_timbre if it hasn't been added yet (i.e., no pieces or prestations were processed)
                     if ($isFacture && !$addedTimbre) {
                         $montant += $document->droit_timbre ?? 0;
                         $addedTimbre = true;
@@ -550,7 +661,7 @@ class DraController extends Controller
 
                     $items->push([
                         'item' => $items->count() + 1,
-                        'libelle' => $charge->nom_charge,
+                        'libelle' => $charge->nom_charge ?? 'Charge sans nom',
                         'compte_charge' => $charge->compteGeneral->code ?? 'N/A',
                         'date' => $date,
                         'fournisseur' => $document->fournisseur->nom_fourn ?? 'Non spécifié',
@@ -561,12 +672,14 @@ class DraController extends Controller
                     ]);
                 }
             }
+            // The logic to add Droit de Timbre as a separate line item was removed in a previous iteration
+            // and is not being re-added here as per your request.
         };
 
         $factures = Facture::with([
-            'pieces.compteGeneral',
-            'prestations.compteGeneral',
-            'charges.compteGeneral',
+            'pieces' => function ($query) { $query->withPivot('qte_f', 'prix_piece')->with('compteGeneral:code,libelle'); },
+            'prestations' => function ($query) { $query->withPivot('qte_fpr', 'prix_prest')->with('compteGeneral:code,libelle'); },
+            'charges' => function ($query) { $query->withPivot('qte_fc', 'prix_charge')->with('compteGeneral:code,libelle'); },
             'fournisseur',
             'dra'
         ])
@@ -579,7 +692,7 @@ class DraController extends Controller
         }
 
         $bonAchats = BonAchat::with([
-            'pieces.compteGeneral',
+            'pieces' => function ($query) { $query->withPivot('qte_ba', 'prix_piece')->with('compteGeneral:code,libelle'); },
             'fournisseur',
             'dra'
         ])
@@ -615,12 +728,17 @@ class DraController extends Controller
         return $pdf->download('etat_trimestriel_' . $formattedCentreCode . '_' . $startDate->format('Y-m') . '.pdf');
     }
 
+    /**
+     * Export the quarterly statement for all centres to a single PDF.
+     *
+     * @return \Illuminate\Http\Response
+     */
     public function exportEtatTrimestrielAllCentres()
     {
         $centres = Centre::all();
         $startDate = Carbon::now()->startOfQuarter();
         $endDate = Carbon::now()->endOfQuarter();
-        $allCentreData = []; // Initialize this array before the loop
+        $allCentreData = [];
         $globalTotals = [
             'totalFourniture' => 0,
             'totalTravaux' => 0,
@@ -628,16 +746,15 @@ class DraController extends Controller
             'grandTotal' => 0
         ];
 
-        foreach ($centres as $centre) { // $centre is now defined here
+        foreach ($centres as $centre) {
             $centreCode = $centre->id_centre;
             $formattedCentreCode = '1' . $centreCode;
             $items = collect();
 
             $processDocuments = function ($documents, $isFacture = true) use (&$items, $formattedCentreCode) {
                 foreach ($documents as $document) {
-                    // Skip invalid documents
                     if (!$document) {
-                        \Log::warning('Invalid document encountered in exportEtatTrimestrielAllCentres');
+                        Log::warning('Invalid document encountered in exportEtatTrimestrielAllCentres');
                         continue;
                     }
 
@@ -646,12 +763,11 @@ class DraController extends Controller
                             ? ($document->date_facture ? Carbon::parse($document->date_facture)->format('d/m/Y') : 'Date invalide')
                             : ($document->date_ba ? Carbon::parse($document->date_ba)->format('d/m/Y') : 'Date invalide');
 
-                        $addedTimbre = false;
+                        $addedTimbre = false; // Flag for each document to ensure droit_timbre is added only once
 
                         // Process pieces
                         if ($document->relationLoaded('pieces')) {
                             foreach ($document->pieces as $piece) {
-                                // Skip invalid pieces
                                 if (!$piece) {
                                     continue;
                                 }
@@ -662,6 +778,7 @@ class DraController extends Controller
                                 $price = $piece->pivot->prix_piece ?? 0;
                                 $montant = ($price * $quantity) * (1 + ($piece->tva ?? 0) / 100);
 
+                                // Add droit_timbre to the first item processed for a Facture
                                 if ($isFacture && !$addedTimbre) {
                                     $montant += $document->droit_timbre ?? 0;
                                     $addedTimbre = true;
@@ -684,7 +801,6 @@ class DraController extends Controller
                         // Process prestations
                         if ($isFacture && $document->relationLoaded('prestations')) {
                             foreach ($document->prestations as $prestation) {
-                                // Skip invalid prestations
                                 if (!$prestation) {
                                     continue;
                                 }
@@ -693,6 +809,7 @@ class DraController extends Controller
                                 $price = $prestation->pivot->prix_prest ?? 0;
                                 $montant = ($price * $quantity) * (1 + ($prestation->tva ?? 0) / 100);
 
+                                // Add droit_timbre if it hasn't been added yet
                                 if ($isFacture && !$addedTimbre) {
                                     $montant += $document->droit_timbre ?? 0;
                                     $addedTimbre = true;
@@ -715,14 +832,15 @@ class DraController extends Controller
                         // Process charges
                         if ($isFacture && $document->relationLoaded('charges')) {
                             foreach ($document->charges as $charge) {
-                                // Skip invalid charges
                                 if (!$charge) {
                                     continue;
                                 }
 
                                 $quantity = $charge->pivot->qte_fc ?? 1;
-                                $montant = ($charge->prix_charge * $quantity) * (1 + ($charge->tva ?? 0) / 100);
+                                $price = $charge->pivot->prix_charge ?? 0; // Corrected to use pivot price
+                                $montant = ($price * $quantity) * (1 + ($charge->tva ?? 0) / 100);
 
+                                // Add droit_timbre if it hasn't been added yet
                                 if ($isFacture && !$addedTimbre) {
                                     $montant += $document->droit_timbre ?? 0;
                                     $addedTimbre = true;
@@ -742,7 +860,7 @@ class DraController extends Controller
                             }
                         }
                     } catch (\Exception $e) {
-                        \Log::error('Error processing document in exportEtatTrimestrielAllCentres', [
+                        Log::error('Error processing document in exportEtatTrimestrielAllCentres', [
                             'document_id' => $document->id ?? 'unknown',
                             'error' => $e->getMessage()
                         ]);
@@ -753,9 +871,9 @@ class DraController extends Controller
 
             try {
                 $factures = Facture::with([
-                    'pieces.compteGeneral:code,libelle',
-                    'prestations.compteGeneral:code,libelle',
-                    'charges.compteGeneral:code,libelle',
+                    'pieces' => function ($query) { $query->withPivot('qte_f', 'prix_piece')->with('compteGeneral:code,libelle'); },
+                    'prestations' => function ($query) { $query->withPivot('qte_fpr', 'prix_prest')->with('compteGeneral:code,libelle'); },
+                    'charges' => function ($query) { $query->withPivot('qte_fc', 'prix_charge')->with('compteGeneral:code,libelle'); },
                     'fournisseur',
                     'dra'
                 ])
@@ -764,7 +882,7 @@ class DraController extends Controller
                     ->get();
 
                 $bonAchats = BonAchat::with([
-                    'pieces.compteGeneral:code,libelle',
+                    'pieces' => function ($query) { $query->withPivot('qte_ba', 'prix_piece')->with('compteGeneral:code,libelle'); },
                     'fournisseur',
                     'dra'
                 ])
@@ -772,8 +890,7 @@ class DraController extends Controller
                     ->whereBetween('date_ba', [$startDate, $endDate])
                     ->get();
 
-                // Changed from processDocument (singular) to processDocuments (plural)
-                // because the closure was modified to accept a collection
+                // Process documents for the current centre
                 $processDocuments($factures, true);
                 $processDocuments($bonAchats, false);
 
@@ -786,9 +903,8 @@ class DraController extends Controller
                 $totalAutresCentre = $calculateTotalCentre('autres');
                 $grandTotalCentre = $totalFournitureCentre + $totalTravauxCentre + $totalAutresCentre;
 
-                // This block is now correctly inside the foreach loop
                 $allCentreData[] = [
-                    'centre' => $centre, // $centre is now defined
+                    'centre' => $centre,
                     'centreType' => $centre->type_centre ?? 'N/A',
                     'centreCode' => $centre->code_centre ?? $centre->id_centre,
                     'items' => $items,
@@ -806,7 +922,7 @@ class DraController extends Controller
                 $globalTotals['grandTotal'] += $grandTotalCentre;
 
             } catch (\Exception $e) {
-                \Log::error('Error processing centre in exportEtatTrimestrielAllCentres', [
+                Log::error('Error processing centre in exportEtatTrimestrielAllCentres', [
                     'centre_id' => $centreCode,
                     'error' => $e->getMessage()
                 ]);

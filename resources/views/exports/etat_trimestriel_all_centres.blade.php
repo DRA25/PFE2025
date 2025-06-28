@@ -4,10 +4,11 @@
     <meta charset="UTF-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>État Trimestriel</title>
+    <title>État Trimestriel- Tout les Centres</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
         @page {
+            size: landscape; /* Set page orientation to landscape */
             margin: 20px;
         }
 

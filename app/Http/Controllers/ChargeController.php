@@ -1,7 +1,5 @@
 <?php
 
-
-
 namespace App\Http\Controllers;
 
 use App\Models\Charge;
@@ -18,7 +16,6 @@ class ChargeController extends Controller
             ->select(
                 'id_charge',
                 'nom_charge',
-                'prix_charge',
                 'type_change',
                 'tva',
                 'compte_general_code',
@@ -49,7 +46,6 @@ class ChargeController extends Controller
             'nom_charge' => 'required|string|max:255',
             'desc_change' => 'required|string|max:255',
             'type_change' => 'required|string|max:255',
-            'prix_charge' => 'required|integer',
             'tva' => 'required|numeric',
             'compte_general_code' => 'required|exists:comptes_generaux,code',
             'compte_analytique_code' => 'required|exists:comptes_analytiques,code',
@@ -87,7 +83,6 @@ class ChargeController extends Controller
             'nom_charge' => 'required|string|max:255',
             'desc_change' => 'required|string|max:255',
             'type_change' => 'required|string|max:255',
-            'prix_charge' => 'required|integer',
             'tva' => 'required|numeric',
             'compte_general_code' => 'required|exists:comptes_generaux,code',
             'compte_analytique_code' => 'required|exists:comptes_analytiques,code',
