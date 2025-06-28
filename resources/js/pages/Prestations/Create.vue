@@ -15,10 +15,9 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 const form = useForm({
-    id_prest:null as number | null,
+    id_prest: null as number | null,
     nom_prest: '',
-    desc_prest: '', // Add the desc_prest field here
-    prix_prest: null as number | null,
+    desc_prest: '',
     date_prest: '',
     tva: null as number | null,
     compte_general_code: '',
@@ -48,9 +47,10 @@ function submit() {
                         v-model="form.id_prest"
                         type="number"
                         class="w-full border border-gray-300 dark:border-gray-600 p-2 rounded focus:ring-2 focus:ring-[#042B62] dark:focus:ring-[#F3B21B] focus:border-transparent dark:bg-gray-800 dark:text-white"
-
                     />
+                    <p v-if="form.errors.id_prest" class="text-sm text-red-600">{{ form.errors.id_prest }}</p>
                 </div>
+
                 <div class="space-y-2">
                     <label for="nom_prest" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Nom</label>
                     <input
@@ -72,19 +72,6 @@ function submit() {
                         placeholder="Description de la prestation"
                     ></textarea>
                     <p v-if="form.errors.desc_prest" class="text-sm text-red-600">{{ form.errors.desc_prest }}</p>
-                </div>
-
-                <div class="space-y-2">
-                    <label for="prix_prest" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Prix</label>
-                    <input
-                        id="prix_prest"
-                        v-model="form.prix_prest"
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        class="w-full border border-gray-300 dark:border-gray-600 p-2 rounded focus:ring-2 focus:ring-[#042B62] dark:focus:ring-[#F3B21B] focus:border-transparent dark:bg-gray-800 dark:text-white"
-                    />
-                    <p v-if="form.errors.prix_prest" class="text-sm text-red-600">{{ form.errors.prix_prest }}</p>
                 </div>
 
                 <div class="space-y-2">

@@ -13,23 +13,17 @@ class PieceController extends Controller
 {
     public function index()
     {
-        // Eager load or join compte general and analytique info for each piece
-        // Assuming your Piece model has relationships or you can do a join query
-
-        // Example if Piece has relationships (adjust relation names as needed):
-        $pieces = Piece::
-            with(['compteGeneral:code,libelle', 'compteAnalytique:code,libelle'])
+        $pieces = Piece::with(['compteGeneral:code,libelle', 'compteAnalytique:code,libelle'])
             ->get()
             ->map(function ($piece) {
                 return [
                     'id' => $piece->id,
                     'id_piece' => $piece->id_piece,
                     'nom_piece' => $piece->nom_piece,
-                    'prix_piece' => $piece->prix_piece,
                     'marque_piece' => $piece->marque_piece,
                     'ref_piece' => $piece->ref_piece,
                     'tva' => $piece->tva,
-                    'compte_general' => $piece->compteGeneral ? $piece->compteGeneral->code : null ,
+                    'compte_general' => $piece->compteGeneral ? $piece->compteGeneral->code : null,
                     'compte_analytique' => $piece->compteAnalytique ? $piece->compteAnalytique->code : null,
                     'created_at' => $piece->created_at,
                     'updated_at' => $piece->updated_at,
@@ -45,20 +39,16 @@ class PieceController extends Controller
         ]);
     }
 
-
     public function create()
     {
-        $compteGenerals = CompteGeneral::all(['code', 'libelle']); // adjust columns as needed
+        $compteGenerals = CompteGeneral::all(['code', 'libelle']);
         $compteAnalytiques = CompteAnalytique::all(['code', 'libelle']);
 
-        if (auth()->user()->hasRole('service magasin')) {
-            return Inertia::render('Magasin/Piece/Create', [
-                'compteGenerals' => $compteGenerals,
-                'compteAnalytiques' => $compteAnalytiques,
-            ]);
-        }
+        $view = auth()->user()->hasRole('service magasin')
+            ? 'Magasin/Piece/Create'
+            : 'Atelier/Piece/Create';
 
-        return Inertia::render('Atelier/Piece/Create', [
+        return Inertia::render($view, [
             'compteGenerals' => $compteGenerals,
             'compteAnalytiques' => $compteAnalytiques,
         ]);
@@ -69,7 +59,6 @@ class PieceController extends Controller
         $validated = $request->validate([
             'id_piece' => 'required|integer|unique:pieces,id_piece',
             'nom_piece' => 'required|string|max:255',
-            'prix_piece' => 'required|numeric|min:0',
             'tva' => 'required|numeric|min:0|max:100',
             'marque_piece' => 'required|string|max:255',
             'ref_piece' => 'required|string|max:255',
@@ -109,7 +98,6 @@ class PieceController extends Controller
         ]);
     }
 
-
     public function update(Request $request, Piece $piece)
     {
         if ($piece->id_centre !== auth()->user()->id_centre) {
@@ -117,10 +105,8 @@ class PieceController extends Controller
         }
 
         $validated = $request->validate([
-            // Usually id_piece is not updated, so no need to validate it here.
             'nom_piece' => 'required|string|max:255',
-            'prix_piece' => 'required|numeric|min:0',
-            'tva' => 'required|numeric|min:0|max:100', // keep if you use tva
+            'tva' => 'required|numeric|min:0|max:100',
             'marque_piece' => 'required|string|max:255',
             'ref_piece' => 'required|string|max:255',
             'compte_general_code' => 'required|string|exists:comptes_generaux,code',

@@ -11,7 +11,6 @@ return new class extends Migration
         Schema::create('pieces', function (Blueprint $table) {
             $table->integer('id_piece')->primary();
             $table->string('nom_piece');
-            $table->integer('prix_piece');
             $table->float('tva', 5, 2); // TVA percentage (e.g., 19.6%)
             $table->string('marque_piece');
             $table->string('ref_piece');

@@ -25,14 +25,14 @@ protected $fillable = [
     public function pieces()
     {
         return $this->belongsToMany(Piece::class, 'quantite__f_s', 'n_facture', 'id_piece')
-            ->withPivot('qte_f');
+            ->withPivot('qte_f','prix_piece');
     }
 
     // New: Relationship for Prestations
     public function prestations()
     {
         return $this->belongsToMany(Prestation::class, 'facture_prestation', 'n_facture', 'id_prest')
-            ->withPivot('qte_fpr'); // Use the correct pivot column name here
+            ->withPivot('qte_fpr','prix_prest'); // Use the correct pivot column name here
     }
 
     // New: Relationship for Charges

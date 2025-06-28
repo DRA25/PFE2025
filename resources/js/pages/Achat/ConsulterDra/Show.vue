@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { Head, Link, router, useForm } from '@inertiajs/vue3';
+import { Head, Link } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
-import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ArrowLeft, FileText } from 'lucide-vue-next'; // Removed Lock and Trash2 as they don't seem used in the target template
+import { TableBody, TableCell, TableHead, TableHeader, TableRow, Table } from '@/components/ui/table';
+import { ArrowLeft, FileText } from 'lucide-vue-next';
 
 const props = defineProps<{
     dra: {
@@ -15,32 +15,24 @@ const props = defineProps<{
             seuil_centre: number;
             montant_disponible: number;
         };
-        errors?: { // Keeping this just in case, though the update form part is removed
-            etat?: string;
-        };
     };
-    factures: Array<{
+    factures?: Array<{
         id_facture: number;
-        fournisseur: { nom_fourn: string };
-        pieces: Array<{ id_piece: number; nom_piece: string; prix_piece: number; tva: number; pivot: { qte_f: number } }>;
-        prestations: Array<{ id_prest: number; nom_prest: string; prix_prest: number; tva: number; pivot: { qte_fpr: number } }>;
-        charges: Array<{ id_charge: number; nom_charge: string; prix_charge: number; tva: number; pivot: { qte_fc: number } }>;
+        fournisseur?: { nom_fourn: string };
+        pieces?: Array<{ id_piece: number; nom_piece: string; tva: number; pivot: { qte_f: number; prix_piece: number } }>;
+        // Updated: prix_prest is on pivot
+        prestations?: Array<{ id_prest: number; nom_prest: string; tva: number; pivot: { qte_fpr: number; prix_prest: number } }>;
+        // Updated: prix_charge is on pivot
+        charges?: Array<{ id_charge: number; nom_charge: string; tva: number; pivot: { qte_fc: number; prix_charge: number } }>;
         droit_timbre?: number;
     }>;
-    bonAchats: Array<{
+    bonAchats?: Array<{
         id_bon: number;
-        fournisseur: { nom_fourn: string };
-        pieces: Array<{ id_piece: number; nom_piece: string; prix_piece: number; tva: number; pivot: { qte_ba: number } }>;
-        prestations: Array<{ id_prest: number; nom_prest: string; prix_prest: number; tva: number; pivot: { qte_bapr: number } }>; // Added for bonAchats
-        charges: Array<{ id_charge: number; nom_charge: string; prix_charge: number; tva: number; pivot: { qte_bac: number } }>;    // Added for bonAchats
-        // No 'montant' property here, as it will be calculated from pieces, prestations, and charges
+        fournisseur?: { nom_fourn: string };
+        pieces?: Array<{ id_piece: number; nom_piece: string; tva: number; pivot: { qte_ba: number; prix_piece: number } }>;
+        // Removed prestations and charges from BonAchat type definition
     }>;
 }>();
-
-// The form and submit function for updating DRA state are removed as per the target template
-// const form = useForm({
-//     etat: props.dra.etat.toLowerCase()
-// });
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Achat', href: route('achat.index') },
@@ -48,114 +40,89 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: `DRA ${props.dra.n_dra}`, href: route('achat.dras.show', { dra: props.dra.n_dra }) }
 ];
 
-// etatOptions and submit function are removed as per the target template
-// const etatOptions = [
-//     { value: 'cloture', label: 'Clôturé' },
-//     { value: 'refuse', label: 'Refusé' },
-//     { value: 'accepte', label: 'Accepté' }
-// ];
+// Helper function to get the price from the correct location (pivot for pieces/prestations/charges)
+const getItemPrice = (item: any, type: 'pieces' | 'prestations' | 'charges') => {
+    if (type === 'pieces') return item.pivot?.prix_piece || 0;
+    if (type === 'prestations') return item.pivot?.prix_prest || 0;
+    if (type === 'charges') return item.pivot?.prix_charge || 0;
+    return 0;
+};
 
-// const submit = () => {
-//     form.put(route('achat.dras.update', { dra: props.dra.n_dra }), {
-//         preserveScroll: true,
-//         onSuccess: () => {
-//             router.visit(route('scf.dras.index'), {
-//                 preserveScroll: true,
-//                 preserveState: true
-//             });
-//         },
-//         onError: () => {
-//             // Errors will be automatically available in props.errors
-//         }
-//     });
-// };
+// Helper function to get the quantity from the correct pivot property
+const getItemQuantity = (item: any, type: 'pieces' | 'prestations' | 'charges', isBonAchat: boolean) => {
+    if (isBonAchat) {
+        if (type === 'pieces') return item.pivot?.qte_ba || 0;
+        // BonAchat no longer has prestations or charges, so these cases are excluded
+    } else { // For Facture
+        if (type === 'pieces') return item.pivot?.qte_f || 0;
+        if (type === 'prestations') return item.pivot?.qte_fpr || 0;
+        if (type === 'charges') return item.pivot?.qte_fc || 0;
+    }
+    return 0;
+};
 
-// --- Helper Functions for Calculations ---
+// Helper function to calculate total for a specific item type (HT only)
+const calculateItemTypeHtTotal = (items: any[] = [], type: 'pieces' | 'prestations' | 'charges', isBonAchat: boolean = false) => {
+    if (!items || items.length === 0) return 0;
 
-// Helper function to calculate total HT for a specific item type (pieces, prestations, charges)
-const calculateItemTypeHtTotal = (items: any[], type: 'pieces' | 'prestations' | 'charges', isBonAchat: boolean = false) => {
     return items.reduce((sum, item) => {
-        let price = 0;
-        let quantity = 0;
-        if (isBonAchat) {
-            if (type === 'pieces') {
-                price = item.prix_piece;
-                quantity = item.pivot?.qte_ba;
-            } else if (type === 'prestations') {
-                price = item.prix_prest;
-                quantity = item.pivot?.qte_bapr;
-            } else if (type === 'charges') {
-                price = item.prix_charge;
-                quantity = item.pivot?.qte_bac;
-            }
-        } else { // For Factures
-            if (type === 'pieces') {
-                price = item.prix_piece;
-                quantity = item.pivot?.qte_f;
-            } else if (type === 'prestations') {
-                price = item.prix_prest;
-                quantity = item.pivot?.qte_fpr;
-            } else if (type === 'charges') {
-                price = item.prix_charge;
-                quantity = item.pivot?.qte_fc;
-            }
-        }
-        return sum + (price * (quantity || 1));
+        // Skip if it's a BonAchat and type is not pieces
+        if (isBonAchat && (type === 'prestations' || type === 'charges')) return sum;
+
+        const price = getItemPrice(item, type);
+        const quantity = getItemQuantity(item, type, isBonAchat);
+
+        return sum + (price * quantity);
     }, 0);
 };
 
 // Helper function to calculate TVA for a specific item type
-const calculateItemTypeTVA = (items: any[], type: 'pieces' | 'prestations' | 'charges', isBonAchat: boolean = false) => {
-    return items.reduce((sum, item) => {
-        let price = 0;
-        let quantity = 0;
-        let tvaRate = 0;
+const calculateItemTypeTVA = (items: any[] = [], type: 'pieces' | 'prestations' | 'charges', isBonAchat: boolean = false) => {
+    if (!items || items.length === 0) return 0;
 
-        if (isBonAchat) {
-            if (type === 'pieces') {
-                price = item.prix_piece;
-                quantity = item.pivot?.qte_ba;
-                tvaRate = item.tva || 0;
-            } else if (type === 'prestations') {
-                price = item.prix_prest;
-                quantity = item.pivot?.qte_bapr;
-                tvaRate = item.tva || 0;
-            } else if (type === 'charges') {
-                price = item.prix_charge;
-                quantity = item.pivot?.qte_bac;
-                tvaRate = item.tva || 0;
-            }
-        } else { // For Factures
-            if (type === 'pieces') {
-                price = item.prix_piece;
-                quantity = item.pivot?.qte_f;
-                tvaRate = item.tva || 0;
-            } else if (type === 'prestations') {
-                price = item.prix_prest;
-                quantity = item.pivot?.qte_fpr;
-                tvaRate = item.tva || 0;
-            } else if (type === 'charges') {
-                price = item.prix_charge;
-                quantity = item.pivot?.qte_fc;
-                tvaRate = item.tva || 0;
-            }
-        }
-        return sum + (price * (quantity || 1) * (tvaRate / 100));
+    return items.reduce((sum, item) => {
+        // Skip if it's a BonAchat and type is not pieces
+        if (isBonAchat && (type === 'prestations' || type === 'charges')) return sum;
+
+        const price = getItemPrice(item, type);
+        const quantity = getItemQuantity(item, type, isBonAchat);
+        const tvaRate = item.tva || 0;
+        return sum + (price * quantity * (tvaRate / 100));
     }, 0);
 };
 
-// Function to calculate the total amount (HT + TVA) for a given set of items (pieces, prestations, charges)
-const calculateFullTotal = (items: { pieces: any[], prestations: any[], charges: any[], droit_timbre?: number }, isBonAchat: boolean = false) => {
+const calculateFullTotal = (items: {
+    pieces?: any[],
+    prestations?: any[],
+    charges?: any[],
+    droit_timbre?: number
+} = {}, isBonAchat: boolean = false) => {
     let total = 0;
 
     // Calculate pieces total (HT + TVA)
-    total += items.pieces.reduce((sum, piece) => sum + (piece.prix_piece * (isBonAchat ? (piece.pivot?.qte_ba || 1) : (piece.pivot?.qte_f || 1)) * (1 + (piece.tva || 0) / 100)), 0);
+    total += (items.pieces || []).reduce((sum, piece) => {
+        const price = getItemPrice(piece, 'pieces');
+        const quantity = getItemQuantity(piece, 'pieces', isBonAchat);
+        return sum + (price * quantity * (1 + ((piece.tva || 0) / 100)));
+    }, 0);
 
-    // Calculate prestations total (HT + TVA)
-    total += items.prestations.reduce((sum, prest) => sum + (prest.prix_prest * (isBonAchat ? (prest.pivot?.qte_bapr || 1) : (prest.pivot?.qte_fpr || 1)) * (1 + (prest.tva || 0) / 100)), 0);
+    // Calculate prestations total (HT + TVA) - only for Facture
+    if (!isBonAchat) {
+        total += (items.prestations || []).reduce((sum, prest) => {
+            const price = getItemPrice(prest, 'prestations');
+            const quantity = getItemQuantity(prest, 'prestations', isBonAchat);
+            return sum + (price * quantity * (1 + ((prest.tva || 0) / 100)));
+        }, 0);
+    }
 
-    // Calculate charges total (HT + TVA)
-    total += items.charges.reduce((sum, charge) => sum + (charge.prix_charge * (isBonAchat ? (charge.pivot?.qte_bac || 1) : (charge.pivot?.qte_fc || 1)) * (1 + (charge.tva || 0) / 100)), 0);
+    // Calculate charges total (HT + TVA) - only for Facture
+    if (!isBonAchat) {
+        total += (items.charges || []).reduce((sum, charge) => {
+            const price = getItemPrice(charge, 'charges');
+            const quantity = getItemQuantity(charge, 'charges', isBonAchat);
+            return sum + (price * quantity * (1 + ((charge.tva || 0) / 100)));
+        }, 0);
+    }
 
     // Add droit_timbre if applicable (only for factures)
     if (!isBonAchat && items.droit_timbre !== undefined) {
@@ -164,7 +131,6 @@ const calculateFullTotal = (items: { pieces: any[], prestations: any[], charges:
 
     return total;
 };
-
 </script>
 
 <template>
@@ -223,7 +189,7 @@ const calculateFullTotal = (items: { pieces: any[], prestations: any[], charges:
 
             <div class="mt-10">
                 <h2 class="text-xl font-semibold text-[#042B62FF] dark:text-[#F3B21B] mb-4">Factures liées</h2>
-                <div v-if="factures.length > 0" class="space-y-2">
+                <div v-if="factures && factures.length > 0" class="space-y-2">
                     <Table class="m-3 w-39/40 bg-white dark:bg-[#111827] rounded-lg">
                         <TableHeader>
                             <TableRow>
@@ -242,42 +208,42 @@ const calculateFullTotal = (items: { pieces: any[], prestations: any[], charges:
                                 :key="facture.id_facture"
                                 class="hover:bg-gray-300 dark:hover:bg-gray-900"
                             >
-                                <TableCell>{{ facture.fournisseur.nom_fourn }}</TableCell>
+                                <TableCell>{{ facture.fournisseur?.nom_fourn || '-' }}</TableCell>
                                 <TableCell>
-                                    <span v-if="facture.pieces.length > 0" class="block">Pièces</span>
-                                    <span v-if="facture.prestations.length > 0" class="block">Prestations</span>
-                                    <span v-if="facture.charges.length > 0" class="block">Charges</span>
+                                    <span v-if="facture.pieces && facture.pieces.length > 0" class="block">Pièces</span>
+                                    <span v-if="facture.prestations && facture.prestations.length > 0" class="block">Prestations</span>
+                                    <span v-if="facture.charges && facture.charges.length > 0" class="block">Charges</span>
                                 </TableCell>
                                 <TableCell>
-                                    <div v-for="piece in facture.pieces" :key="piece.id_piece" class="text-sm">
-                                        {{ piece.nom_piece }} (x{{ piece.pivot.qte_f }})
+                                    <div v-if="facture.pieces" v-for="piece in facture.pieces" :key="piece.id_piece" class="text-sm">
+                                        {{ piece.nom_piece }} (x{{ piece.pivot?.qte_f || 0 }})
                                     </div>
-                                    <div v-for="prestation in facture.prestations" :key="prestation.id_prest" class="text-sm">
-                                        {{ prestation.nom_prest }} (x{{ prestation.pivot.qte_fpr }})
+                                    <div v-if="facture.prestations" v-for="prestation in facture.prestations" :key="prestation.id_prest" class="text-sm">
+                                        {{ prestation.nom_prest }} (x{{ prestation.pivot?.qte_fpr || 0 }})
                                     </div>
-                                    <div v-for="charge in facture.charges" :key="charge.id_charge" class="text-sm">
-                                        {{ charge.nom_charge }} (x{{ charge.pivot.qte_fc }})
+                                    <div v-if="facture.charges" v-for="charge in facture.charges" :key="charge.id_charge" class="text-sm">
+                                        {{ charge.nom_charge }} (x{{ charge.pivot?.qte_fc || 0 }})
                                     </div>
                                 </TableCell>
                                 <TableCell>
-                                    <div v-if="facture.pieces.length > 0" class="text-sm">
+                                    <div v-if="facture.pieces && facture.pieces.length > 0" class="text-sm">
                                         {{ calculateItemTypeHtTotal(facture.pieces, 'pieces').toFixed(2) }} DA
                                     </div>
-                                    <div v-if="facture.prestations.length > 0" class="text-sm">
+                                    <div v-if="facture.prestations && facture.prestations.length > 0" class="text-sm">
                                         {{ calculateItemTypeHtTotal(facture.prestations, 'prestations').toFixed(2) }} DA
                                     </div>
-                                    <div v-if="facture.charges.length > 0" class="text-sm">
+                                    <div v-if="facture.charges && facture.charges.length > 0" class="text-sm">
                                         {{ calculateItemTypeHtTotal(facture.charges, 'charges').toFixed(2) }} DA
                                     </div>
                                 </TableCell>
                                 <TableCell>
-                                    <div v-if="facture.pieces.length > 0" class="text-sm">
+                                    <div v-if="facture.pieces && facture.pieces.length > 0" class="text-sm">
                                         {{ calculateItemTypeTVA(facture.pieces, 'pieces').toFixed(2) }} DA
                                     </div>
-                                    <div v-if="facture.prestations.length > 0" class="text-sm">
+                                    <div v-if="facture.prestations && facture.prestations.length > 0" class="text-sm">
                                         {{ calculateItemTypeTVA(facture.prestations, 'prestations').toFixed(2) }} DA
                                     </div>
-                                    <div v-if="facture.charges.length > 0" class="text-sm">
+                                    <div v-if="facture.charges && facture.charges.length > 0" class="text-sm">
                                         {{ calculateItemTypeTVA(facture.charges, 'charges').toFixed(2) }} DA
                                     </div>
                                 </TableCell>
@@ -296,7 +262,7 @@ const calculateFullTotal = (items: { pieces: any[], prestations: any[], charges:
 
             <div class="mt-10">
                 <h2 class="text-xl font-semibold text-[#042B62FF] dark:text-[#F3B21B] mb-4">Bons d'Achat liés</h2>
-                <div v-if="bonAchats.length > 0" class="space-y-2">
+                <div v-if="bonAchats && bonAchats.length > 0" class="space-y-2">
                     <Table class="m-3 w-39/40 bg-white dark:bg-[#111827] rounded-lg">
                         <TableHeader>
                             <TableRow>
@@ -314,43 +280,23 @@ const calculateFullTotal = (items: { pieces: any[], prestations: any[], charges:
                                 :key="bon.id_bon"
                                 class="hover:bg-gray-300 dark:hover:bg-gray-900"
                             >
-                                <TableCell>{{ bon.fournisseur.nom_fourn }}</TableCell>
+                                <TableCell>{{ bon.fournisseur?.nom_fourn || '-' }}</TableCell>
                                 <TableCell>
-                                    <span v-if="bon.pieces.length > 0" class="block">Pièces</span>
-                                    <span v-if="bon.prestations.length > 0" class="block">Prestations</span>
-                                    <span v-if="bon.charges.length > 0" class="block">Charges</span>
+                                    <span v-if="bon.pieces && bon.pieces.length > 0" class="block">Pièces</span>
                                 </TableCell>
                                 <TableCell>
-                                    <div v-for="piece in bon.pieces" :key="piece.id_piece" class="text-sm">
-                                        {{ piece.nom_piece }} (x{{ piece.pivot.qte_ba }})
-                                    </div>
-                                    <div v-for="prestation in bon.prestations" :key="prestation.id_prest" class="text-sm">
-                                        {{ prestation.nom_prest }} (x{{ prestation.pivot.qte_bapr }})
-                                    </div>
-                                    <div v-for="charge in bon.charges" :key="charge.id_charge" class="text-sm">
-                                        {{ charge.nom_charge }} (x{{ charge.pivot.qte_bac }})
+                                    <div v-if="bon.pieces" v-for="piece in bon.pieces" :key="piece.id_piece" class="text-sm">
+                                        {{ piece.nom_piece }} (x{{ piece.pivot?.qte_ba || 0 }})
                                     </div>
                                 </TableCell>
                                 <TableCell>
-                                    <div v-if="bon.pieces.length > 0" class="text-sm">
+                                    <div v-if="bon.pieces && bon.pieces.length > 0" class="text-sm">
                                         {{ calculateItemTypeHtTotal(bon.pieces, 'pieces', true).toFixed(2) }} DA
                                     </div>
-                                    <div v-if="bon.prestations.length > 0" class="text-sm">
-                                        {{ calculateItemTypeHtTotal(bon.prestations, 'prestations', true).toFixed(2) }} DA
-                                    </div>
-                                    <div v-if="bon.charges.length > 0" class="text-sm">
-                                        {{ calculateItemTypeHtTotal(bon.charges, 'charges', true).toFixed(2) }} DA
-                                    </div>
                                 </TableCell>
                                 <TableCell>
-                                    <div v-if="bon.pieces.length > 0" class="text-sm">
+                                    <div v-if="bon.pieces && bon.pieces.length > 0" class="text-sm">
                                         {{ calculateItemTypeTVA(bon.pieces, 'pieces', true).toFixed(2) }} DA
-                                    </div>
-                                    <div v-if="bon.prestations.length > 0" class="text-sm">
-                                        {{ calculateItemTypeTVA(bon.prestations, 'prestations', true).toFixed(2) }} DA
-                                    </div>
-                                    <div v-if="bon.charges.length > 0" class="text-sm">
-                                        {{ calculateItemTypeTVA(bon.charges, 'charges', true).toFixed(2) }} DA
                                     </div>
                                 </TableCell>
                                 <TableCell>
@@ -362,8 +308,6 @@ const calculateFullTotal = (items: { pieces: any[], prestations: any[], charges:
                 </div>
                 <p v-else class="text-gray-600 dark:text-gray-400">Aucun bon d'achat lié à ce DRA.</p>
             </div>
-
-
 
             <div class="mt-10">
                 <Link

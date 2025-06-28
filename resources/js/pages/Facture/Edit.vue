@@ -16,28 +16,28 @@ const props = defineProps<{
         pieces: Array<{
             id_piece: number,
             nom_piece: string,
-            prix_piece: number,
             tva: number,
             pivot: {
-                qte_f: number
+                qte_f: number,
+                prix_piece: number
             }
         }>,
         prestations: Array<{
             id_prest: number,
             nom_prest: string,
-            prix_prest: number,
             tva: number,
             pivot: {
-                qte_fpr: number
+                qte_fpr: number,
+                prix_prest: number
             }
         }>,
         charges: Array<{
             id_charge: number,
             nom_charge: string,
-            prix_charge: number,
             tva: number,
             pivot: {
-                qte_fc: number
+                qte_fc: number,
+                prix_charge: number
             }
         }>,
     },
@@ -48,19 +48,16 @@ const props = defineProps<{
     allPieces: Array<{
         id_piece: number,
         nom_piece: string,
-        prix_piece: number,
         tva: number
     }>,
     allPrestations: Array<{
         id_prest: number,
         nom_prest: string,
-        prix_prest: number,
         tva: number
     }>,
     allCharges: Array<{
         id_charge: number,
         nom_charge: string,
-        prix_charge: number,
         tva: number
     }>,
 }>()
@@ -78,16 +75,19 @@ const form = useForm({
     date_facture: props.facture.date_facture,
     id_fourn: props.facture.id_fourn,
     pieces: props.facture.pieces.map(p => ({
-        id_piece: p.id_piece.toString(), // Ensure string for consistency with selectedItemId
-        qte_f: p.pivot.qte_f
+        id_piece: p.id_piece.toString(),
+        qte_f: p.pivot.qte_f,
+        prix_piece: p.pivot.prix_piece
     })),
     prestations: props.facture.prestations.map(pr => ({
-        id_prest: pr.id_prest.toString(), // Ensure string
-        qte_fpr: pr.pivot.qte_fpr
+        id_prest: pr.id_prest.toString(),
+        qte_fpr: pr.pivot.qte_fpr,
+        prix_prest: pr.pivot.prix_prest
     })),
     charges: props.facture.charges.map(ch => ({
-        id_charge: ch.id_charge.toString(), // Ensure string
-        qte_fc: ch.pivot.qte_fc
+        id_charge: ch.id_charge.toString(),
+        qte_fc: ch.pivot.qte_fc,
+        prix_charge: ch.pivot.prix_charge
     })),
     droit_timbre: props.facture.droit_timbre ?? 0,
 })
@@ -103,9 +103,10 @@ const initialSelectedItemType = computed(() => {
 // Ref to control which item type is currently selected for adding
 const selectedItemType = ref<'piece' | 'prestation' | 'charge'>(initialSelectedItemType.value);
 
-// Track selected item and quantity for the add form
+// Track selected item, quantity and unit price for the add form
 const selectedItemId = ref('');
 const quantity = ref(1);
+const unitPrice = ref('');
 
 // Calculate total amount
 const totalAmount = computed(() => {
@@ -113,7 +114,7 @@ const totalAmount = computed(() => {
         const piece = props.allPieces.find(p => p.id_piece == item.id_piece)
         if (!piece) return total
 
-        const subtotal = piece.prix_piece * item.qte_f
+        const subtotal = item.prix_piece * item.qte_f
         const totalWithTva = subtotal * (1 + (piece.tva / 100))
         return total + totalWithTva
     }, 0)
@@ -122,7 +123,7 @@ const totalAmount = computed(() => {
         const prestation = props.allPrestations.find(pr => pr.id_prest == item.id_prest)
         if (!prestation) return total
 
-        const subtotal = prestation.prix_prest * item.qte_fpr
+        const subtotal = item.prix_prest * item.qte_fpr
         const totalWithTva = subtotal * (1 + (prestation.tva / 100))
         return total + totalWithTva
     }, 0)
@@ -131,7 +132,7 @@ const totalAmount = computed(() => {
         const charge = props.allCharges.find(ch => ch.id_charge == item.id_charge)
         if (!charge) return total
 
-        const subtotal = charge.prix_charge * item.qte_fc
+        const subtotal = item.prix_charge * item.qte_fc
         const totalWithTva = subtotal * (1 + (charge.tva / 100))
         return total + totalWithTva
     }, 0)
@@ -148,26 +149,39 @@ function addItem() {
         if (existingIndex >= 0) {
             form.pieces[existingIndex].qte_f += quantity.value;
         } else {
-            form.pieces.push({ id_piece: selectedItemId.value, qte_f: quantity.value });
+            form.pieces.push({
+                id_piece: selectedItemId.value,
+                qte_f: quantity.value,
+                prix_piece: unitPrice.value ? Number(unitPrice.value) : 0
+            });
         }
     } else if (selectedItemType.value === 'prestation') {
         const existingIndex = form.prestations.findIndex(p => p.id_prest === selectedItemId.value);
         if (existingIndex >= 0) {
             form.prestations[existingIndex].qte_fpr += quantity.value;
         } else {
-            form.prestations.push({ id_prest: selectedItemId.value, qte_fpr: quantity.value });
+            form.prestations.push({
+                id_prest: selectedItemId.value,
+                qte_fpr: quantity.value,
+                prix_prest: unitPrice.value ? Number(unitPrice.value) : 0
+            });
         }
     } else if (selectedItemType.value === 'charge') {
         const existingIndex = form.charges.findIndex(c => c.id_charge === selectedItemId.value);
         if (existingIndex >= 0) {
             form.charges[existingIndex].qte_fc += quantity.value;
         } else {
-            form.charges.push({ id_charge: selectedItemId.value, qte_fc: quantity.value });
+            form.charges.push({
+                id_charge: selectedItemId.value,
+                qte_fc: quantity.value,
+                prix_charge: unitPrice.value ? Number(unitPrice.value) : 0
+            });
         }
     }
 
     selectedItemId.value = '';
     quantity.value = 1;
+    unitPrice.value = '';
 }
 
 // Generic function to remove any item type
@@ -180,7 +194,6 @@ function removeItem(type: 'piece' | 'prestation' | 'charge', index: number) {
         form.charges.splice(index, 1);
     }
 }
-
 
 function submit() {
     form.put(route('scentre.dras.factures.update', { dra: props.dra.n_dra, facture: props.facture.n_facture }), {
@@ -329,7 +342,7 @@ function destroyFacture() {
                                     :key="piece.id_piece"
                                     :value="piece.id_piece"
                                 >
-                                    {{ piece.nom_piece }} ({{ piece.prix_piece }} DA, TVA {{ piece.tva }}%)
+                                    {{ piece.nom_piece }} (TVA {{ piece.tva }}%)
                                 </option>
                             </select>
                             <select
@@ -343,7 +356,7 @@ function destroyFacture() {
                                     :key="prestation.id_prest"
                                     :value="prestation.id_prest"
                                 >
-                                    {{ prestation.nom_prest }} ({{ prestation.prix_prest }} DA, TVA {{ prestation.tva }}%)
+                                    {{ prestation.nom_prest }} (TVA {{ prestation.tva }}%)
                                 </option>
                             </select>
                             <select
@@ -357,9 +370,21 @@ function destroyFacture() {
                                     :key="charge.id_charge"
                                     :value="charge.id_charge"
                                 >
-                                    {{ charge.nom_charge }} ({{ charge.prix_charge }} DA, TVA {{ charge.tva }}%)
+                                    {{ charge.nom_charge }} (TVA {{ charge.tva }}%)
                                 </option>
                             </select>
+                        </div>
+
+                        <div class="space-y-2">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Prix Unitaire</label>
+                            <input
+                                v-model="unitPrice"
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                class="w-24 border border-gray-300 dark:border-gray-600 p-2 rounded focus:ring-2 focus:ring-[#042B62] dark:focus:ring-[#F3B21B] focus:border-transparent dark:bg-gray-800 dark:text-white"
+                                placeholder="0.00"
+                            />
                         </div>
 
                         <div class="space-y-2">
@@ -407,7 +432,13 @@ function destroyFacture() {
                                         {{ allPieces.find(p => p.id_piece == item.id_piece)?.nom_piece }}
                                     </TableCell>
                                     <TableCell>
-                                        {{ allPieces.find(p => p.id_piece == item.id_piece)?.prix_piece }} DA
+                                        <input
+                                            v-model.number="item.prix_piece"
+                                            type="number"
+                                            min="0"
+                                            step="0.01"
+                                            class="w-24 border border-gray-300 dark:border-gray-600 p-1 rounded focus:ring-2 focus:ring-[#042B62] dark:focus:ring-[#F3B21B] focus:border-transparent dark:bg-gray-800 dark:text-white"
+                                        /> DA
                                     </TableCell>
                                     <TableCell>
                                         {{ allPieces.find(p => p.id_piece == item.id_piece)?.tva }}%
@@ -423,7 +454,8 @@ function destroyFacture() {
                                     <TableCell>
                                         {{
                                             (
-                                                (allPieces.find(p => p.id_piece == item.id_piece)?.prix_piece ?? 0) * item.qte_f *
+                                                item.prix_piece *
+                                                item.qte_f *
                                                 (1 + ((allPieces.find(p => p.id_piece == item.id_piece)?.tva ?? 0) / 100))
                                             ).toFixed(2)
                                         }} DA
@@ -467,7 +499,13 @@ function destroyFacture() {
                                         {{ allPrestations.find(pr => pr.id_prest == item.id_prest)?.nom_prest }}
                                     </TableCell>
                                     <TableCell>
-                                        {{ allPrestations.find(pr => pr.id_prest == item.id_prest)?.prix_prest }} DA
+                                        <input
+                                            v-model.number="item.prix_prest"
+                                            type="number"
+                                            min="0"
+                                            step="0.01"
+                                            class="w-24 border border-gray-300 dark:border-gray-600 p-1 rounded focus:ring-2 focus:ring-[#042B62] dark:focus:ring-[#F3B21B] focus:border-transparent dark:bg-gray-800 dark:text-white"
+                                        /> DA
                                     </TableCell>
                                     <TableCell>
                                         {{ allPrestations.find(pr => pr.id_prest == item.id_prest)?.tva }}%
@@ -483,7 +521,8 @@ function destroyFacture() {
                                     <TableCell>
                                         {{
                                             (
-                                                (allPrestations.find(pr => pr.id_prest == item.id_prest)?.prix_prest ?? 0) * item.qte_fpr *
+                                                item.prix_prest *
+                                                item.qte_fpr *
                                                 (1 + ((allPrestations.find(pr => pr.id_prest == item.id_prest)?.tva ?? 0) / 100))
                                             ).toFixed(2)
                                         }} DA
@@ -527,7 +566,13 @@ function destroyFacture() {
                                         {{ allCharges.find(ch => ch.id_charge == item.id_charge)?.nom_charge }}
                                     </TableCell>
                                     <TableCell>
-                                        {{ allCharges.find(ch => ch.id_charge == item.id_charge)?.prix_charge }} DA
+                                        <input
+                                            v-model.number="item.prix_charge"
+                                            type="number"
+                                            min="0"
+                                            step="0.01"
+                                            class="w-24 border border-gray-300 dark:border-gray-600 p-1 rounded focus:ring-2 focus:ring-[#042B62] dark:focus:ring-[#F3B21B] focus:border-transparent dark:bg-gray-800 dark:text-white"
+                                        /> DA
                                     </TableCell>
                                     <TableCell>
                                         {{ allCharges.find(ch => ch.id_charge == item.id_charge)?.tva }}%
@@ -543,7 +588,8 @@ function destroyFacture() {
                                     <TableCell>
                                         {{
                                             (
-                                                (allCharges.find(ch => ch.id_charge == item.id_charge)?.prix_charge ?? 0) * item.qte_fc *
+                                                item.prix_charge *
+                                                item.qte_fc *
                                                 (1 + ((allCharges.find(ch => ch.id_charge == item.id_charge)?.tva ?? 0) / 100))
                                             ).toFixed(2)
                                         }} DA

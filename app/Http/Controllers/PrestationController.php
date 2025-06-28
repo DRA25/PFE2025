@@ -16,12 +16,11 @@ class PrestationController extends Controller
             ->select(
                 'id_prest',
                 'nom_prest',
-                'prix_prest',
                 'date_prest',
-                'tva', // Assuming you want to display TVA
-                'compte_general_code', // Include if needed for display or search
-                'compte_analytique_code', // Include if needed for display or search
-
+                'tva',
+                'compte_general_code',
+                'compte_analytique_code',
+                'desc_prest' // Added description since it was missing in original select
             )
             ->orderBy('date_prest', 'desc')
             ->get();
@@ -48,11 +47,11 @@ class PrestationController extends Controller
             'id_prest' => 'required|integer',
             'nom_prest' => 'required|string|max:255',
             'desc_prest' => 'required|string|max:255',
-            'prix_prest' => 'required|integer',
             'date_prest' => 'required|date',
             'tva' => 'required|numeric',
             'compte_general_code' => 'required|exists:comptes_generaux,code',
             'compte_analytique_code' => 'required|exists:comptes_analytiques,code',
+            // Removed prix_prest validation as it's no longer part of Prestation
         ]);
 
         Prestation::create($validated);
@@ -86,11 +85,11 @@ class PrestationController extends Controller
             'id_prest' => 'required|integer',
             'nom_prest' => 'required|string|max:255',
             'desc_prest' => 'required|string|max:255',
-            'prix_prest' => 'required|integer',
             'date_prest' => 'required|date',
             'tva' => 'required|numeric',
             'compte_general_code' => 'required|exists:comptes_generaux,code',
             'compte_analytique_code' => 'required|exists:comptes_analytiques,code',
+            // Removed prix_prest validation as it's no longer part of Prestation
         ]);
 
         $prestation->update($validated);

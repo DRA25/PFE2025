@@ -23,7 +23,7 @@ class BonAchat extends Model
     public function pieces()
     {
         return $this->belongsToMany(Piece::class, 'quantite_b_a_s', 'n_ba', 'id_piece')
-            ->withPivot('qte_ba');
+            ->withPivot('qte_ba','prix_piece');
     }
 
     public function prestations()

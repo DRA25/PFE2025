@@ -1,8 +1,9 @@
+
 <script setup lang="ts">
 import { Head, Link, useForm } from '@inertiajs/vue3'
 import AppLayout from '@/layouts/AppLayout.vue'
 import { type BreadcrumbItem } from '@/types'
-import { Plus, Trash2 } from 'lucide-vue-next' // Removed Pencil as it was not directly used
+import { Plus, Trash2 } from 'lucide-vue-next'
 import { ref, computed } from 'vue'
 import { TableBody, TableCell, TableHead, TableHeader, TableRow, Table } from '@/components/ui/table'
 
@@ -15,13 +16,12 @@ const props = defineProps<{
         pieces: Array<{
             id_piece: number,
             nom_piece: string,
-            prix_piece: number,
             tva: number,
             pivot: {
-                qte_ba: number
+                qte_ba: number,
+                prix_piece: number
             }
-        }>,
-        // prestations and charges are removed from props
+        }>
     },
     fournisseurs: Array<{
         id_fourn: number,
@@ -30,10 +30,8 @@ const props = defineProps<{
     allPieces: Array<{
         id_piece: number,
         nom_piece: string,
-        prix_piece: number,
         tva: number
-    }>,
-    // allPrestations and allCharges are removed from props
+    }>
 }>()
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -49,49 +47,46 @@ const form = useForm({
     date_ba: props.bonAchat.date_ba,
     id_fourn: props.bonAchat.id_fourn,
     pieces: props.bonAchat.pieces.map(p => ({
-        id_piece: p.id_piece.toString(), // Ensure id_piece is string for consistency with select v-model
-        qte_ba: p.pivot.qte_ba
-    })),
-    // prestations and charges removed from form
+        id_piece: p.id_piece.toString(),
+        qte_ba: p.pivot.qte_ba,
+        prix_piece: p.pivot.prix_piece
+    }))
 })
 
-// selectedItemType is no longer needed as only 'piece' is handled
-const selectedItemId = ref<string | number>('');
-const quantity = ref(1);
+const selectedItemId = ref<string | number>('')
+const quantity = ref(1)
+const unitPrice = ref('')
 
 const totalAmount = computed(() => {
-    const piecesTotal = form.pieces.reduce((total, item) => {
+    return form.pieces.reduce((total, item) => {
         const piece = props.allPieces.find(p => p.id_piece == item.id_piece)
         if (!piece) return total
-        const subtotal = piece.prix_piece * item.qte_ba
+        const subtotal = Number(item.prix_piece) * item.qte_ba
         const totalWithTva = subtotal * (1 + (piece.tva / 100))
         return total + totalWithTva
     }, 0)
-
-    // prestationsTotal and chargesTotal removed
-    return piecesTotal
 })
 
 function addItem() {
     if (!selectedItemId.value || quantity.value < 1) return
 
-    // Only add pieces
     const existingIndex = form.pieces.findIndex(p => p.id_piece === selectedItemId.value)
     if (existingIndex >= 0) {
         form.pieces[existingIndex].qte_ba += quantity.value
     } else {
         form.pieces.push({
             id_piece: selectedItemId.value,
-            qte_ba: quantity.value
+            qte_ba: quantity.value,
+            prix_piece: unitPrice.value ? Number(unitPrice.value) : 0
         })
     }
 
     selectedItemId.value = ''
     quantity.value = 1
+    unitPrice.value = ''
 }
 
 function removeItem(type: 'piece', index: number) {
-    // Only remove pieces
     if (type === 'piece') {
         form.pieces.splice(index, 1)
     }
@@ -104,33 +99,23 @@ function submit() {
     }), {
         onSuccess: () => {
             window.location.href = route('scentre.dras.bon-achats.index', { dra: props.dra.n_dra })
-        },
-        onError: () => {
-            console.log('Validation errors:', form.errors)
         }
     })
 }
 
 function destroyBonAchat() {
-    // Replaced confirm() with a console log as direct browser alerts are not supported.
-    // For a production application, you would implement a custom modal component here.
-    console.log("Confirmation: Are you sure you want to delete this bon d'achat? (A proper modal UI is needed here)");
-
-    // Proceed with deletion logic (assuming confirmation is handled by a proper UI later)
-    form.delete(route('scentre.dras.bon-achats.destroy', {
-        dra: props.dra.n_dra,
-        bonAchat: props.bonAchat.n_ba
-    }), {
-        onSuccess: () => {
-            window.location.href = route('scentre.dras.bon-achats.index', { dra: props.dra.n_dra })
-        },
-        onError: () => {
-            console.log("Erreur lors de la suppression.")
-        }
-    })
+    if (confirm("Êtes-vous sûr de vouloir supprimer ce bon d'achat?")) {
+        form.delete(route('scentre.dras.bon-achats.destroy', {
+            dra: props.dra.n_dra,
+            bonAchat: props.bonAchat.n_ba
+        }), {
+            onSuccess: () => {
+                window.location.href = route('scentre.dras.bon-achats.index', { dra: props.dra.n_dra })
+            }
+        })
+    }
 }
 </script>
-
 <template>
     <Head :title="`Modifier Bon d'achat ${bonAchat.n_ba}`" />
     <AppLayout :breadcrumbs="breadcrumbs">
@@ -213,9 +198,21 @@ function destroyBonAchat() {
                                     :key="piece.id_piece"
                                     :value="piece.id_piece"
                                 >
-                                    {{ piece.nom_piece }} ({{ piece.prix_piece }} DA, TVA {{ piece.tva }}%)
+                                    {{ piece.nom_piece }} (TVA {{ piece.tva }}%)
                                 </option>
                             </select>
+                        </div>
+
+                        <div class="space-y-2">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Prix Unitaire</label>
+                            <input
+                                v-model="unitPrice"
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                class="w-24 border border-gray-300 dark:border-gray-600 p-2 rounded focus:ring-2 focus:ring-[#042B62] dark:focus:ring-[#F3B21B] focus:border-transparent dark:bg-gray-800 dark:text-white"
+                                placeholder="0.00"
+                            />
                         </div>
 
                         <div class="space-y-2">
@@ -263,7 +260,13 @@ function destroyBonAchat() {
                                         {{ allPieces.find(p => p.id_piece == item.id_piece)?.nom_piece }}
                                     </TableCell>
                                     <TableCell>
-                                        {{ allPieces.find(p => p.id_piece == item.id_piece)?.prix_piece }} DA
+                                        <input
+                                            v-model.number="item.prix_piece"
+                                            type="number"
+                                            min="0"
+                                            step="0.01"
+                                            class="w-24 border border-gray-300 dark:border-gray-600 p-1 rounded focus:ring-2 focus:ring-[#042B62] dark:focus:ring-[#F3B21B] focus:border-transparent dark:bg-gray-800 dark:text-white"
+                                        /> DA
                                     </TableCell>
                                     <TableCell>
                                         {{ allPieces.find(p => p.id_piece == item.id_piece)?.tva }}%
@@ -279,7 +282,8 @@ function destroyBonAchat() {
                                     <TableCell>
                                         {{
                                             (
-                                                (allPieces.find(p => p.id_piece == item.id_piece)?.prix_piece ?? 0) * item.qte_ba *
+                                                item.prix_piece *
+                                                item.qte_ba *
                                                 (1 + ((allPieces.find(p => p.id_piece == item.id_piece)?.tva ?? 0) / 100))
                                             ).toFixed(2)
                                         }} DA
@@ -322,7 +326,7 @@ function destroyBonAchat() {
                     </button>
                     <div class="flex gap-4">
                         <Link
-                            :href="route('scentre.dras.bon-achats.index', { dra: props.dra.n_dra })"
+                            :href="route('scentre.dras.bon-achats.index', { dra: dra.n_dra })"
                             class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition"
                         >
                             Annuler

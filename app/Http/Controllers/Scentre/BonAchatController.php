@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Http\Controllers\Scentre;
 
 use App\Http\Controllers\Controller;
@@ -19,11 +18,11 @@ class BonAchatController extends Controller
         $bonAchats = $dra->bonAchats()
             ->with([
                 'fournisseur:id_fourn,nom_fourn',
-                'pieces:id_piece,nom_piece,prix_piece,tva',
+                'pieces:id_piece,nom_piece,tva',
             ])
             ->get()
             ->map(function ($bonAchat) {
-                $bonAchat->montant = $this->calculateMontant($bonAchat);
+                $bonAchat->montant = $this->calculateBonAchatMontant($bonAchat); // Renamed for clarity
                 return $bonAchat;
             });
 
@@ -38,11 +37,11 @@ class BonAchatController extends Controller
         $bonAchats = $dra->bonAchats()
             ->with([
                 'fournisseur:id_fourn,nom_fourn',
-                'pieces:id_piece,nom_piece,prix_piece,tva',
+                'pieces:id_piece,nom_piece,tva',
             ])
             ->get()
             ->map(function ($bonAchat) {
-                $bonAchat->montant = $this->calculateMontant($bonAchat);
+                $bonAchat->montant = $this->calculateBonAchatMontant($bonAchat); // Renamed for clarity
                 return $bonAchat;
             });
 
@@ -55,7 +54,7 @@ class BonAchatController extends Controller
     public function create(Dra $dra)
     {
         $fournisseurs = Fournisseur::all(['id_fourn', 'nom_fourn']);
-        $pieces = Piece::all(['id_piece', 'nom_piece', 'prix_piece', 'tva']);
+        $pieces = Piece::all(['id_piece', 'nom_piece', 'tva']);
 
         return Inertia::render('BonAchat/Create', [
             'dra' => $dra,
@@ -73,6 +72,7 @@ class BonAchatController extends Controller
             'pieces' => 'required|array|min:1',
             'pieces.*.id_piece' => 'required|exists:pieces,id_piece',
             'pieces.*.qte_ba' => 'required|integer|min:1',
+            'pieces.*.prix_piece' => 'required|numeric|min:0.01', // Price validation
         ]);
 
         DB::beginTransaction();
@@ -88,25 +88,29 @@ class BonAchatController extends Controller
 
             $pieceAttachments = [];
             foreach ($request->pieces as $piece) {
-                $pieceAttachments[$piece['id_piece']] = ['qte_ba' => $piece['qte_ba']];
+                $pieceAttachments[$piece['id_piece']] = [
+                    'qte_ba' => $piece['qte_ba'],
+                    'prix_piece' => $piece['prix_piece'] // Store price in pivot
+                ];
             }
             $bonAchat->pieces()->attach($pieceAttachments);
 
-            $totalBonAchat = $this->calculateMontant($bonAchat);
+            $totalBonAchat = $this->calculateBonAchatMontant($bonAchat); // Renamed for clarity
 
             if ($totalBonAchat > 10000) {
                 DB::rollBack();
                 return back()->withErrors(['bonAchat_total' => 'Le montant total du Bon Achat ne peut pas dépasser 10 000 DA.']);
             }
 
-            $dra->load('bonAchats.pieces', 'factures.pieces');
+            $dra->load(['bonAchats.pieces', 'factures.pieces', 'factures.prestations', 'factures.charges']); // Added prestations and charges
+
             $totalDra = '0';
 
             foreach ($dra->bonAchats as $ba) {
-                $totalDra = bcadd($totalDra, (string)$this->calculateMontant($ba), 2);
+                $totalDra = bcadd($totalDra, (string)$this->calculateBonAchatMontant($ba), 2); // Renamed for clarity
             }
             foreach ($dra->factures as $f) {
-                $totalDra = bcadd($totalDra, (string)$this->calculateFactureMontant($f), 2);
+                $totalDra = bcadd($totalDra, (string)$this->calculateFactureTotal($f), 2); // Using the new comprehensive function
             }
 
             if ($dra->centre->montant_disponible < $totalBonAchat) {
@@ -135,7 +139,7 @@ class BonAchatController extends Controller
     public function edit(Dra $dra, BonAchat $bonAchat)
     {
         $fournisseurs = Fournisseur::all(['id_fourn', 'nom_fourn']);
-        $pieces = Piece::all(['id_piece', 'nom_piece', 'prix_piece', 'tva']);
+        $pieces = Piece::all(['id_piece', 'nom_piece', 'tva']);
         $bonAchat->load('pieces');
 
         return Inertia::render('BonAchat/Edit', [
@@ -155,6 +159,7 @@ class BonAchatController extends Controller
             'pieces' => 'required|array|min:1',
             'pieces.*.id_piece' => 'required|exists:pieces,id_piece',
             'pieces.*.qte_ba' => 'required|integer|min:1',
+            'pieces.*.prix_piece' => 'required|numeric|min:0', // Added validation for prix_piece
         ]);
 
         DB::beginTransaction();
@@ -164,7 +169,7 @@ class BonAchatController extends Controller
             $bonAchat = BonAchat::where('n_ba', $n_ba)->firstOrFail();
             $centre = $dra->centre;
 
-            $oldMontant = $this->calculateMontant($bonAchat);
+            $oldMontant = $this->calculateBonAchatMontant($bonAchat); // Renamed for clarity
             $centre->montant_disponible += $oldMontant;
             $centre->save();
 
@@ -176,13 +181,15 @@ class BonAchatController extends Controller
 
             $pieceAttachments = [];
             foreach ($request->pieces as $piece) {
-                $pieceAttachments[$piece['id_piece']] = ['qte_ba' => $piece['qte_ba']];
+                $pieceAttachments[$piece['id_piece']] = [
+                    'qte_ba' => $piece['qte_ba'],
+                    'prix_piece' => $piece['prix_piece'] // Get prix_piece directly from request
+                ];
             }
             $bonAchat->pieces()->sync($pieceAttachments);
 
-
             $bonAchat->refresh();
-            $newMontant = $this->calculateMontant($bonAchat);
+            $newMontant = $this->calculateBonAchatMontant($bonAchat); // Renamed for clarity
 
             if ($newMontant > 10000) {
                 DB::rollBack();
@@ -190,13 +197,13 @@ class BonAchatController extends Controller
             }
 
             $totalDra = 0;
-            $dra->load(['bonAchats.pieces', 'factures.pieces']);
+            $dra->load(['bonAchats.pieces', 'factures.pieces', 'factures.prestations', 'factures.charges']); // Added prestations and charges
 
             foreach ($dra->bonAchats as $ba) {
-                $totalDra += $this->calculateMontant($ba);
+                $totalDra += $this->calculateBonAchatMontant($ba); // Renamed for clarity
             }
             foreach ($dra->factures as $f) {
-                $totalDra += $this->calculateFactureMontant($f);
+                $totalDra += $this->calculateFactureTotal($f); // Using the new comprehensive function
             }
 
             if ($centre->montant_disponible < $newMontant) {
@@ -225,7 +232,7 @@ class BonAchatController extends Controller
         DB::beginTransaction();
 
         try {
-            $montantToRestore = $this->calculateMontant($bonAchat);
+            $montantToRestore = $this->calculateBonAchatMontant($bonAchat); // Renamed for clarity
 
             $bonAchat->pieces()->detach();
             $bonAchat->delete();
@@ -234,14 +241,14 @@ class BonAchatController extends Controller
                 'montant_disponible' => $dra->centre->montant_disponible + $montantToRestore
             ]);
 
-            $dra->load('bonAchats.pieces', 'factures.pieces');
+            $dra->load(['bonAchats.pieces', 'factures.pieces', 'factures.prestations', 'factures.charges']); // Added prestations and charges
 
             $totalDra = '0';
             foreach ($dra->bonAchats as $ba) {
-                $totalDra = bcadd($totalDra, (string)$this->calculateMontant($ba), 2);
+                $totalDra = bcadd($totalDra, (string)$this->calculateBonAchatMontant($ba), 2); // Renamed for clarity
             }
             foreach ($dra->factures as $f) {
-                $totalDra = bcadd($totalDra, (string)$this->calculateFactureMontant($f), 2);
+                $totalDra = bcadd($totalDra, (string)$this->calculateFactureTotal($f), 2); // Using the new comprehensive function
             }
 
             $dra->update([
@@ -258,23 +265,40 @@ class BonAchatController extends Controller
         }
     }
 
-    protected function calculateMontant(BonAchat $bonAchat): float
+    // Renamed the function to avoid naming conflict and clarify its purpose
+    protected function calculateBonAchatMontant(BonAchat $bonAchat): float
     {
         $piecesTotal = $bonAchat->pieces->sum(function ($piece) {
-            $subtotal = $piece->prix_piece * $piece->pivot->qte_ba;
+            $subtotal = $piece->pivot->prix_piece * $piece->pivot->qte_ba;
             return $subtotal * (1 + ($piece->tva / 100));
         });
 
         return $piecesTotal;
     }
 
-    protected function calculateFactureMontant(Facture $facture): float
+    // New/Updated function to calculate the total for a Facture
+    protected function calculateFactureTotal(Facture $facture): float
     {
         $piecesTotal = $facture->pieces->sum(function ($piece) {
-            $subtotal = $piece->prix_piece * $piece->pivot->qte_f;
+            $price = $piece->pivot->prix_piece;
+            $subtotal = $price * $piece->pivot->qte_f;
             return $subtotal * (1 + ($piece->tva / 100));
         });
 
-        return $piecesTotal + ($facture->droit_timbre ?? 0);
+        $prestationsTotal = $facture->prestations->sum(function ($prestation) {
+            $price = $prestation->pivot->prix_prest; // Get price from pivot
+            $subtotal = $price * $prestation->pivot->qte_fpr;
+            return $subtotal * (1 + ($prestation->tva / 100));
+        });
+
+        $chargesTotal = $facture->charges->sum(function ($charge) {
+            // Assuming prix_charge is on the pivot table, or direct on charge model
+            // If prix_charge is on the pivot, it should be $charge->pivot->prix_charge
+            // Based on your current schema (from DraController), it seems to be $charge->prix_charge
+            $subtotal = ($charge->pivot->prix_charge ?? $charge->prix_charge) * $charge->pivot->qte_fc; // Adjusted to check pivot first
+            return $subtotal * (1 + ($charge->tva / 100));
+        });
+
+        return $piecesTotal + $prestationsTotal + $chargesTotal + ($facture->droit_timbre ?? 0);
     }
 }

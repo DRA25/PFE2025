@@ -27,10 +27,11 @@ const props = defineProps({
         pieces: Array<{
             id_piece: number
             nom_piece: string
-            prix_piece: number
+            // prix_piece is now in pivot, tva remains on the piece object
             tva: number
             pivot: {
                 qte_ba: number
+                prix_piece: number // prix_piece is now part of the pivot
             }
         }>
         // prestations and charges are removed from here
@@ -56,10 +57,10 @@ const requestSort = (column: string) => {
 }
 
 const calculateMontant = (bonAchat: typeof props.bonAchats[0]) => {
-    // Only calculate total for pieces
+    // Only calculate total for pieces. Access prix_piece from the pivot table.
     const totalPieces = bonAchat.pieces.reduce((total, piece) => {
-        const subtotal = piece.prix_piece * piece.pivot.qte_ba;
-        return total + (subtotal * (1 + (piece.tva / 100)));
+        const subtotal = piece.pivot.prix_piece * piece.pivot.qte_ba; // Access prix_piece from pivot
+        return total + (subtotal * (1 + (piece.tva / 100))); // TVA remains on the piece object
     }, 0);
 
     return totalPieces;
@@ -71,12 +72,11 @@ const sortedBonAchats = computed(() => {
     if (searchQuery.value) {
         const query = searchQuery.value.toLowerCase();
         data = data.filter(bonAchat =>
-                String(bonAchat.n_ba).toLowerCase().includes(query) ||
-                String(calculateMontant(bonAchat)).toLowerCase().includes(query) ||
-                bonAchat.date_ba.toLowerCase().includes(query) ||
-                bonAchat.fournisseur?.nom_fourn?.toLowerCase().includes(query) ||
-                bonAchat.pieces?.some(piece => piece.nom_piece.toLowerCase().includes(query))
-            // Removed search for prestations and charges
+            String(bonAchat.n_ba).toLowerCase().includes(query) ||
+            String(calculateMontant(bonAchat)).toLowerCase().includes(query) ||
+            bonAchat.date_ba.toLowerCase().includes(query) ||
+            bonAchat.fournisseur?.nom_fourn?.toLowerCase().includes(query) ||
+            bonAchat.pieces?.some(piece => piece.nom_piece.toLowerCase().includes(query))
         );
     }
 
@@ -92,6 +92,8 @@ const sortedBonAchats = computed(() => {
                 valA = a.fournisseur?.nom_fourn ?? '';
                 valB = b.fournisseur?.nom_fourn ?? '';
             } else {
+                // This 'else' block might need more specific handling if `a[column]` isn't directly sortable or if nested properties are needed for other columns.
+                // For simplicity, directly accessing as 'keyof typeof a' for non-custom sort columns.
                 valA = a[column as keyof typeof a] ?? '';
                 valB = b[column as keyof typeof b] ?? '';
             }
@@ -180,7 +182,6 @@ const sortedBonAchats = computed(() => {
                                         {{ piece.nom_piece }} (x{{ piece.pivot.qte_ba }})
                                     </div>
                                 </div>
-                                <!-- Removed sections for prestations and charges -->
                                 <div v-if="!bonAchat.pieces || bonAchat.pieces.length === 0" class="text-sm text-gray-500 dark:text-gray-400">
                                     Aucune pièce
                                 </div>

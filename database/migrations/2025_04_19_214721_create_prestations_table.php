@@ -15,7 +15,6 @@ return new class extends Migration
             $table->integer('id_prest')->primary();
             $table->string('nom_prest');
             $table->string('desc_prest');
-            $table->integer('prix_prest');
             $table->date('date_prest');
             $table->float('tva', 5, 2);
             $table->string('compte_general_code');

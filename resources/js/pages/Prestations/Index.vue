@@ -19,14 +19,12 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 const props = defineProps<{
     prestations: Array<{
-        id_prest: number, // Changed from 'id' to 'id_prest' based on your edit page
+        id_prest: number,
         nom_prest: string,
-        prix_prest: number,
         date_prest: string,
-        tva: number, // Added TVA
-        compte_general: { code: string; libelle: string } | null, // Updated to object with code and libelle
-        compte_analytique: { code: string; libelle: string } | null, // Updated to object with code and libelle
-
+        tva: number,
+        compte_general: { code: string; libelle: string } | null,
+        compte_analytique: { code: string; libelle: string } | null,
     }>,
     success?: string
 }>();
@@ -49,11 +47,10 @@ const sortedPrestations = computed(() => {
         const query = searchQuery.value.toLowerCase();
         data = data.filter(prestation =>
             prestation.nom_prest.toLowerCase().includes(query) ||
-            String(prestation.prix_prest).toLowerCase().includes(query) ||
-            String(prestation.tva).toLowerCase().includes(query) || // Include TVA in search
-            (prestation.compte_general?.libelle.toLowerCase().includes(query) ?? false) || // Search by libelle
-            (prestation.compte_analytique?.libelle.toLowerCase().includes(query) ?? false) || // Search by libelle
-            String(prestation.date_prest).toLowerCase().includes(query) // Search by date
+            String(prestation.tva).toLowerCase().includes(query) ||
+            (prestation.compte_general?.libelle.toLowerCase().includes(query) ?? false) ||
+            (prestation.compte_analytique?.libelle.toLowerCase().includes(query) ?? false) ||
+            String(prestation.date_prest).toLowerCase().includes(query)
         );
     }
 
@@ -63,7 +60,6 @@ const sortedPrestations = computed(() => {
             let valA: any = a[column as keyof typeof a];
             let valB: any = b[column as keyof typeof b];
 
-            // Handle nested objects for sorting if needed (e.g., compte_general.libelle)
             if (column === 'compte_general') {
                 valA = a.compte_general?.libelle ?? '';
                 valB = b.compte_general?.libelle ?? '';
@@ -91,7 +87,7 @@ const sortedPrestations = computed(() => {
                 <input
                     type="text"
                     v-model="searchQuery"
-                    placeholder="Rechercher par nom, prix, TVA, date, compte général ou analytique..."
+                    placeholder="Rechercher par nom, TVA, date, compte général ou analytique..."
                     class="w-full bg-gray-100 px-4 py-2 rounded-md border border-gray-200 dark:border-gray-700 dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
                 />
             </div>
@@ -124,10 +120,6 @@ const sortedPrestations = computed(() => {
                             Nom
                             <ArrowUpDown class="ml-2 h-4 w-4 inline-block" />
                         </TableHead>
-                        <TableHead class="cursor-pointer" @click="requestSort('prix_prest')">
-                            Prix
-                            <ArrowUpDown class="ml-2 h-4 w-4 inline-block" />
-                        </TableHead>
                         <TableHead class="cursor-pointer" @click="requestSort('date_prest')">
                             Date
                             <ArrowUpDown class="ml-2 h-4 w-4 inline-block" />
@@ -155,7 +147,6 @@ const sortedPrestations = computed(() => {
                         class="hover:bg-gray-300 dark:hover:bg-gray-900"
                     >
                         <TableCell>{{ prestation.nom_prest }}</TableCell>
-                        <TableCell>{{ prestation.prix_prest }} DA</TableCell>
                         <TableCell>{{ new Date(prestation.date_prest).toLocaleDateString() }}</TableCell>
                         <TableCell>{{ prestation.tva }} %</TableCell>
                         <TableCell>{{ prestation.compte_general?.code || 'N/A' }}</TableCell>
@@ -171,7 +162,7 @@ const sortedPrestations = computed(() => {
                         </TableCell>
                     </TableRow>
                     <TableRow v-if="sortedPrestations.length === 0">
-                        <TableCell colspan="7" class="text-center py-4">
+                        <TableCell colspan="6" class="text-center py-4">
                             No prestations found.
                         </TableCell>
                     </TableRow>

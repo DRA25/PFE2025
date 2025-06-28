@@ -12,7 +12,7 @@ class ConsulterDraController extends Controller
     public function index()
     {
         $dras = Dra::with('centre')
-            ->whereIn('etat', ['cloture', 'refuse', 'accepte','rembourse']) // Filter by multiple states
+            ->whereIn('etat', ['cloture', 'refuse', 'accepte', 'rembourse'])
             ->orderByDesc('created_at')
             ->get()
             ->map(function ($dra) {
@@ -23,7 +23,6 @@ class ConsulterDraController extends Controller
                     'etat' => $dra->etat,
                     'total_dra' => $dra->total_dra,
                     'created_at' => $dra->created_at->toISOString(),
-                    // Removed available and seuil_centre as they're no longer needed in the frontend
                 ];
             });
 
@@ -32,17 +31,18 @@ class ConsulterDraController extends Controller
 
     public function show($n_dra)
     {
-
-
         $dra = Dra::with('centre')->where('n_dra', $n_dra)->firstOrFail();
 
-//
-        // Load factures with related data
+        // Load factures with related data and pivot prices.
+        // Factures still have pieces, prestations, and charges.
         $factures = $dra->factures()
-            ->with(['fournisseur:id_fourn,nom_fourn',
-                'pieces:id_piece,nom_piece,prix_piece,tva',
-                'prestations:id_prest,nom_prest,desc_prest,prix_prest,tva',
-                'charges:id_charge,nom_charge,desc_change,prix_charge,tva'
+            ->with([
+                'fournisseur:id_fourn,nom_fourn',
+                'pieces:id_piece,nom_piece,tva',
+                // Assuming prix_prest is on the pivot for prestations related to Facture
+                'prestations:id_prest,nom_prest,tva',
+                // Assuming prix_charge is on the pivot for charges related to Facture
+                'charges:id_charge,nom_charge,tva'
             ])
             ->get()
             ->map(function ($facture) {
@@ -50,12 +50,12 @@ class ConsulterDraController extends Controller
                 return $facture;
             });
 
-        // Load bonAchats with related data
+        // Load bonAchats with related data and pivot prices.
+        // BonAchats now only have pieces.
         $bonAchats = $dra->bonAchats()
-            ->with(['fournisseur:id_fourn,nom_fourn',
-                'pieces:id_piece,nom_piece,prix_piece,tva',
-                'prestations:id_prest,nom_prest,desc_prest,prix_prest,tva',
-                'charges:id_charge,nom_charge,desc_change,prix_charge,tva'
+            ->with([
+                'fournisseur:id_fourn,nom_fourn',
+                'pieces:id_piece,nom_piece,tva'
             ])
             ->get()
             ->map(function ($bonAchat) {
@@ -81,34 +81,47 @@ class ConsulterDraController extends Controller
         ]);
     }
 
+    /**
+     * Calculates the total amount for a given model (Facture or BonAchat).
+     * This now correctly handles BonAchat having only pieces and Facture having all.
+     *
+     * @param \App\Models\Facture|\App\Models\BonAchat $model
+     * @return float
+     */
     protected function calculateMontant($model)
     {
         $total = 0;
 
-        // Calculate pieces total (HT + TVA)
+        // Calculate pieces total (HT + TVA) using pivot prices
         if ($model->relationLoaded('pieces')) {
             $total += $model->pieces->sum(function ($piece) {
-                $ht = $piece->prix_piece;
+                $ht = $piece->pivot->prix_piece ?? 0;
                 $tva = $piece->tva ?? 0;
-                return $ht * (1 + $tva / 100);
+                // Use qte_f for Facture pieces, qte_ba for BonAchat pieces
+                $quantity = $piece->pivot->qte_f ?? $piece->pivot->qte_ba ?? 1;
+                return $ht * $quantity * (1 + $tva / 100);
             });
         }
 
-        // Add prestations (HT + TVA)
-        if ($model->relationLoaded('prestations')) {
+        // Add prestations (HT + TVA) using pivot prices - Only for Facture
+        if ($model instanceof \App\Models\Facture && $model->relationLoaded('prestations')) {
             $total += $model->prestations->sum(function ($prestation) {
-                $ht = $prestation->prix_prest;
+                $ht = $prestation->pivot->prix_prest ?? 0;
                 $tva = $prestation->tva ?? 0;
-                return $ht * (1 + $tva / 100);
+                // For Facture prestations, use qte_fpr
+                $quantity = $prestation->pivot->qte_fpr ?? 1;
+                return $ht * $quantity * (1 + $tva / 100);
             });
         }
 
-        // Add charges (HT + TVA)
-        if ($model->relationLoaded('charges')) {
+        // Add charges (HT + TVA) using pivot prices - Only for Facture
+        if ($model instanceof \App\Models\Facture && $model->relationLoaded('charges')) {
             $total += $model->charges->sum(function ($charge) {
-                $ht = $charge->prix_charge;
+                $ht = $charge->pivot->prix_charge ?? 0;
                 $tva = $charge->tva ?? 0;
-                return $ht * (1 + $tva / 100);
+                // For Facture charges, use qte_fc
+                $quantity = $charge->pivot->qte_fc ?? 1;
+                return $ht * $quantity * (1 + $tva / 100);
             });
         }
 
@@ -119,8 +132,4 @@ class ConsulterDraController extends Controller
 
         return $total;
     }
-
-
-
-
 }

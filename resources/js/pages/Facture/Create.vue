@@ -27,8 +27,8 @@ const form = useForm({
     date_facture: '',
     id_fourn: '',
     droit_timbre: 0,
-    pieces: [] as Array<{ id_piece: string, qte_f: number }>,
-    prestations: [] as Array<{ id_prest: string, qte_fpr: number }>,
+    pieces: [] as Array<{ id_piece: string, qte_f: number, prix_piece: number }>, // Added prix_piece
+    prestations: [] as Array<{ id_prest: string, qte_fpr: number, prix_prest: number }>, // Added prix_prest here
     charges: [] as Array<{ id_charge: string, qte_fc: number }>,
 })
 
@@ -38,22 +38,23 @@ const selectedItemType = ref<'piece' | 'prestation' | 'charge'>('piece'); // Def
 // Track selected item and quantity for the add form
 const selectedItemId = ref('');
 const quantity = ref(1);
+const unitPrice = ref(0); // Added unit price input for pieces and prestations
 
 // Calculate total amount including pieces, prestations, charges, and droit_timbre
 const totalAmount = computed(() => {
     const piecesTotal = form.pieces.reduce((total, item) => {
-        const piece = props.pieces.find(p => p.id_piece == item.id_piece)
-        if (!piece) return total
-        const subtotal = piece.prix_piece * item.qte_f
-        const totalWithTva = subtotal * (1 + (piece.tva / 100))
+        const pieceDetails = props.pieces.find(p => p.id_piece == item.id_piece)
+        if (!pieceDetails) return total
+        const subtotal = item.prix_piece * item.qte_f // Use item.prix_piece
+        const totalWithTva = subtotal * (1 + (pieceDetails.tva / 100))
         return total + totalWithTva
     }, 0)
 
     const prestationsTotal = form.prestations.reduce((total, item) => {
-        const prestation = props.prestations.find(p => p.id_prest == item.id_prest)
-        if (!prestation) return total
-        const subtotal = prestation.prix_prest * item.qte_fpr
-        const totalWithTva = subtotal * (1 + (prestation.tva / 100))
+        const prestationDetails = props.prestations.find(p => p.id_prest == item.id_prest)
+        if (!prestationDetails) return total
+        const subtotal = item.prix_prest * item.qte_fpr // Use item.prix_prest from the form
+        const totalWithTva = subtotal * (1 + (prestationDetails.tva / 100))
         return total + totalWithTva
     }, 0)
 
@@ -73,18 +74,27 @@ function addItem() {
     if (!selectedItemId.value || quantity.value < 1) return;
 
     if (selectedItemType.value === 'piece') {
+        if (unitPrice.value <= 0) return; // Ensure unit price is valid for pieces
+
         const existingIndex = form.pieces.findIndex(p => p.id_piece === selectedItemId.value);
         if (existingIndex >= 0) {
             form.pieces[existingIndex].qte_f += quantity.value;
+            // For now, we'll keep the price from the existing item if it already exists.
+            // If you want to update it to the new unitPrice.value, uncomment the line below:
+            // form.pieces[existingIndex].prix_piece = unitPrice.value;
         } else {
-            form.pieces.push({ id_piece: selectedItemId.value, qte_f: quantity.value });
+            form.pieces.push({ id_piece: selectedItemId.value, qte_f: quantity.value, prix_piece: unitPrice.value });
         }
     } else if (selectedItemType.value === 'prestation') {
+        if (unitPrice.value <= 0) return; // Ensure unit price is valid for prestations
+
         const existingIndex = form.prestations.findIndex(p => p.id_prest === selectedItemId.value);
         if (existingIndex >= 0) {
             form.prestations[existingIndex].qte_fpr += quantity.value;
+            // Similar to pieces, you might want to update the price here if needed
+            // form.prestations[existingIndex].prix_prest = unitPrice.value;
         } else {
-            form.prestations.push({ id_prest: selectedItemId.value, qte_fpr: quantity.value });
+            form.prestations.push({ id_prest: selectedItemId.value, qte_fpr: quantity.value, prix_prest: unitPrice.value }); // Add prix_prest
         }
     } else if (selectedItemType.value === 'charge') {
         const existingIndex = form.charges.findIndex(c => c.id_charge === selectedItemId.value);
@@ -97,6 +107,7 @@ function addItem() {
 
     selectedItemId.value = '';
     quantity.value = 1;
+    unitPrice.value = 0; // Reset unit price after adding
 }
 
 // Generic function to remove any item type
@@ -190,7 +201,6 @@ function submit() {
                     <div v-if="form.errors.id_fourn" class="text-red-500 text-sm">{{ form.errors.id_fourn }}</div>
                 </div>
 
-                <!-- Radio buttons for item type selection -->
                 <div class="space-y-2">
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Type d'article à ajouter</label>
                     <div class="flex items-center space-x-4">
@@ -224,7 +234,6 @@ function submit() {
                     </div>
                 </div>
 
-                <!-- Conditional Input Section based on selectedItemType -->
                 <div class="space-y-4">
                     <div class="flex gap-3 items-end">
                         <div class="flex-1 space-y-2">
@@ -242,7 +251,7 @@ function submit() {
                                     :key="piece.id_piece"
                                     :value="piece.id_piece"
                                 >
-                                    {{ piece.nom_piece }} ({{ piece.prix_piece }} DA, TVA {{ piece.tva }}%)
+                                    {{ piece.nom_piece }} (TVA {{ piece.tva }}%)
                                 </option>
                             </select>
                             <select
@@ -256,8 +265,7 @@ function submit() {
                                     :key="prestation.id_prest"
                                     :value="prestation.id_prest"
                                 >
-                                    {{ prestation.nom_prest }} ({{ prestation.prix_prest }} DA, TVA {{ prestation.tva }}%)
-                                </option>
+                                    {{ prestation.nom_prest }} (TVA {{ prestation.tva }}%) </option>
                             </select>
                             <select
                                 v-else-if="selectedItemType === 'charge'"
@@ -275,6 +283,17 @@ function submit() {
                             </select>
                         </div>
 
+                        <div v-if="selectedItemType === 'piece' || selectedItemType === 'prestation'" class="space-y-2">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Prix Unitaire (DA)</label>
+                            <input
+                                v-model.number="unitPrice"
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                class="w-24 border border-gray-300 dark:border-gray-600 p-2 rounded focus:ring-2 focus:ring-[#042B62] dark:focus:ring-[#F3B21B] focus:border-transparent dark:bg-gray-800 dark:text-white"
+                            />
+                        </div>
+
                         <div class="space-y-2">
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Quantité</label>
                             <input
@@ -288,7 +307,7 @@ function submit() {
                         <button
                             type="button"
                             @click="addItem"
-                            :disabled="!selectedItemId || quantity < 1"
+                            :disabled="!selectedItemId || quantity < 1 || ((selectedItemType === 'piece' || selectedItemType === 'prestation') && unitPrice <= 0)"
                             class="px-4 py-2 rounded-lg transition flex items-center gap-1 bg-[#042B62] dark:bg-[#F3B21B] dark:text-[#042B62] text-white hover:bg-blue-900 dark:hover:bg-yellow-200 disabled:opacity-50"
                         >
                             <Plus class="w-4 h-4" />
@@ -296,7 +315,6 @@ function submit() {
                         </button>
                     </div>
 
-                    <!-- Display Table for Pieces -->
                     <div v-if="form.pieces.length > 0" class="overflow-x-auto bg-gray-100 dark:bg-gray-800 rounded-lg m-5">
                         <h4 class="text-md font-medium text-gray-700 dark:text-gray-300 p-3">Pièces sélectionnées:</h4>
                         <Table class="w-full">
@@ -320,7 +338,14 @@ function submit() {
                                         {{ props.pieces.find(p => p.id_piece === item.id_piece)?.nom_piece }}
                                     </TableCell>
                                     <TableCell>
-                                        {{ props.pieces.find(p => p.id_piece === item.id_piece)?.prix_piece }} DA
+                                        <input
+                                            v-model.number="item.prix_piece"
+                                            type="number"
+                                            min="0"
+                                            step="0.01"
+                                            class="w-24 border border-gray-300 dark:border-gray-600 p-1 rounded focus:ring-2 focus:ring-[#042B62] dark:focus:ring-[#F3B21B] focus:border-transparent dark:bg-gray-800 dark:text-white"
+                                        />
+                                        DA
                                     </TableCell>
                                     <TableCell>
                                         {{ props.pieces.find(p => p.id_piece === item.id_piece)?.tva }}%
@@ -336,7 +361,7 @@ function submit() {
                                     <TableCell>
                                         {{
                                             (
-                                                (props.pieces.find(p => p.id_piece === item.id_piece)?.prix_piece ?? 0) *
+                                                item.prix_piece * // Use item.prix_piece from the form
                                                 item.qte_f *
                                                 (1 + ((props.pieces.find(p => p.id_piece === item.id_piece)?.tva ?? 0) / 100))
                                             ).toFixed(2)
@@ -357,7 +382,6 @@ function submit() {
                         </Table>
                     </div>
 
-                    <!-- Display Table for Prestations -->
                     <div v-if="form.prestations.length > 0" class="overflow-x-auto bg-gray-100 dark:bg-gray-800 rounded-lg m-5">
                         <h4 class="text-md font-medium text-gray-700 dark:text-gray-300 p-3">Prestations sélectionnées:</h4>
                         <Table class="w-full">
@@ -381,7 +405,13 @@ function submit() {
                                         {{ props.prestations.find(p => p.id_prest === item.id_prest)?.nom_prest }}
                                     </TableCell>
                                     <TableCell>
-                                        {{ props.prestations.find(p => p.id_prest === item.id_prest)?.prix_prest }} DA
+                                        <input
+                                            v-model.number="item.prix_prest" type="number"
+                                            min="0"
+                                            step="0.01"
+                                            class="w-24 border border-gray-300 dark:border-gray-600 p-1 rounded focus:ring-2 focus:ring-[#042B62] dark:focus:ring-[#F3B21B] focus:border-transparent dark:bg-gray-800 dark:text-white"
+                                        />
+                                        DA
                                     </TableCell>
                                     <TableCell>
                                         {{ props.prestations.find(p => p.id_prest === item.id_prest)?.tva }}%
@@ -397,7 +427,7 @@ function submit() {
                                     <TableCell>
                                         {{
                                             (
-                                                (props.prestations.find(p => p.id_prest === item.id_prest)?.prix_prest ?? 0) *
+                                                item.prix_prest * // Use item.prix_prest from the form
                                                 item.qte_fpr *
                                                 (1 + ((props.prestations.find(p => p.id_prest === item.id_prest)?.tva ?? 0) / 100))
                                             ).toFixed(2)
@@ -418,7 +448,6 @@ function submit() {
                         </Table>
                     </div>
 
-                    <!-- Display Table for Charges -->
                     <div v-if="form.charges.length > 0" class="overflow-x-auto bg-gray-100 dark:bg-gray-800 rounded-lg m-5">
                         <h4 class="text-md font-medium text-gray-700 dark:text-gray-300 p-3">Charges sélectionnées:</h4>
                         <Table class="w-full">
@@ -484,7 +513,6 @@ function submit() {
                     </div>
                 </div>
 
-                <!-- Droit Timbre Input -->
                 <div class="flex justify-end items-center space-x-2">
                     <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Droit Timbre (DA):</label>
                     <input
@@ -496,7 +524,6 @@ function submit() {
                     />
                 </div>
 
-                <!-- Total Amount -->
                 <div class="flex justify-end">
                     <div class="text-lg font-semibold text-gray-700 dark:text-gray-300">
                         Montant Total: {{ totalAmount.toFixed(2) }} DA
@@ -523,4 +550,3 @@ function submit() {
         </div>
     </AppLayout>
 </template>
-

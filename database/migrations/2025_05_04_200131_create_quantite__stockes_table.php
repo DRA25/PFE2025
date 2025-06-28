@@ -15,6 +15,7 @@ return new class extends Migration
             $table->primary(['id_magasin', 'id_piece']);
             $table->integer('id_magasin');
             $table->integer('id_piece');
+            $table->integer('prix_piece');
             $table->foreign('id_magasin')->references('id_magasin')->on('magasins')->onDelete('cascade');
             $table->foreign('id_piece')->references('id_piece')->on('pieces')->onDelete('cascade');
             $table->integer('qte_stocke');

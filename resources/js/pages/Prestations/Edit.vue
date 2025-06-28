@@ -8,8 +8,7 @@ const props = defineProps<{
     prestation: {
         id_prest: number;
         nom_prest: string;
-        desc_prest:string;
-        prix_prest: number;
+        desc_prest: string;
         date_prest: string;
         tva: number;
         compte_general_code: string;
@@ -29,7 +28,6 @@ const form = useForm({
     id_prest: props.prestation.id_prest,
     nom_prest: props.prestation.nom_prest,
     desc_prest: props.prestation.desc_prest,
-    prix_prest: props.prestation.prix_prest,
     date_prest: props.prestation.date_prest,
     tva: props.prestation.tva,
     compte_general_code: props.prestation.compte_general_code || '',
@@ -77,7 +75,6 @@ function destroyPrestation() {
                 <div v-for="(label, field) in {
                     nom_prest: 'Nom',
                     desc_prest: 'Description',
-                    prix_prest: 'Prix',
                     date_prest: 'Date',
                     tva: 'TVA (%)'
                 }" :key="field" class="space-y-2">
@@ -96,12 +93,12 @@ function destroyPrestation() {
                         v-else
                         v-model="form[field]"
                         :id="field"
-                        :type="field.includes('prix') || field === 'tva' ? 'number' : (field === 'date_prest' ? 'date' : 'text')"
+                        :type="field === 'tva' ? 'number' : (field === 'date_prest' ? 'date' : 'text')"
                         class="w-full border border-gray-300 dark:border-gray-600 p-2 rounded focus:ring-2 focus:ring-[#042B62] dark:focus:ring-[#F3B21B] focus:border-transparent dark:bg-gray-800 dark:text-white"
-                        :step="field === 'tva' || field.includes('prix') ? 0.01 : undefined"
-                        :min="field === 'tva' || field.includes('prix') ? 0 : undefined"
+                        :step="field === 'tva' ? 0.01 : undefined"
+                        :min="field === 'tva' ? 0 : undefined"
                         :max="field === 'tva' ? 100 : undefined"
-                        :placeholder="field === 'nom_prest' ? 'Nom de la prestation' : field === 'prix_prest' ? 'Prix en €' : field === 'tva' ? 'TVA en %' : ''"
+                        :placeholder="field === 'nom_prest' ? 'Nom de la prestation' : field === 'tva' ? 'TVA en %' : ''"
                     />
                     <div v-if="form.errors[field]" class="text-red-500 text-sm">{{ form.errors[field] }}</div>
                 </div>

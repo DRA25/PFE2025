@@ -24,18 +24,19 @@ const form = useForm({
     n_ba: '',
     date_ba: '',
     id_fourn: '',
-    pieces: [] as Array<{ id_piece: string | number, qte_ba: number }>,
+    pieces: [] as Array<{ id_piece: string | number, qte_ba: number, prix_piece: number }>, // Added prix_piece
 })
 
-const selectedItemId = ref<string | number>(''); // No need for selectedItemType anymore
+const selectedItemId = ref<string | number>('');
 const quantity = ref(1);
+const unitPrice = ref(0); // Added unit price input
 
 const totalAmount = computed(() => {
     // Calculate total only for pieces
     const piecesTotal = form.pieces.reduce((total, item) => {
         const piece = props.pieces.find(p => p.id_piece == item.id_piece)
         if (!piece) return total
-        const subtotal = piece.prix_piece * item.qte_ba
+        const subtotal = item.prix_piece * item.qte_ba
         const totalWithTva = subtotal * (1 + (piece.tva / 100))
         return total + totalWithTva
     }, 0)
@@ -44,22 +45,25 @@ const totalAmount = computed(() => {
 })
 
 function addItem() {
-    // Only add pieces
-    if (!selectedItemId.value || quantity.value < 1) return;
+    if (!selectedItemId.value || quantity.value < 1 || unitPrice.value <= 0) return;
 
     const existingIndex = form.pieces.findIndex(p => p.id_piece === selectedItemId.value);
     if (existingIndex >= 0) {
         form.pieces[existingIndex].qte_ba += quantity.value;
     } else {
-        form.pieces.push({ id_piece: selectedItemId.value, qte_ba: quantity.value });
+        form.pieces.push({
+            id_piece: selectedItemId.value,
+            qte_ba: quantity.value,
+            prix_piece: unitPrice.value // Add price from input
+        });
     }
 
     selectedItemId.value = '';
     quantity.value = 1;
+    unitPrice.value = 0;
 }
 
 function removeItem(type: 'piece', index: number) {
-    // Only remove pieces
     if (type === 'piece') {
         form.pieces.splice(index, 1);
     }
@@ -79,12 +83,12 @@ function submit() {
 </script>
 
 <template>
-    <Head :title="`Créer un Bon d'achat pour DRA ${props.dra.n_dra}`" />
+    <Head :title="`Créer un Bon d'achat pour DRA ${dra.n_dra}`" />
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="m-5 mr-2 bg-gray-100 dark:bg-gray-800 rounded-lg p-6">
             <div class="flex justify-between mb-6">
                 <h1 class="text-lg font-bold text-left text-[#042B62FF] dark:text-[#BDBDBDFF]">
-                    Créer un Bon d'achat pour DRA {{ props.dra.n_dra }}
+                    Créer un Bon d'achat pour DRA {{ dra.n_dra }}
                 </h1>
             </div>
 
@@ -129,7 +133,7 @@ function submit() {
                         >
                             <option value="">-- Sélectionnez un fournisseur --</option>
                             <option
-                                v-for="fournisseur in props.fournisseurs"
+                                v-for="fournisseur in fournisseurs"
                                 :key="fournisseur.id_fourn"
                                 :value="fournisseur.id_fourn"
                             >
@@ -147,7 +151,6 @@ function submit() {
                     <div v-if="form.errors.id_fourn" class="text-red-500 text-sm">{{ form.errors.id_fourn }}</div>
                 </div>
 
-                <!-- Input Section for Pieces -->
                 <div class="space-y-4">
                     <div class="flex gap-3 items-end">
                         <div class="flex-1 space-y-2">
@@ -158,13 +161,25 @@ function submit() {
                             >
                                 <option value="">-- Sélectionnez une pièce --</option>
                                 <option
-                                    v-for="piece in props.pieces"
+                                    v-for="piece in pieces"
                                     :key="piece.id_piece"
                                     :value="piece.id_piece"
                                 >
-                                    {{ piece.nom_piece }} ({{ piece.prix_piece }} DA, TVA {{ piece.tva }}%)
+                                    {{ piece.nom_piece }} (TVA {{ piece.tva }}%)
                                 </option>
                             </select>
+                        </div>
+
+                        <div class="space-y-2">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Prix Unitaire</label>
+                            <input
+                                v-model="unitPrice"
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                class="w-24 border border-gray-300 dark:border-gray-600 p-2 rounded focus:ring-2 focus:ring-[#042B62] dark:focus:ring-[#F3B21B] focus:border-transparent dark:bg-gray-800 dark:text-white"
+                                placeholder="0.00"
+                            />
                         </div>
 
                         <div class="space-y-2">
@@ -188,7 +203,6 @@ function submit() {
                         </button>
                     </div>
 
-                    <!-- Display Table for Pieces -->
                     <div v-if="form.pieces.length > 0" class="overflow-x-auto bg-gray-100 dark:bg-gray-800 rounded-lg m-5">
                         <h4 class="text-md font-medium text-gray-700 dark:text-gray-300 p-3">Pièces sélectionnées:</h4>
                         <Table class="w-full">
@@ -209,13 +223,19 @@ function submit() {
                                     class="hover:bg-gray-300 dark:hover:bg-gray-900"
                                 >
                                     <TableCell>
-                                        {{ props.pieces.find(p => p.id_piece === item.id_piece)?.nom_piece }}
+                                        {{ pieces.find(p => p.id_piece === item.id_piece)?.nom_piece }}
                                     </TableCell>
                                     <TableCell>
-                                        {{ props.pieces.find(p => p.id_piece === item.id_piece)?.prix_piece }} DA
+                                        <input
+                                            v-model.number="item.prix_piece"
+                                            type="number"
+                                            min="0"
+                                            step="0.01"
+                                            class="w-24 border border-gray-300 dark:border-gray-600 p-1 rounded focus:ring-2 focus:ring-[#042B62] dark:focus:ring-[#F3B21B] focus:border-transparent dark:bg-gray-800 dark:text-white"
+                                        /> DA
                                     </TableCell>
                                     <TableCell>
-                                        {{ props.pieces.find(p => p.id_piece === item.id_piece)?.tva }}%
+                                        {{ pieces.find(p => p.id_piece === item.id_piece)?.tva }}%
                                     </TableCell>
                                     <TableCell>
                                         <input
@@ -228,9 +248,9 @@ function submit() {
                                     <TableCell>
                                         {{
                                             (
-                                                (props.pieces.find(p => p.id_piece === item.id_piece)?.prix_piece ?? 0) *
+                                                item.prix_piece *
                                                 item.qte_ba *
-                                                (1 + ((props.pieces.find(p => p.id_piece === item.id_piece)?.tva ?? 0) / 100))
+                                                (1 + ((pieces.find(p => p.id_piece === item.id_piece)?.tva ?? 0) / 100))
                                             ).toFixed(2)
                                         }} DA
                                     </TableCell>
@@ -254,7 +274,6 @@ function submit() {
                     </div>
                 </div>
 
-                <!-- Total Amount -->
                 <div class="flex justify-end">
                     <div class="text-lg font-semibold text-gray-700 dark:text-gray-300">
                         Montant Total: {{ totalAmount.toFixed(2) }} DA
@@ -263,7 +282,7 @@ function submit() {
 
                 <div class="flex justify-end space-x-4 pt-4">
                     <Link
-                        :href="route('scentre.dras.bon-achats.index', { dra: props.dra.n_dra })"
+                        :href="route('scentre.dras.bon-achats.index', { dra: dra.n_dra })"
                         class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition"
                     >
                         Annuler

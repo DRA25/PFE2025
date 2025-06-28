@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('quantite_b_a_s', function (Blueprint $table) {
             $table->integer('n_ba');
             $table->integer('id_piece');
+            $table->integer('prix_piece');
             $table->integer('qte_ba');
 
 

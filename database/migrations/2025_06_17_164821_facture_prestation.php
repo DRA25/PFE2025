@@ -17,6 +17,7 @@ return new class extends Migration
             $table->primary(['n_facture', 'id_prest']);
             $table->integer('n_facture');
             $table->integer('id_prest');
+            $table->integer('prix_prest');
             $table->foreign('n_facture')->references('n_facture')->on('factures')->onDelete('cascade');
             $table->foreign('id_prest')->references('id_prest')->on('prestations')->onDelete('cascade');
             $table->integer('qte_fpr');

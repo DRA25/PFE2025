@@ -6,7 +6,8 @@ import {
     TableBody,
     TableRow,
     TableCell,
-    TableHead
+    TableHead,
+    Table
 } from '@/components/ui/table'
 import { type BreadcrumbItem } from '@/types'
 import { Pencil, ArrowLeft, ArrowUpDown, Search } from 'lucide-vue-next'
@@ -27,22 +28,22 @@ const props = defineProps({
         pieces: Array<{
             id_piece: number
             nom_piece: string
-            prix_piece: number
             tva: number
             pivot: {
-                qte_f: number
+                qte_f: number,
+                prix_piece: number
             }
         }>,
-        prestations: Array<{ // Add prestations to props
+        prestations: Array<{
             id_prest: number
             nom_prest: string
-            prix_prest: number
             tva: number
             pivot: {
-                qte_fpr: number
+                qte_fpr: number,
+                prix_prest: number // prix_prest is now exclusively from the pivot
             }
         }>,
-        charges: Array<{ // Add charges to props
+        charges: Array<{
             id_charge: number
             nom_charge: string
             prix_charge: number
@@ -74,21 +75,41 @@ const requestSort = (column: string) => {
 
 // Calculate total amount for a facture including droit_timbre, pieces, prestations, and charges
 const calculateMontant = (facture: typeof props.factures[0]) => {
-    const totalPieces = facture.pieces.reduce((total, piece) => {
-        const subtotal = piece.prix_piece * piece.pivot.qte_f;
-        return total + (subtotal * (1 + (piece.tva / 100)));
+    // Ensure facture.pieces is an array; default to empty if null/undefined
+    const totalPieces = (facture.pieces ?? []).reduce((total, piece) => {
+        // Use nullish coalescing to default to 0 if any value is null or undefined
+        const prixPiece = piece.pivot.prix_piece ?? 0;
+        const qteF = piece.pivot.qte_f ?? 0;
+        const tva = piece.tva ?? 0;
+
+        const subtotal = prixPiece * qteF;
+        return total + (subtotal * (1 + (tva / 100)));
     }, 0);
 
-    const totalPrestations = facture.prestations.reduce((total, prestation) => {
-        const subtotal = prestation.prix_prest * prestation.pivot.qte_fpr;
-        return total + (subtotal * (1 + (prestation.tva / 100)));
+    // Ensure facture.prestations is an array; default to empty if null/undefined
+    const totalPrestations = (facture.prestations ?? []).reduce((total, prestation) => {
+        // Use nullish coalescing to default to 0 if any value is null or undefined
+        // *** IMPORTANT CHANGE HERE: prix_prest is now accessed from prestation.pivot.prix_prest ***
+        const prixPrest = prestation.pivot.prix_prest ?? 0;
+        const qteFpr = prestation.pivot.qte_fpr ?? 0;
+        const tva = prestation.tva ?? 0; // TVA is still on the main prestation object
+
+        const subtotal = prixPrest * qteFpr;
+        return total + (subtotal * (1 + (tva / 100)));
     }, 0);
 
-    const totalCharges = facture.charges.reduce((total, charge) => {
-        const subtotal = charge.prix_charge * charge.pivot.qte_fc;
-        return total + (subtotal * (1 + (charge.tva / 100)));
+    // Ensure facture.charges is an array; default to empty if null/undefined
+    const totalCharges = (facture.charges ?? []).reduce((total, charge) => {
+        // Use nullish coalescing to default to 0 if any value is null or undefined
+        const prixCharge = charge.prix_charge ?? 0;
+        const qteFc = charge.pivot.qte_fc ?? 0;
+        const tva = charge.tva ?? 0;
+
+        const subtotal = prixCharge * qteFc;
+        return total + (subtotal * (1 + (tva / 100)));
     }, 0);
 
+    // Default droit_timbre to 0 if null or undefined
     const timbre = facture.droit_timbre ?? 0;
     return totalPieces + totalPrestations + totalCharges + timbre;
 }
@@ -104,8 +125,8 @@ const sortedFactures = computed(() => {
             facture.date_facture.toLowerCase().includes(query) ||
             facture.fournisseur?.nom_fourn?.toLowerCase().includes(query) ||
             facture.pieces?.some(piece => piece.nom_piece.toLowerCase().includes(query)) ||
-            facture.prestations?.some(prestation => prestation.nom_prest.toLowerCase().includes(query)) || // Include prestations in search
-            facture.charges?.some(charge => charge.nom_charge.toLowerCase().includes(query)) // Include charges in search
+            facture.prestations?.some(prestation => prestation.nom_prest.toLowerCase().includes(query)) ||
+            facture.charges?.some(charge => charge.nom_charge.toLowerCase().includes(query))
         );
     }
 
@@ -121,8 +142,9 @@ const sortedFactures = computed(() => {
                 valA = a.fournisseur?.nom_fourn ?? '';
                 valB = b.fournisseur?.nom_fourn ?? '';
             } else {
-                valA = a[column as keyof typeof a] ?? '';
-                valB = b[column as keyof typeof b] ?? '';
+                // Ensure to handle cases where properties might be missing gracefully
+                valA = (a as any)[column] ?? '';
+                valB = (b as any)[column] ?? '';
             }
 
             if (typeof valA === 'number' && typeof valB === 'number') {
