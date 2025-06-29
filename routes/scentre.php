@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ChargeController;
+use App\Http\Controllers\ExportController;
 use App\Http\Controllers\PrestationController;
 use App\Http\Controllers\Scentre\BonAchatController;
 use App\Http\Controllers\Scentre\BonCommandeController;
@@ -14,11 +15,16 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth', 'role:service centre|admin'])->group(function () {
 
-    Route::get('/export/etat-trimestriel', [DraController::class, 'exportEtatTrimestriel'])
+    Route::get('/export/etat-trimestriel', [ExportController::class, 'exportEtatTrimestriel'])
         ->name('export.etat-trimestriel');
 
-    Route::get('/export/etat-trimestriel-all', [DraController::class, 'exportEtatTrimestrielAllCentres'])
+    Route::get('/export/etat-trimestriel-all', [ExportController::class, 'exportEtatTrimestrielAllCentres'])
         ->name('export.etat-trimestriel-all');
+
+    Route::get('/export/demande-derogation/{draNumber}',
+        [App\Http\Controllers\ExportController::class, 'exportDemandeDerogation'])
+        ->name('export.demande-derogation');
+
 
     Route::resource('scentre/charges', ChargeController::class)
         ->names([
@@ -36,8 +42,9 @@ Route::middleware(['auth', 'role:service centre|admin'])->group(function () {
 
 
 
-        Route::get('/dras/export-all', [DraController::class, 'exportAllDras'])
+        Route::get('/dras/export-all', [ExportController::class, 'exportAllDras'])
             ->name('dras.export-all');
+
 
         // Prestations Routes
         Route::prefix('prestations')->name('prestations.')->group(function () {

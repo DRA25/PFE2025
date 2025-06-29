@@ -47,14 +47,7 @@ class FactureController extends Controller
         ]);
     }
 
-    /**
-     * Display the specified DRA with its related data (Factures).
-     * Note: This method seems to duplicate functionality with `index` for factures,
-     * it might be intended for a different view or context.
-     *
-     * @param  \App\Models\Dra  $dra
-     * @return \Inertia\Response
-     */
+
     public function show(Dra $dra)
     {
         $factures = $dra->factures()
@@ -82,12 +75,7 @@ class FactureController extends Controller
         ]);
     }
 
-    /**
-     * Show the form for creating a new facture.
-     *
-     * @param  \App\Models\Dra  $dra
-     * @return \Inertia\Response
-     */
+
     public function create(Dra $dra)
     {
         $fournisseurs = Fournisseur::all(['id_fourn', 'nom_fourn']);
@@ -106,13 +94,7 @@ class FactureController extends Controller
         ]);
     }
 
-    /**
-     * Store a newly created facture in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \App\Models\Dra  $dra
-     * @return \Illuminate\Http\RedirectResponse
-     */
+
     public function store(Request $request, Dra $dra)
     {
         $request->validate([
@@ -229,13 +211,7 @@ class FactureController extends Controller
         }
     }
 
-    /**
-     * Show the form for editing the specified facture.
-     *
-     * @param  \App\Models\Dra  $dra
-     * @param  \App\Models\Facture  $facture
-     * @return \Inertia\Response
-     */
+
     public function edit(Dra $dra, Facture $facture)
     {
         $fournisseurs = Fournisseur::all(['id_fourn', 'nom_fourn']);
@@ -266,14 +242,7 @@ class FactureController extends Controller
         ]);
     }
 
-    /**
-     * Update the specified facture in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  string  $n_dra
-     * @param  string  $n_facture
-     * @return \Illuminate\Http\RedirectResponse
-     */
+
     public function update(Request $request, $n_dra, $n_facture)
     {
         // Find facture by n_facture first for old montant calculation
@@ -411,13 +380,7 @@ class FactureController extends Controller
         }
     }
 
-    /**
-     * Remove the specified facture from storage.
-     *
-     * @param  \App\Models\Dra  $dra
-     * @param  \App\Models\Facture  $facture
-     * @return \Illuminate\Http\RedirectResponse
-     */
+
     public function destroy(Dra $dra, Facture $facture)
     {
         DB::beginTransaction();
@@ -462,12 +425,7 @@ class FactureController extends Controller
         }
     }
 
-    /**
-     * Calculate the total amount for a given Facture, including VAT and droit_timbre.
-     *
-     * @param  \App\Models\Facture  $facture
-     * @return float
-     */
+
     protected function calculateMontant(Facture $facture): float
     {
         $piecesTotal = $facture->pieces->sum(function ($piece) {
@@ -495,12 +453,7 @@ class FactureController extends Controller
         );
     }
 
-    /**
-     * Calculate the total amount for a given BonAchat, including VAT.
-     *
-     * @param  mixed  $bonAchat
-     * @return float
-     */
+
     protected function calculateBonAchatMontant($bonAchat): float
     {
         return $bonAchat->pieces->sum(function ($piece) {

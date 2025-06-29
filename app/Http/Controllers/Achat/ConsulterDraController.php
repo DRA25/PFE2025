@@ -9,12 +9,7 @@ use Inertia\Inertia;
 
 class ConsulterDraController extends Controller
 {
-    /**
-     * Display a listing of DRAs for consultation.
-     * Only DRAs with specific states are shown.
-     *
-     * @return \Inertia\Response
-     */
+
     public function index()
     {
         $dras = Dra::with('centre')
@@ -35,12 +30,7 @@ class ConsulterDraController extends Controller
         return Inertia::render('Achat/ConsulterDra/Index', compact('dras'));
     }
 
-    /**
-     * Display the specified DRA and its associated factures and bonAchats.
-     *
-     * @param string $n_dra The unique identifier of the DRA.
-     * @return \Inertia\Response
-     */
+
     public function show($n_dra)
     {
         $dra = Dra::with('centre')->where('n_dra', $n_dra)->firstOrFail();
@@ -97,13 +87,6 @@ class ConsulterDraController extends Controller
         ]);
     }
 
-    /**
-     * Calculates the total amount for a given model (Facture or BonAchat).
-     * This now correctly handles BonAchat having only pieces and Facture having all.
-     *
-     * @param \App\Models\Facture|\App\Models\BonAchat $model
-     * @return float
-     */
     protected function calculateMontant($model)
     {
         $total = 0;

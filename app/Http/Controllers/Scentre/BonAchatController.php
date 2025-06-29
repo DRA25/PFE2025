@@ -265,7 +265,6 @@ class BonAchatController extends Controller
         }
     }
 
-    // Renamed the function to avoid naming conflict and clarify its purpose
     protected function calculateBonAchatMontant(BonAchat $bonAchat): float
     {
         $piecesTotal = $bonAchat->pieces->sum(function ($piece) {
@@ -276,7 +275,6 @@ class BonAchatController extends Controller
         return $piecesTotal;
     }
 
-    // New/Updated function to calculate the total for a Facture
     protected function calculateFactureTotal(Facture $facture): float
     {
         $piecesTotal = $facture->pieces->sum(function ($piece) {

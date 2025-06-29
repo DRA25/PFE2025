@@ -172,6 +172,7 @@ const calculateFactureFullTotal = (facture: typeof props.factures[0]) => {
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="m-5 bg-gray-100 dark:bg-gray-800 rounded-lg p-6">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
                 <div class="space-y-4">
                     <h2 class="text-xl font-semibold text-[#042B62FF] dark:text-[#F3B21B]">
                         Informations sur le DRA
@@ -198,7 +199,28 @@ const calculateFactureFullTotal = (facture: typeof props.factures[0]) => {
                     </div>
                 </div>
 
+
+
                 <div class="mt-20 flex flex-wrap gap-4 justify-center md:justify-end h-fit">
+                    <a
+                        :href="route('export.demande-derogation', dra.n_dra)"
+                        class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition flex items-center gap-2"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                        </svg>
+                        <span>Exporter Demande de Dérégation</span>
+                    </a>
+
+                    <button
+                        v-if="dra.etat === 'actif' || dra.etat === 'refuse'"
+                        @click="closeDra(dra.n_dra, dra.etat)"
+                        class="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition flex items-center gap-2"
+                    >
+                        <Lock class="w-4 h-4" />
+                        <span>Clôturer</span>
+                    </button>
+
                     <Link
                         v-if="dra.etat === 'actif' || dra.etat === 'refuse'"
                         :href="route('scentre.dras.factures.index', { dra: dra.n_dra })"
@@ -217,14 +239,7 @@ const calculateFactureFullTotal = (facture: typeof props.factures[0]) => {
                         <span>Bons d'Achat</span>
                     </Link>
 
-                    <button
-                        v-if="dra.etat === 'actif' || dra.etat === 'refuse'"
-                        @click="closeDra(dra.n_dra, dra.etat)"
-                        class="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition flex items-center gap-2"
-                    >
-                        <Lock class="w-4 h-4" />
-                        <span>Clôturer</span>
-                    </button>
+
 
                     <Link
                         v-if="dra.etat === 'actif'"
