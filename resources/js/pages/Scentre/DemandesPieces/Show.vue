@@ -101,7 +101,6 @@ const breadcrumbs: BreadcrumbItem[] = [
                             <select v-model="form.etat_dp"
                                     class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-[#042B62] focus:border-[#042B62] dark:bg-gray-700 dark:text-white">
                                 <option value="En attente">En attente</option>
-                                <option value="Validée">Validée</option>
                                 <option value="Refusée">Refusée</option>
                                 <option value="Livrée">Livrée</option>
                             </select>

@@ -134,7 +134,7 @@
     <tr>
         {{-- You'll need to replace 'images/Naftal.png' with the actual path to your logo if you have one --}}
         <td class="ttd" style="width:10%"><img src="{{ public_path('images/Naftal.png') }}" alt="Logo Naftal"></td>
-        <td class="ttd" style="width:70%"><h1>Demande de Dérégation</h1></td>
+        <td class="ttd" style="width:70%"><h1>Demande de Dérogation</h1></td>
         <td style="width:20%; font-size: 0.8rem;">Date: {{ $currentDate }}</td>
     </tr>
 </table>

@@ -16,9 +16,40 @@ use Illuminate\Support\Facades\Log;
 
 class ExportController extends Controller
 {
-    public function exportAllDras()
+    public function exportAllDras(Request $request)
     {
         $userCentreId = Auth::user()->id_centre;
+
+        // Get trimestre and year from request (default to current quarter if not provided)
+        $trimestre = $request->input('trimestre', 'current');
+        $year = $request->input('year', date('Y'));
+
+        // Calculate dates based on selected trimestre
+        switch ($trimestre) {
+            case '1':
+                $startDate = Carbon::create($year, 1, 1)->startOfQuarter();
+                $endDate = Carbon::create($year, 3, 31)->endOfQuarter();
+                break;
+            case '2':
+                $startDate = Carbon::create($year, 4, 1)->startOfQuarter();
+                $endDate = Carbon::create($year, 6, 30)->endOfQuarter();
+                break;
+            case '3':
+                $startDate = Carbon::create($year, 7, 1)->startOfQuarter();
+                $endDate = Carbon::create($year, 9, 30)->endOfQuarter();
+                break;
+            case '4':
+                $startDate = Carbon::create($year, 10, 1)->startOfQuarter();
+                $endDate = Carbon::create($year, 12, 31)->endOfQuarter();
+                break;
+            default: // current quarter
+                $startDate = Carbon::now()->startOfQuarter();
+                $endDate = Carbon::now()->endOfQuarter();
+                $trimestre = ceil(Carbon::now()->month / 3);
+                $year = Carbon::now()->year;
+                break;
+        }
+
         $allItems = collect();
         $centre = Centre::find($userCentreId);
         $centreType = $centre ? $centre->type_centre : 'Marine';
@@ -27,26 +58,48 @@ class ExportController extends Controller
 
         $dras = Dra::with([
             'centre',
-            'factures.pieces' => fn($query) => $query->withPivot('qte_f', 'prix_piece'),
-            'factures.prestations' => fn($query) => $query->withPivot('qte_fpr', 'prix_prest'),
-            'factures.charges' => fn($query) => $query->withPivot('qte_fc', 'prix_charge'),
-            'factures.fournisseur',
-            'bonAchats.pieces' => fn($query) => $query->withPivot('qte_ba', 'prix_piece'),
-            'bonAchats.fournisseur',
-            'remboursements.encaissements'
+            'factures' => function($query) use ($startDate, $endDate) {
+                $query->whereBetween('date_facture', [$startDate, $endDate])
+                    ->with(['pieces' => function($query) {
+                        $query->withPivot('qte_f', 'prix_piece');
+                    }])
+                    ->with(['prestations' => function($query) {
+                        $query->withPivot('qte_fpr', 'prix_prest');
+                    }])
+                    ->with(['charges' => function($query) {
+                        $query->withPivot('qte_fc', 'prix_charge');
+                    }])
+                    ->with('fournisseur');
+            },
+            'bonAchats' => function($query) use ($startDate, $endDate) {
+                $query->whereBetween('date_ba', [$startDate, $endDate])
+                    ->with(['pieces' => function($query) {
+                        $query->withPivot('qte_ba', 'prix_piece');
+                    }])
+                    ->with('fournisseur');
+            },
+            'remboursements.encaissements' => function($query) use ($startDate, $endDate) {
+                $query->whereBetween('date_enc', [$startDate, $endDate]);
+            }
         ])
             ->where('id_centre', $userCentreId)
+            ->where(function($query) use ($startDate, $endDate) {
+                $query->whereHas('factures', function($q) use ($startDate, $endDate) {
+                    $q->whereBetween('date_facture', [$startDate, $endDate]);
+                })
+                    ->orWhereHas('bonAchats', function($q) use ($startDate, $endDate) {
+                        $q->whereBetween('date_ba', [$startDate, $endDate]);
+                    });
+            })
             ->orderBy('n_dra', 'asc')
             ->get();
-
-        $firstDate = $dras->first() ? Carbon::parse($dras->first()->date_creation) : now();
-        $lastDate = $dras->last() ? Carbon::parse($dras->last()->date_creation) : now();
 
         foreach ($dras as $dra) {
             $draItems = collect();
             $draTotalDecaissement = 0;
             $draTotalEncaissement = 0;
 
+            // Process factures
             foreach ($dra->factures as $facture) {
                 $piecesTotal = $facture->pieces->sum(function ($piece) {
                     $quantity = $piece->pivot->qte_f ?? 1;
@@ -62,7 +115,7 @@ class ExportController extends Controller
 
                 $chargesTotal = $facture->charges->sum(function ($charge) {
                     $quantity = $charge->pivot->qte_fc ?? 1;
-                    $price = $charge->pivot->prix_charge ?? 0; // Corrected to get price from pivot
+                    $price = $charge->pivot->prix_charge ?? 0;
                     return ($price * $quantity) * (1 + ($charge->tva ?? 0) / 100);
                 });
 
@@ -102,6 +155,7 @@ class ExportController extends Controller
                 $draTotalDecaissement += $totalAmount;
             }
 
+            // Process bon achats
             foreach ($dra->bonAchats as $bonAchat) {
                 $baPiecesTotal = $bonAchat->pieces->sum(function ($piece) {
                     $quantity = $piece->pivot->qte_ba ?? 1;
@@ -133,22 +187,24 @@ class ExportController extends Controller
                 $draTotalDecaissement += $totalAmount;
             }
 
+            // Process remboursements
             foreach ($dra->remboursements as $remboursement) {
-                $draTotalEncaissement += $remboursement->encaissements->sum('montant_enc');
-            }
+                $encaisTotal = $remboursement->encaissements->sum('montant_enc');
+                $draTotalEncaissement += $encaisTotal;
 
-            if ($draTotalEncaissement > 0) {
-                $draItems->push([
-                    'n_dra' => $dra->n_dra,
-                    'n_bon' => '',
-                    'date_bon' => $dra->date_creation->format('d/m/Y'),
-                    'libelle' => 'Encaissement remboursement',
-                    'fournisseur' => '',
-                    'encaissement' => number_format($draTotalEncaissement, 2, ',', ' '),
-                    'decaissement' => '',
-                    'obs' => '',
-                    'is_total' => false
-                ]);
+                if ($encaisTotal > 0) {
+                    $draItems->push([
+                        'n_dra' => $dra->n_dra,
+                        'n_bon' => 'Remb. ' . $remboursement->n_remb,
+                        'date_bon' => $remboursement->date_remb ? Carbon::parse($remboursement->date_remb)->format('d/m/Y') : '',
+                        'libelle' => 'Encaissement remboursement',
+                        'fournisseur' => '',
+                        'encaissement' => number_format($encaisTotal, 2, ',', ' '),
+                        'decaissement' => '',
+                        'obs' => '',
+                        'is_total' => false
+                    ]);
+                }
             }
 
             if ($draItems->isNotEmpty()) {
@@ -189,28 +245,56 @@ class ExportController extends Controller
             'id_centre' => $userCentreId,
             'centre_type' => $centreType,
             'centre_code' => $centreCode,
-            'periode_debut' => $firstDate->format('d/m/Y'),
-            'periode_fin' => $lastDate->format('d/m/Y'),
-            'exercice' => $firstDate->format('Y'),
+            'periode_debut' => $startDate->format('d/m/Y'),
+            'periode_fin' => $endDate->format('d/m/Y'),
+            'exercice' => $year,
+            'trimestre' => 'Trimestre ' . $trimestre . ' ' . $year,
         ]);
 
-        return $pdf->download('brouillard_caisse_regie.pdf');
+        return $pdf->download('brouillard_caisse_regie_T' . $trimestre . '_' . $year . '.pdf');
     }
 
 
-    public function exportEtatTrimestriel()
+    public function exportEtatTrimestriel(Request $request)
     {
         $user = Auth::user();
         if (!$user->id_centre) {
             abort(403, 'User is not associated with any centre');
         }
 
+        $trimestre = $request->input('trimestre', 'current');
+        $year = $request->input('year', date('Y'));
+
+        // Calculate dates based on selected trimestre
+        switch ($trimestre) {
+            case '1':
+                $startDate = Carbon::create($year, 1, 1)->startOfQuarter();
+                $endDate = Carbon::create($year, 3, 31)->endOfQuarter();
+                break;
+            case '2':
+                $startDate = Carbon::create($year, 4, 1)->startOfQuarter();
+                $endDate = Carbon::create($year, 6, 30)->endOfQuarter();
+                break;
+            case '3':
+                $startDate = Carbon::create($year, 7, 1)->startOfQuarter();
+                $endDate = Carbon::create($year, 9, 30)->endOfQuarter();
+                break;
+            case '4':
+                $startDate = Carbon::create($year, 10, 1)->startOfQuarter();
+                $endDate = Carbon::create($year, 12, 31)->endOfQuarter();
+                break;
+            default: // current quarter
+                $startDate = Carbon::now()->startOfQuarter();
+                $endDate = Carbon::now()->endOfQuarter();
+                $trimestre = ceil(Carbon::now()->month / 3);
+                $year = Carbon::now()->year;
+                break;
+        }
+
         $centreCode = $user->id_centre;
         $formattedCentreCode = '1' . $centreCode;
         $centre = Centre::find($centreCode);
         $centreType = $centre ? $centre->type_centre : 'Inconnu';
-        $startDate = Carbon::now()->startOfQuarter();
-        $endDate = Carbon::now()->endOfQuarter();
         $items = collect();
 
         $processDocument = function ($document, $isFacture = true) use (&$items, $formattedCentreCode) {
@@ -218,20 +302,16 @@ class ExportController extends Controller
                 ? Carbon::parse($document->date_facture)->format('d/m/Y')
                 : Carbon::parse($document->date_ba)->format('d/m/Y');
 
-            $addedTimbre = false; // Flag to ensure droit_timbre is added only once per facture
+            $addedTimbre = false;
 
-            // Process pieces
             if ($document->relationLoaded('pieces')) {
                 foreach ($document->pieces as $piece) {
-                    if (!$piece) {
-                        continue;
-                    }
+                    if (!$piece) continue;
 
                     $quantity = $isFacture ? ($piece->pivot->qte_f ?? 1) : ($piece->pivot->qte_ba ?? 1);
                     $price = $piece->pivot->prix_piece ?? 0;
                     $montant = ($price * $quantity) * (1 + ($piece->tva ?? 0) / 100);
 
-                    // Add droit_timbre to the first item processed for a Facture
                     if ($isFacture && !$addedTimbre) {
                         $montant += $document->droit_timbre ?? 0;
                         $addedTimbre = true;
@@ -251,18 +331,14 @@ class ExportController extends Controller
                 }
             }
 
-            // Process prestations
             if ($isFacture && $document->relationLoaded('prestations')) {
                 foreach ($document->prestations as $prestation) {
-                    if (!$prestation) {
-                        continue;
-                    }
+                    if (!$prestation) continue;
 
                     $quantity = $prestation->pivot->qte_fpr ?? 1;
                     $price = $prestation->pivot->prix_prest ?? 0;
                     $montant = ($price * $quantity) * (1 + ($prestation->tva ?? 0) / 100);
 
-                    // Add droit_timbre if it hasn't been added yet (i.e., no pieces were processed)
                     if ($isFacture && !$addedTimbre) {
                         $montant += $document->droit_timbre ?? 0;
                         $addedTimbre = true;
@@ -282,18 +358,14 @@ class ExportController extends Controller
                 }
             }
 
-            // Process charges
             if ($isFacture && $document->relationLoaded('charges')) {
                 foreach ($document->charges as $charge) {
-                    if (!$charge) {
-                        continue;
-                    }
+                    if (!$charge) continue;
 
                     $quantity = $charge->pivot->qte_fc ?? 1;
-                    $price = $charge->pivot->prix_charge ?? 0; // Corrected to use pivot price
+                    $price = $charge->pivot->prix_charge ?? 0;
                     $montant = ($price * $quantity) * (1 + ($charge->tva ?? 0) / 100);
 
-                    // Add droit_timbre if it hasn't been added yet (i.e., no pieces or prestations were processed)
                     if ($isFacture && !$addedTimbre) {
                         $montant += $document->droit_timbre ?? 0;
                         $addedTimbre = true;
@@ -312,18 +384,24 @@ class ExportController extends Controller
                     ]);
                 }
             }
-            // The logic to add Droit de Timbre as a separate line item was removed in a previous iteration
-            // and is not being re-added here as per your request.
         };
 
         $factures = Facture::with([
-            'pieces' => function ($query) { $query->withPivot('qte_f', 'prix_piece')->with('compteGeneral:code,libelle'); },
-            'prestations' => function ($query) { $query->withPivot('qte_fpr', 'prix_prest')->with('compteGeneral:code,libelle'); },
-            'charges' => function ($query) { $query->withPivot('qte_fc', 'prix_charge')->with('compteGeneral:code,libelle'); },
+            'pieces' => function ($query) {
+                $query->withPivot('qte_f', 'prix_piece')->with('compteGeneral:code,libelle');
+            },
+            'prestations' => function ($query) {
+                $query->withPivot('qte_fpr', 'prix_prest')->with('compteGeneral:code,libelle');
+            },
+            'charges' => function ($query) {
+                $query->withPivot('qte_fc', 'prix_charge')->with('compteGeneral:code,libelle');
+            },
             'fournisseur',
             'dra'
         ])
-            ->whereHas('dra', fn($q) => $q->where('id_centre', $centreCode))
+            ->whereHas('dra', function ($q) use ($centreCode) {
+                $q->where('id_centre', $centreCode);
+            })
             ->whereBetween('date_facture', [$startDate, $endDate])
             ->get();
 
@@ -332,11 +410,15 @@ class ExportController extends Controller
         }
 
         $bonAchats = BonAchat::with([
-            'pieces' => function ($query) { $query->withPivot('qte_ba', 'prix_piece')->with('compteGeneral:code,libelle'); },
+            'pieces' => function ($query) {
+                $query->withPivot('qte_ba', 'prix_piece')->with('compteGeneral:code,libelle');
+            },
             'fournisseur',
             'dra'
         ])
-            ->whereHas('dra', fn($q) => $q->where('id_centre', $centreCode))
+            ->whereHas('dra', function ($q) use ($centreCode) {
+                $q->where('id_centre', $centreCode);
+            })
             ->whereBetween('date_ba', [$startDate, $endDate])
             ->get();
 
@@ -344,9 +426,11 @@ class ExportController extends Controller
             $processDocument($bonAchat, false);
         }
 
-        $calculateTotal = fn($field) =>
-        $items->sum(fn($item) =>
-        (float) str_replace([' ', ','], ['', '.'], $item[$field] ?? '0'));
+        $calculateTotal = function ($field) use ($items) {
+            return $items->sum(function ($item) use ($field) {
+                return (float)str_replace([' ', ','], ['', '.'], $item[$field] ?? '0');
+            });
+        };
 
         $totalFourniture = $calculateTotal('fourniture_consommable');
         $totalTravaux = $calculateTotal('travaux_prestations');
@@ -357,7 +441,7 @@ class ExportController extends Controller
             'items' => $items,
             'centreCode' => $formattedCentreCode,
             'centreType' => $centreType,
-            'trimestre' => 'Du ' . $startDate->format('d/m/Y') . ' au ' . $endDate->format('d/m/Y'),
+            'trimestre' => 'Trimestre ' . $trimestre . ' ' . $year . ' (Du ' . $startDate->format('d/m/Y') . ' au ' . $endDate->format('d/m/Y') . ')',
             'totalFourniture' => number_format($totalFourniture, 2, ',', ' '),
             'totalTravaux' => number_format($totalTravaux, 2, ',', ' '),
             'totalAutres' => number_format($totalAutres, 2, ',', ' '),
@@ -365,15 +449,41 @@ class ExportController extends Controller
             'currentDate' => Carbon::now()->format('d/m/Y H:i'),
         ]);
 
-        return $pdf->download('etat_trimestriel_' . $formattedCentreCode . '_' . $startDate->format('Y-m') . '.pdf');
+        return $pdf->download('etat_trimestriel_' . $formattedCentreCode . '_T' . $trimestre . '_' . $year . '.pdf');
     }
 
-
-    public function exportEtatTrimestrielAllCentres()
+    public function exportEtatTrimestrielAllCentres(Request $request)
     {
+        $trimestre = $request->input('trimestre', 'current');
+        $year = $request->input('year', date('Y'));
+
+        // Calculate dates based on selected trimestre
+        switch ($trimestre) {
+            case '1':
+                $startDate = Carbon::create($year, 1, 1)->startOfQuarter();
+                $endDate = Carbon::create($year, 3, 31)->endOfQuarter();
+                break;
+            case '2':
+                $startDate = Carbon::create($year, 4, 1)->startOfQuarter();
+                $endDate = Carbon::create($year, 6, 30)->endOfQuarter();
+                break;
+            case '3':
+                $startDate = Carbon::create($year, 7, 1)->startOfQuarter();
+                $endDate = Carbon::create($year, 9, 30)->endOfQuarter();
+                break;
+            case '4':
+                $startDate = Carbon::create($year, 10, 1)->startOfQuarter();
+                $endDate = Carbon::create($year, 12, 31)->endOfQuarter();
+                break;
+            default: // current quarter
+                $startDate = Carbon::now()->startOfQuarter();
+                $endDate = Carbon::now()->endOfQuarter();
+                $trimestre = ceil(Carbon::now()->month / 3);
+                $year = Carbon::now()->year;
+                break;
+        }
+
         $centres = Centre::all();
-        $startDate = Carbon::now()->startOfQuarter();
-        $endDate = Carbon::now()->endOfQuarter();
         $allCentreData = [];
         $globalTotals = [
             'totalFourniture' => 0,
@@ -399,7 +509,7 @@ class ExportController extends Controller
                             ? ($document->date_facture ? Carbon::parse($document->date_facture)->format('d/m/Y') : 'Date invalide')
                             : ($document->date_ba ? Carbon::parse($document->date_ba)->format('d/m/Y') : 'Date invalide');
 
-                        $addedTimbre = false; // Flag for each document to ensure droit_timbre is added only once
+                        $addedTimbre = false;
 
                         // Process pieces
                         if ($document->relationLoaded('pieces')) {
@@ -414,7 +524,6 @@ class ExportController extends Controller
                                 $price = $piece->pivot->prix_piece ?? 0;
                                 $montant = ($price * $quantity) * (1 + ($piece->tva ?? 0) / 100);
 
-                                // Add droit_timbre to the first item processed for a Facture
                                 if ($isFacture && !$addedTimbre) {
                                     $montant += $document->droit_timbre ?? 0;
                                     $addedTimbre = true;
@@ -445,7 +554,6 @@ class ExportController extends Controller
                                 $price = $prestation->pivot->prix_prest ?? 0;
                                 $montant = ($price * $quantity) * (1 + ($prestation->tva ?? 0) / 100);
 
-                                // Add droit_timbre if it hasn't been added yet
                                 if ($isFacture && !$addedTimbre) {
                                     $montant += $document->droit_timbre ?? 0;
                                     $addedTimbre = true;
@@ -473,10 +581,9 @@ class ExportController extends Controller
                                 }
 
                                 $quantity = $charge->pivot->qte_fc ?? 1;
-                                $price = $charge->pivot->prix_charge ?? 0; // Corrected to use pivot price
+                                $price = $charge->pivot->prix_charge ?? 0;
                                 $montant = ($price * $quantity) * (1 + ($charge->tva ?? 0) / 100);
 
-                                // Add droit_timbre if it hasn't been added yet
                                 if ($isFacture && !$addedTimbre) {
                                     $montant += $document->droit_timbre ?? 0;
                                     $addedTimbre = true;
@@ -513,7 +620,9 @@ class ExportController extends Controller
                     'fournisseur',
                     'dra'
                 ])
-                    ->whereHas('dra', fn($q) => $q->where('id_centre', $centreCode))
+                    ->whereHas('dra', function($q) use ($centreCode) {
+                        $q->where('id_centre', $centreCode);
+                    })
                     ->whereBetween('date_facture', [$startDate, $endDate])
                     ->get();
 
@@ -522,7 +631,9 @@ class ExportController extends Controller
                     'fournisseur',
                     'dra'
                 ])
-                    ->whereHas('dra', fn($q) => $q->where('id_centre', $centreCode))
+                    ->whereHas('dra', function($q) use ($centreCode) {
+                        $q->where('id_centre', $centreCode);
+                    })
                     ->whereBetween('date_ba', [$startDate, $endDate])
                     ->get();
 
@@ -530,9 +641,11 @@ class ExportController extends Controller
                 $processDocuments($factures, true);
                 $processDocuments($bonAchats, false);
 
-                $calculateTotalCentre = fn($field) =>
-                $items->sum(fn($item) =>
-                (float) str_replace([' ', ','], ['', '.'], $item[$field] ?? '0'));
+                $calculateTotalCentre = function($field) use ($items) {
+                    return $items->sum(function($item) use ($field) {
+                        return (float) str_replace([' ', ','], ['', '.'], $item[$field] ?? '0');
+                    });
+                };
 
                 $totalFournitureCentre = $calculateTotalCentre('fourniture_consommable');
                 $totalTravauxCentre = $calculateTotalCentre('travaux_prestations');
@@ -568,13 +681,15 @@ class ExportController extends Controller
 
         $pdf = PDF::loadView('exports.etat_trimestriel_all_centres', [
             'allCentreData' => $allCentreData,
-            'globalTotals' => array_map(fn($total) => number_format($total, 2, ',', ' '), $globalTotals),
-            'trimestre' => 'Du ' . $startDate->format('d/m/Y') . ' au ' . $endDate->format('d/m/Y'),
+            'globalTotals' => array_map(function($total) {
+                return number_format($total, 2, ',', ' ');
+            }, $globalTotals),
+            'trimestre' => 'Trimestre ' . $trimestre . ' ' . $year . ' (Du ' . $startDate->format('d/m/Y') . ' au ' . $endDate->format('d/m/Y') . ')',
             'currentDate' => Carbon::now()->format('d/m/Y H:i'),
         ]);
 
-        return $pdf->download('etat_trimestriel_all_centres_' . $startDate->format('Y-m') . '.pdf');
-    }
+        return $pdf->download('etat_trimestriel_all_centres_T' . $trimestre . '_' . $year . '.pdf');
+}
 
     public function exportDemandeDerogation($draNumber)
     {
@@ -748,4 +863,11 @@ class ExportController extends Controller
 
         return $pdf->download('demande_derogation_' . $draNumber . '_' . Carbon::now()->format('Y-m-d') . '.pdf');
     }
+
+
+
+
+
+
+
 }

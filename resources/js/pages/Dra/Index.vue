@@ -19,7 +19,7 @@ const props = defineProps<{
         created_at: string;
         centre: {
             seuil_centre: number;
-            montant_disponible: number; // Keep this in the type definition as it's passed from the controller
+            montant_disponible: number;
         };
     }>,
     id_centre: string
@@ -28,13 +28,30 @@ const props = defineProps<{
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Centre', href: '/scentre' },
     { title: 'Gestion des DRAs', href: '/scentre/dras' },
-
 ]
 
+// State filter options
 const etatOptions = ['actif', 'cloture', 'refuse', 'accepte','rembourse'];
 const selectedEtat = ref<string | null>(null);
 const sortConfig = ref<{ column: string; direction: 'asc' | 'desc' } | null>(null);
 const searchQuery = ref('');
+
+// Trimestre filter options
+const selectedTrimestre = ref<string>('');
+const selectedYear = ref<string>(new Date().getFullYear().toString());
+const trimestreOptions = [
+    { value: '', label: 'Trimestre actuel' },
+    { value: '1', label: 'Trimestre 1' },
+    { value: '2', label: 'Trimestre 2' },
+    { value: '3', label: 'Trimestre 3' },
+    { value: '4', label: 'Trimestre 4' }
+];
+
+// Generate year options (current year and previous 5 years)
+const yearOptions = computed(() => {
+    const currentYear = new Date().getFullYear();
+    return Array.from({ length: 6 }, (_, i) => (currentYear - i).toString());
+});
 
 const filteredDras = computed(() => {
     let data = selectedEtat.value
@@ -44,12 +61,11 @@ const filteredDras = computed(() => {
     if (searchQuery.value) {
         const query = searchQuery.value.toLowerCase();
         data = data.filter(dra =>
-                dra.n_dra.toLowerCase().includes(query) ||
-                dra.etat.toLowerCase().includes(query) ||
-                new Date(dra.date_creation).toLocaleDateString().includes(query) ||
-                dra.total_dra.toString().includes(query) ||
-                dra.centre.seuil_centre.toString().includes(query)
-            // Removed montant_disponible from individual row search as it's now a global stat
+            dra.n_dra.toLowerCase().includes(query) ||
+            dra.etat.toLowerCase().includes(query) ||
+            new Date(dra.date_creation).toLocaleDateString().includes(query) ||
+            dra.total_dra.toString().includes(query) ||
+            dra.centre.seuil_centre.toString().includes(query)
         );
     }
 
@@ -105,20 +121,27 @@ watch(
 
 const hasActiveDra = computed(() => localDras.value.some(dra => dra.etat === 'actif'));
 
-// Computed property for the total available amount for the current center
+
+const exportAllDras = () => {
+    let url = route('scentre.dras.export-all');
+    const params = new URLSearchParams();
+
+    if (selectedTrimestre.value) {
+        params.append('trimestre', selectedTrimestre.value);
+    }
+    if (selectedYear.value) {
+        params.append('year', selectedYear.value);
+    }
+
+    window.location.href = params.toString() ? `${url}?${params.toString()}` : url;
+};
+
 const availableAmountForCenter = computed(() => {
-    // Assuming all DRAs belong to the same center and thus share the same available amount.
-    // We can just take the montant_disponible from the first DRA, or handle if dras is empty.
     if (props.dras.length > 0) {
         return props.dras[0].centre.montant_disponible;
     }
-    return 0; // Default if no DRAs are present
+    return 0;
 });
-
-
-
-
-
 
 const requestSort = (column: string) => {
     if (!sortConfig.value || sortConfig.value.column !== column) {
@@ -140,6 +163,24 @@ const createDra = () => {
         date_creation: today,
     });
 };
+
+const exportEtatTrimestriel = () => {
+    let url = '/export/etat-trimestriel';
+    const params = new URLSearchParams();
+
+    if (selectedTrimestre.value) {
+        params.append('trimestre', selectedTrimestre.value);
+    }
+    if (selectedYear.value) {
+        params.append('year', selectedYear.value);
+    }
+
+    if (params.toString()) {
+        url += `?${params.toString()}`;
+    }
+
+    window.location.href = url;
+};
 </script>
 
 <template>
@@ -152,30 +193,60 @@ const createDra = () => {
                     type="text"
                     v-model="searchQuery"
                     placeholder="Rechercher..."
-                    class="w-full bg-gray-100 px-4 py-2 rounded-md border border-gray-200 dark:border-gray-700  dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+                    class="w-full bg-gray-100 px-4 py-2 rounded-md border border-gray-200 dark:border-gray-700 dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
                 />
             </div>
-            <a href="/export/etat-trimestriel"
-               class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition flex items-center gap-2"
 
-            >
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
-                </svg>
-                <span> Export Etat Trimestrielle</span>
-               </a>
+            <div class="flex items-center gap-2">
+                <select
+                    v-model="selectedTrimestre"
+                    class="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                    <option
+                        v-for="option in trimestreOptions"
+                        :key="option.value"
+                        :value="option.value"
+                    >
+                        {{ option.label }}
+                    </option>
+                </select>
+
+                <select
+                    v-model="selectedYear"
+                    class="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                    <option
+                        v-for="year in yearOptions"
+                        :key="year"
+                        :value="year"
+                    >
+                        {{ year }}
+                    </option>
+                </select>
+
+                <button
+                    @click="exportEtatTrimestriel"
+                    class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition flex items-center gap-2"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                    </svg>
+                    <span>Export État Trimestriel</span>
+                </button>
+            </div>
 
 
 
-            <a
-                :href="route('scentre.dras.export-all')"
+            <button
+                @click="exportAllDras"
                 class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition flex items-center gap-2"
             >
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
                 </svg>
                 <span>Exporter brouillard caisse regie</span>
-            </a>
+            </button>
+
             <button
                 @click="createDra"
                 :disabled="hasActiveDra"
@@ -191,15 +262,13 @@ const createDra = () => {
         </div>
 
         <div class="m-5 mr-2 bg-gray-100 dark:bg-gray-800 rounded-lg p-6 relative">
-
-
-            <div class="flex justify-between mb-3 "> <h1 class="text-lg font-bold text-left text-[#042B62FF] dark:text-[#BDBDBDFF]">Liste des DRAs</h1>
+            <div class="flex justify-between mb-3">
+                <h1 class="text-lg font-bold text-left text-[#042B62FF] dark:text-[#BDBDBDFF]">Liste des DRAs</h1>
                 <div class="absolute top-4 right-4 bg-white dark:bg-gray-700 p-4 rounded-lg shadow-md text-right">
                     <h2 class="text-md font-semibold text-[#042B62FF] dark:text-[#BDBDBDFF] mb-2">Statistiques Centre</h2>
                     <p class="text-sm text-gray-700 dark:text-gray-300">
                         <span class="font-bold">Montant Disponible:</span>
                         {{ Number(parseFloat(availableAmountForCenter).toFixed(2)).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }} DA
-
                     </p>
                 </div>
             </div>
@@ -270,14 +339,12 @@ const createDra = () => {
                                     dra.etat === 'actif' ? 'ACTIF' :
                                         dra.etat === 'cloture' ? 'CLÔTURÉ' :
                                             dra.etat === 'refuse' ? 'REFUSÉ' :
-                                               dra.etat === 'accepte' ? 'ACCEPTÉ' :
-                                                   'REMBOURSÉ'
+                                                dra.etat === 'accepte' ? 'ACCEPTÉ' :
+                                                    'REMBOURSÉ'
                                 }}
                             </span>
                         </TableCell>
                         <TableCell class="flex flex-wrap gap-2">
-
-
                             <Link
                                 :href="route('scentre.dras.show', dra.n_dra)"
                                 class="bg-[#042B62] text-white px-4 py-2 rounded-lg hover:bg-indigo-600 dark:bg-indigo-500 dark:hover:bg-indigo-400 transition flex items-center gap-2"
@@ -285,10 +352,6 @@ const createDra = () => {
                                 <FileText class="w-4 h-4" />
                                 <span>Afficher</span>
                             </Link>
-
-
-
-
                         </TableCell>
                     </TableRow>
                 </TableBody>

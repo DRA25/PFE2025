@@ -40,6 +40,23 @@ const selectedEtat = ref<string | null>(null);
 const searchQuery = ref('');
 const sortConfig = ref<{ column: string; direction: 'asc' | 'desc' } | null>(null);
 
+// Trimestre selection
+const selectedTrimestre = ref<string>('');
+const selectedYear = ref<string>(new Date().getFullYear().toString());
+const trimestreOptions = [
+    { value: '', label: 'Trimestre actuel' },
+    { value: '1', label: 'Trimestre 1' },
+    { value: '2', label: 'Trimestre 2' },
+    { value: '3', label: 'Trimestre 3' },
+    { value: '4', label: 'Trimestre 4' }
+];
+
+// Generate year options (current year and previous 5 years)
+const yearOptions = computed(() => {
+    const currentYear = new Date().getFullYear();
+    return Array.from({ length: 6 }, (_, i) => (currentYear - i).toString());
+});
+
 // Filter DRAs by selected state
 const filteredDras = computed(() => {
     let data = props.dras;
@@ -102,8 +119,6 @@ const sortedDras = computed(() => {
     return dras;
 });
 
-
-
 const requestSort = (column: string) => {
     if (!sortConfig.value || sortConfig.value.column !== column) {
         sortConfig.value = { column, direction: 'asc' };
@@ -111,6 +126,24 @@ const requestSort = (column: string) => {
         sortConfig.value.direction =
             sortConfig.value.direction === 'asc' ? 'desc' : 'asc';
     }
+};
+
+const exportEtatTrimestriel = () => {
+    let url = '/export/etat-trimestriel-all';
+    const params = new URLSearchParams();
+
+    if (selectedTrimestre.value) {
+        params.append('trimestre', selectedTrimestre.value);
+    }
+    if (selectedYear.value) {
+        params.append('year', selectedYear.value);
+    }
+
+    if (params.toString()) {
+        url += `?${params.toString()}`;
+    }
+
+    window.location.href = url;
 };
 </script>
 
@@ -129,15 +162,43 @@ const requestSort = (column: string) => {
                 />
             </div>
 
-            <a href="/export/etat-trimestriel-all"
-               class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition flex items-center gap-2"
+            <div class="flex items-center gap-2">
+                <select
+                    v-model="selectedTrimestre"
+                    class="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                    <option
+                        v-for="option in trimestreOptions"
+                        :key="option.value"
+                        :value="option.value"
+                    >
+                        {{ option.label }}
+                    </option>
+                </select>
 
-            >
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
-                </svg>
-                <span> Export Etat Trimestrielle</span>
-            </a>
+                <select
+                    v-model="selectedYear"
+                    class="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                    <option
+                        v-for="year in yearOptions"
+                        :key="year"
+                        :value="year"
+                    >
+                        {{ year }}
+                    </option>
+                </select>
+
+                <button
+                    @click="exportEtatTrimestriel"
+                    class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition flex items-center gap-2"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                    </svg>
+                    <span>Export État Trimestriel</span>
+                </button>
+            </div>
         </div>
 
         <div class="m-5 mr-2 bg-gray-100 dark:bg-gray-800 rounded-lg">
@@ -158,10 +219,9 @@ const requestSort = (column: string) => {
                     }"
                 >
                     {{
-
-                            etat === 'cloture' ? 'Clôturé' :
-                                etat === 'refuse' ? 'Refusé' :
-                                    etat === 'rembourse' ? 'Remboursé' :
+                        etat === 'cloture' ? 'Clôturé' :
+                            etat === 'refuse' ? 'Refusé' :
+                                etat === 'rembourse' ? 'Remboursé' :
                                     'Accepté'
                     }}
                 </button>
@@ -219,7 +279,7 @@ const requestSort = (column: string) => {
                                     dra.etat === 'accepte' ? 'ACCEPTÉ' :
                                         dra.etat === 'cloture' ? 'CLÔTURÉ' :
                                             dra.etat === 'rembourse' ? 'REMBOURSÉ' :
-                                             'REFUSÉ'
+                                                'REFUSÉ'
 
                                 }}
                             </span>

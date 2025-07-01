@@ -21,9 +21,11 @@ Route::middleware(['auth', 'role:service centre|admin'])->group(function () {
     Route::get('/export/etat-trimestriel-all', [ExportController::class, 'exportEtatTrimestrielAllCentres'])
         ->name('export.etat-trimestriel-all');
 
-    Route::get('/export/demande-derogation/{draNumber}',
-        [App\Http\Controllers\ExportController::class, 'exportDemandeDerogation'])
+    Route::get('/export/demande-derogation/{draNumber}', [ExportController::class, 'exportDemandeDerogation'])
         ->name('export.demande-derogation');
+
+
+
 
 
     Route::resource('scentre/charges', ChargeController::class)
