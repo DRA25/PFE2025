@@ -8,23 +8,24 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
         @page {
-            size: landscape; /* Set page orientation to landscape */
+            size: landscape;
             margin: 20px;
+            margin-bottom: 50px; /* Extra space for QR code */
         }
 
         body {
             font-family: 'Inter', sans-serif;
-            font-size: 0.8rem; /* Reduced base font size */
+            font-size: 0.8rem;
             text-align: center;
             margin: 0;
             padding: 0;
+            position: relative;
         }
 
         .t1 {
             width: 100%;
             border-collapse: collapse;
             margin-bottom: 20px;
-            font-family: 'Inter', sans-serif;
         }
 
         .t1, .ttd {
@@ -42,27 +43,27 @@
         h1 {
             color: #042B62FF;
             text-align: center;
-            font-size: 1.2rem; /* Reduced h1 font size */
+            font-size: 1.2rem;
             margin-top: 20px;
         }
 
         h2 {
             color: #042B62FF;
-            text-align: left; /* Changed from center to left */
-            font-size: 1rem; /* Reduced h2 font size */
+            text-align: left;
+            font-size: 1rem;
             margin-top: 30px;
             margin-bottom: 10px;
-            padding-left: 10px; /* Added padding */
-            padding-right: 10px; /* Added padding */
+            padding-left: 10px;
+            padding-right: 10px;
         }
 
         h3 {
             color: #042B62FF;
-            text-align: left; /* Changed from center to left */
-            font-size: 0.9rem; /* Reduced h3 font size */
+            text-align: left;
+            font-size: 0.9rem;
             margin-bottom: 5px;
-            padding-left: 10px; /* Added padding */
-            padding-right: 10px; /* Added padding */
+            padding-left: 10px;
+            padding-right: 10px;
         }
 
         p.info-period {
@@ -78,7 +79,6 @@
             width: 100%;
             border-collapse: collapse;
             margin-top: 20px;
-            font-family: 'Inter', sans-serif;
             margin-bottom: 40px;
         }
 
@@ -87,14 +87,14 @@
         }
 
         .t2 th, .t2 td {
-            padding: 5px; /* Reduced padding */
+            padding: 5px;
             text-align: left;
-            font-size: 0.8rem; /* Reduced table cell font size */
+            font-size: 0.8rem;
         }
 
         .t2 th {
             background-color: #f2f2f2;
-            font-size: 0.85rem; /* Slightly larger for table headers */
+            font-size: 0.85rem;
         }
 
         .text-center {
@@ -113,8 +113,8 @@
         }
 
         .info-item {
-            margin-bottom: 3px; /* Reduced margin */
-            font-size: 0.85rem; /* Reduced info-item font size */
+            margin-bottom: 3px;
+            font-size: 0.85rem;
             color: #333;
         }
 
@@ -123,15 +123,15 @@
         }
 
         .footer-text {
-            font-size: 0.7rem; /* Reduced footer font size */
+            font-size: 0.7rem;
             color: #666;
-            margin-top: 20px; /* Reduced margin-top */
+            margin-top: 20px;
             text-align: center;
         }
 
         .divider {
             border-top: 1px solid #ddd;
-            margin: 15px 0; /* Reduced margin */
+            margin: 15px 0;
         }
 
         .dra-table th, .dra-table td {
@@ -142,9 +142,35 @@
             font-weight: bold;
             background-color: #e6e6e6;
         }
+
+        /* QR Code Styles */
+        .qr-code-container {
+            position: fixed;
+            right: 20px;
+            bottom: 20px;
+            text-align: center;
+            width: 150px;
+
+        }
+
+        .qr-code-container img {
+            width: 150px;
+            height: 150px;
+        }
+
+        .qr-code-label {
+            font-size: 7px;
+
+        }
     </style>
 </head>
 <body>
+<!-- QR Code - Fixed position on all pages -->
+<div class="qr-code-container">
+    <img src="data:image/png;base64,{{ $qrCode }}" alt="QR Code">
+    <p class="qr-code-label">Scan pour vérification</p>
+</div>
+
 <table class="t1">
     <tr>
         <td class="ttd" style="width:10%"><img src="{{ public_path('images/Naftal.png') }}" alt="Company Logo"></td>
@@ -161,6 +187,7 @@
 
 <div class="info-section">
     <div class="info-item">Période: Du {{ $periode_debut }} à {{ $periode_fin }}</div>
+    <div class="info-item">Trimestre: {{ $trimestre }}</div>
 </div>
 
 <div class="divider"></div>
@@ -182,7 +209,7 @@
     @foreach($items as $item)
         <tr class="{{ $item['is_total'] ? 'total-row' : '' }}">
             <td class="text-center">{{ $item['n_dra'] }}</td>
-            <td class="text-center"></td>
+            <td class="text-center">{{ $item['n_bon'] }}</td>
             <td class="text-center">{{ $item['date_bon'] }}</td>
             <td>{{ $item['libelle'] }}</td>
             <td class="text-center">{{ $item['fournisseur'] }}</td>
@@ -209,12 +236,10 @@
 <div class="divider"></div>
 
 <div class="info-section">
-
     <div class="info-item">NB: LE SOLDE FIN DE PÉRIODE DOIT ÊTRE DÉBITEUR OU NUL EN AUCUN CAS IL PRÉSENTE UN SOLDE NÉGATIF</div>
     <div class="info-item">S'IL S'AGIT DE PLUSIEUR PAGES IL Y'A LIEU D'INDIQUER LE REPORT DES PAGES</div>
 </div>
 
 <p class="footer-text">Généré le: {{ \Carbon\Carbon::now()->format('d/m/Y H:i') }}</p>
-
 </body>
 </html>

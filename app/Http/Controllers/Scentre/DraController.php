@@ -19,13 +19,91 @@ use Inertia\Inertia;
 class DraController extends Controller
 {
 
-    public function index()
+    public function index(Request $request) // Inject Request
     {
         $userCentreId = Auth::user()->id_centre;
 
-        $dras = Dra::with('centre')
-            ->where('id_centre', $userCentreId)
-            ->orderBy('created_at', 'desc')
+        // Get trimestre and year from the request, with default to current trimester/year
+        $selectedTrimestre = $request->input('trimestre');
+        $selectedYear = $request->input('year');
+
+        $drasQuery = Dra::with('centre')
+            ->where('id_centre', $userCentreId);
+
+        // Apply trimester and year filter if both are provided
+        if ($selectedTrimestre && $selectedYear) {
+            $startDate = null;
+            $endDate = null;
+
+            switch ($selectedTrimestre) {
+                case '1': // January, February, March
+                    $startDate = "$selectedYear-01-01";
+                    $endDate = "$selectedYear-03-31";
+                    break;
+                case '2': // April, May, June
+                    $startDate = "$selectedYear-04-01";
+                    $endDate = "$selectedYear-06-30";
+                    break;
+                case '3': // July, August, September
+                    $startDate = "$selectedYear-07-01";
+                    $endDate = "$selectedYear-09-30";
+                    break;
+                case '4': // October, November, December
+                    $startDate = "$selectedYear-10-01";
+                    $endDate = "$selectedYear-12-31";
+                    break;
+                // 'Trimestre actuel' case is handled by not applying the filter
+            }
+
+            if ($startDate && $endDate) {
+                $drasQuery->whereBetween('date_creation', [$startDate, $endDate]);
+            }
+        } else {
+            // Default to current trimester if no specific trimester/year is selected
+            // This mirrors the frontend's 'Trimestre actuel' logic
+            $currentMonth = now()->month;
+            $currentYear = now()->year;
+
+            $currentTrimestre = null;
+            if ($currentMonth >= 1 && $currentMonth <= 3) {
+                $currentTrimestre = '1';
+            } elseif ($currentMonth >= 4 && $currentMonth <= 6) {
+                $currentTrimestre = '2';
+            } elseif ($currentMonth >= 7 && $currentMonth <= 9) {
+                $currentTrimestre = '3';
+            } elseif ($currentMonth >= 10 && $currentMonth <= 12) {
+                $currentTrimestre = '4';
+            }
+
+            if ($currentTrimestre) {
+                $startDate = null;
+                $endDate = null;
+                switch ($currentTrimestre) {
+                    case '1':
+                        $startDate = "$currentYear-01-01";
+                        $endDate = "$currentYear-03-31";
+                        break;
+                    case '2':
+                        $startDate = "$currentYear-04-01";
+                        $endDate = "$currentYear-06-30";
+                        break;
+                    case '3':
+                        $startDate = "$currentYear-07-01";
+                        $endDate = "$currentYear-09-30";
+                        break;
+                    case '4':
+                        $startDate = "$currentYear-10-01";
+                        $endDate = "$currentYear-12-31";
+                        break;
+                }
+                if ($startDate && $endDate) {
+                    $drasQuery->whereBetween('date_creation', [$startDate, $endDate]);
+                }
+            }
+        }
+
+
+        $dras = $drasQuery->orderBy('created_at', 'desc')
             ->get();
 
         return Inertia::render('Dra/Index', [
@@ -43,7 +121,9 @@ class DraController extends Controller
                     ]
                 ];
             }),
-            'id_centre' => $userCentreId
+            'id_centre' => $userCentreId,
+            'selectedTrimestre' => $selectedTrimestre, // Pass back the selected trimester
+            'selectedYear' => $selectedYear,       // Pass back the selected year
         ]);
     }
 

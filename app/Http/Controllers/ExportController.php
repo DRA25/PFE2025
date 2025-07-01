@@ -7,6 +7,11 @@ use App\Models\Centre;
 use App\Models\Dra;
 use App\Models\Facture;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Endroid\QrCode\Builder\Builder;
+use Endroid\QrCode\Encoding\Encoding;
+use Endroid\QrCode\ErrorCorrectionLevel;
+use Endroid\QrCode\RoundBlockSizeMode;
+use Endroid\QrCode\Writer\PngWriter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -235,6 +240,25 @@ class ExportController extends Controller
         $rawBalancePeriod = $rawTotalEncaissement - $rawTotalDecaissement;
         $calculatedValue = $centreSeuil + $rawBalancePeriod;
 
+        // Generate QR code content
+        $qrContent = "BROUILLARD CAISSE REGIE\n";
+        $qrContent .= "Centre: $centreCode ($centreType)\n";
+        $qrContent .= "Trimestre: T$trimestre $year\n";
+        $qrContent .= "Période: " . $startDate->format('d/m/Y') . " - " . $endDate->format('d/m/Y') . "\n";
+        $qrContent .= "Total Encaissements: " . number_format($rawTotalEncaissement, 2, ',', ' ') . " DZD\n";
+        $qrContent .= "Total Décaissements: " . number_format($rawTotalDecaissement, 2, ',', ' ') . " DZD\n";
+        $qrContent .= "Solde: " . number_format($rawBalancePeriod, 2, ',', ' ') . " DZD\n";
+        $qrContent .= "Généré le: " . Carbon::now()->format('d/m/Y H:i');
+
+        $qrCode = Builder::create()
+            ->writer(new PngWriter())
+            ->data($qrContent)
+            ->encoding(new Encoding('UTF-8'))
+            ->errorCorrectionLevel(ErrorCorrectionLevel::High)
+            ->size(150)
+            ->margin(10)
+            ->build();
+
         $pdf = PDF::loadView('scentre.dra.export_brouillard', [
             'items' => $allItems,
             'totalEncaissement' => number_format($rawTotalEncaissement, 2, ',', ' '),
@@ -249,9 +273,14 @@ class ExportController extends Controller
             'periode_fin' => $endDate->format('d/m/Y'),
             'exercice' => $year,
             'trimestre' => 'Trimestre ' . $trimestre . ' ' . $year,
+            'qrCode' => base64_encode($qrCode->getString()),
         ]);
 
-        return $pdf->download('brouillard_caisse_regie_T' . $trimestre . '_' . $year . '.pdf');
+        return $pdf->setOption('defaultFont', 'dejavu sans')
+            ->setOption('isRemoteEnabled', true)
+            ->setOption('isHtml5ParserEnabled', true)
+            ->setPaper('a4', 'landscape')
+            ->download('brouillard_caisse_regie_T' . $trimestre . '_' . $year . '.pdf');
     }
 
 
@@ -297,6 +326,7 @@ class ExportController extends Controller
         $centreType = $centre ? $centre->type_centre : 'Inconnu';
         $items = collect();
 
+        // Document processing function (THIS WAS MISSING)
         $processDocument = function ($document, $isFacture = true) use (&$items, $formattedCentreCode) {
             $date = $isFacture
                 ? Carbon::parse($document->date_facture)->format('d/m/Y')
@@ -386,6 +416,8 @@ class ExportController extends Controller
             }
         };
 
+        // [Rest of your existing code for fetching factures and bonAchats]
+
         $factures = Facture::with([
             'pieces' => function ($query) {
                 $query->withPivot('qte_f', 'prix_piece')->with('compteGeneral:code,libelle');
@@ -437,6 +469,24 @@ class ExportController extends Controller
         $totalAutres = $calculateTotal('autres');
         $grandTotal = $totalFourniture + $totalTravaux + $totalAutres;
 
+        // Generate QR code with quarter information
+        $qrContent = "ETAT TRIMESTRIEL\n";
+        $qrContent .= "Centre: $formattedCentreCode\n";
+        $qrContent .= "Trimestre: T$trimestre $year\n";
+        $qrContent .= "Période: " . $startDate->format('d/m/Y') . " - " . $endDate->format('d/m/Y') . "\n";
+        $qrContent .= "Total: " . number_format($grandTotal, 2, ',', ' ') . " DZD\n";
+        $qrContent .= "Généré le: " . Carbon::now()->format('d/m/Y H:i');
+
+        $qrCode = Builder::create()
+            ->writer(new PngWriter())
+            ->data($qrContent)
+            ->encoding(new Encoding('UTF-8'))
+            ->errorCorrectionLevel(ErrorCorrectionLevel::High)
+            ->size(150)
+            ->margin(10)
+            ->build();
+
+        // Generate PDF with QR code
         $pdf = PDF::loadView('exports.etat_trimestriel', [
             'items' => $items,
             'centreCode' => $formattedCentreCode,
@@ -447,10 +497,16 @@ class ExportController extends Controller
             'totalAutres' => number_format($totalAutres, 2, ',', ' '),
             'grandTotal' => number_format($grandTotal, 2, ',', ' '),
             'currentDate' => Carbon::now()->format('d/m/Y H:i'),
+            'qrCode' => base64_encode($qrCode->getString()),
         ]);
 
-        return $pdf->download('etat_trimestriel_' . $formattedCentreCode . '_T' . $trimestre . '_' . $year . '.pdf');
+        return $pdf->setOption('defaultFont', 'dejavu sans')
+            ->setOption('isRemoteEnabled', true)
+            ->setOption('isHtml5ParserEnabled', true)
+            ->setPaper('a4', 'landscape')
+            ->download('etat_trimestriel_' . $formattedCentreCode . '_T' . $trimestre . '_' . $year . '.pdf');
     }
+
 
     public function exportEtatTrimestrielAllCentres(Request $request)
     {
@@ -679,6 +735,23 @@ class ExportController extends Controller
             }
         }
 
+        // Generate QR code with consolidated information
+        $qrContent = "ÉTAT TRIMESTRIEL TOUS CENTRES\n";
+        $qrContent .= "Trimestre: T$trimestre $year\n";
+        $qrContent .= "Période: " . $startDate->format('d/m/Y') . " - " . $endDate->format('d/m/Y') . "\n";
+        $qrContent .= "Centres inclus: " . count($centres) . "\n";
+        $qrContent .= "Total global: " . number_format($globalTotals['grandTotal'], 2, ',', ' ') . " DZD\n";
+        $qrContent .= "Généré le: " . Carbon::now()->format('d/m/Y H:i');
+
+        $qrCode = Builder::create()
+            ->writer(new PngWriter())
+            ->data($qrContent)
+            ->encoding(new Encoding('UTF-8'))
+            ->errorCorrectionLevel(ErrorCorrectionLevel::High)
+            ->size(150)
+            ->margin(10)
+            ->build();
+
         $pdf = PDF::loadView('exports.etat_trimestriel_all_centres', [
             'allCentreData' => $allCentreData,
             'globalTotals' => array_map(function($total) {
@@ -686,10 +759,15 @@ class ExportController extends Controller
             }, $globalTotals),
             'trimestre' => 'Trimestre ' . $trimestre . ' ' . $year . ' (Du ' . $startDate->format('d/m/Y') . ' au ' . $endDate->format('d/m/Y') . ')',
             'currentDate' => Carbon::now()->format('d/m/Y H:i'),
+            'qrCode' => base64_encode($qrCode->getString()),
         ]);
 
-        return $pdf->download('etat_trimestriel_all_centres_T' . $trimestre . '_' . $year . '.pdf');
-}
+        return $pdf->setOption('defaultFont', 'dejavu sans')
+            ->setOption('isRemoteEnabled', true)
+            ->setOption('isHtml5ParserEnabled', true)
+            ->setPaper('a4', 'landscape')
+            ->download('etat_trimestriel_all_centres_T' . $trimestre . '_' . $year . '.pdf');
+    }
 
     public function exportDemandeDerogation($draNumber)
     {
@@ -848,7 +926,29 @@ class ExportController extends Controller
         $totalAutres = $calculateTotal('autres');
         $grandTotal = $totalFourniture + $totalTravaux + $totalAutres;
 
-        // Generate PDF
+
+        // Generate QR code content
+        $qrContent = "NAFTAL DRA DOCUMENT\n";
+        $qrContent .= "Référence: {$reference}\n";
+        $qrContent .= "Centre: {$formattedCentreCode}\n";
+        $qrContent .= "Date: " . Carbon::now()->format('d/m/Y') . "\n";
+        $qrContent .= "Total: " . number_format($grandTotal, 2, ',', ' ') . " DZD";
+
+        // Generate QR code
+        $qrCode = Builder::create()
+            ->writer(new PngWriter())
+            ->data($qrContent)
+            ->encoding(new Encoding('UTF-8'))
+            ->errorCorrectionLevel(ErrorCorrectionLevel::High)
+            ->size(200)
+            ->margin(10)
+            ->roundBlockSizeMode(RoundBlockSizeMode::Margin)
+            ->build();
+
+        // Get QR code as base64 string
+        $qrCodeBase64 = base64_encode($qrCode->getString());
+
+        // Generate PDF with QR code
         $pdf = PDF::loadView('exports.demande_derogation', [
             'items' => $items,
             'centreCode' => $formattedCentreCode,
@@ -859,12 +959,15 @@ class ExportController extends Controller
             'totalAutres' => number_format($totalAutres, 2, ',', ' '),
             'grandTotal' => number_format($grandTotal, 2, ',', ' '),
             'currentDate' => Carbon::now()->format('d/m/Y'),
+            'qrCode' => $qrCodeBase64, // Pass the QR code to view
         ]);
 
-        return $pdf->download('demande_derogation_' . $draNumber . '_' . Carbon::now()->format('Y-m-d') . '.pdf');
+        // Ensure proper PDF rendering
+        return $pdf->setOption('defaultFont', 'dejavu sans')
+            ->setOption('isRemoteEnabled', true)
+            ->setOption('isHtml5ParserEnabled', true)
+            ->download('demande_derogation_' . $draNumber . '_' . Carbon::now()->format('Y-m-d') . '.pdf');
     }
-
-
 
 
 

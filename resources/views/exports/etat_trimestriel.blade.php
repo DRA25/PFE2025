@@ -9,6 +9,7 @@
     <style>
         @page {
             size: landscape; /* Set page orientation to landscape */
+            margin-bottom: 30px; /* Add space for QR code */
         }
 
         body {
@@ -17,6 +18,7 @@
             text-align: center;
             margin: 0;
             padding: 0;
+            position: relative;
         }
 
         .t1 {
@@ -112,6 +114,27 @@
             border-top: 1px solid #ddd;
             margin: 15px 0;
         }
+
+        /* QR Code Styles */
+        .qr-code-container {
+            position: fixed;
+            right: 20px;
+            bottom: 10px;
+            text-align: center;
+            width: 120px;
+            z-index: 100;
+        }
+
+        .qr-code-container img {
+            width: 100px;
+            height: 100px;
+        }
+
+        .qr-code-label {
+            font-size: 7px;
+            margin-top: 2px;
+            color: #555;
+        }
     </style>
 </head>
 <body>
@@ -127,7 +150,6 @@
     <div class="info-item"><strong>Branche Carburants</strong></div>
     <div class="info-item"><strong>D.{{ strtoupper($centreType) }} DÉPT APPRO</strong></div>
     <div class="info-item"><strong>A MONSIEUR LE DIRECTEUR {{ strtoupper($centreType) }}</strong></div>
-
     <div class="info-item">Trimestre : {{ $trimestre }}</div>
 </div>
 
@@ -176,6 +198,12 @@
     </tr>
     </tbody>
 </table>
+
+<!-- QR Code positioned in bottom right -->
+<div class="qr-code-container">
+    <img src="data:image/png;base64,{{ $qrCode }}" alt="QR Code de vérification">
+    <div class="qr-code-label">Scan pour vérification</div>
+</div>
 
 <div class="divider"></div>
 <p class="footer-text">Généré le: {{ $currentDate }}</p>

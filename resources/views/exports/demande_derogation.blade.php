@@ -17,6 +17,7 @@
             text-align: center;
             margin: 0;
             padding: 0;
+            position: relative; /* Needed for absolute positioning of QR code */
         }
 
         .t1 {
@@ -33,10 +34,8 @@
             text-align: center;
         }
 
-        /* Adjusted for the new layout, assuming a placeholder image for Naftal logo */
         .ttd img {
             width: 90px;
-            /* If you have a real image path, you might need to adjust this */
         }
 
         h1 {
@@ -101,6 +100,7 @@
             margin-top: 50px;
             text-align: right;
             padding-right: 10px;
+            position: relative; /* For QR code positioning */
         }
 
         .footer-signatures p {
@@ -120,19 +120,35 @@
             margin: 15px 0;
         }
 
-        #signtab{
+        #signtab {
             width: 100%;
             margin-top: 50px;
             margin-left: 100px;
-
         }
 
+        /* QR Code Styles */
+        .qr-code-container {
+            position: absolute;
+            right: 20px;
+            bottom: 20px;
+            text-align: center;
+            width: 120px;
+        }
+
+        .qr-code-container img {
+            width: 100px;
+            height: 100px;
+        }
+
+        .qr-code-label {
+            font-size: 8px;
+            margin-top: 2px;
+        }
     </style>
 </head>
 <body>
 <table class="t1">
     <tr>
-        {{-- You'll need to replace 'images/Naftal.png' with the actual path to your logo if you have one --}}
         <td class="ttd" style="width:10%"><img src="{{ public_path('images/Naftal.png') }}" alt="Logo Naftal"></td>
         <td class="ttd" style="width:70%"><h1>Demande de Dérogation</h1></td>
         <td style="width:20%; font-size: 0.8rem;">Date: {{ $currentDate }}</td>
@@ -182,10 +198,6 @@
     </tbody>
 </table>
 
-
-
-
-
 <table id="signtab">
     <tr>
         <td style="width: 200px">Chef unité</td>
@@ -193,6 +205,12 @@
         <td style="width: 200px">DIRECTEUR {{ strtoupper($centreType) }}</td>
     </tr>
 </table>
+
+<!-- QR Code positioned in bottom right -->
+<div class="qr-code-container">
+    <img src="data:image/png;base64,{{ $qrCode }}" alt="QR Code">
+    <div class="qr-code-label">Scan pour vérification</div>
+</div>
 
 </body>
 </html>

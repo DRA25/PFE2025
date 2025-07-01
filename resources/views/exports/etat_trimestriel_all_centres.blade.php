@@ -4,12 +4,13 @@
     <meta charset="UTF-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>État Trimestriel- Tout les Centres</title>
+    <title>État Trimestriel - Tous les Centres</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
         @page {
-            size: landscape; /* Set page orientation to landscape */
+            size: landscape;
             margin: 20px;
+            margin-bottom: 40px; /* Extra space for QR code */
         }
 
         body {
@@ -18,6 +19,7 @@
             text-align: center;
             margin: 0;
             padding: 0;
+            position: relative; /* Ensure body is a positioned ancestor */
         }
 
         .t1 {
@@ -121,6 +123,33 @@
         .first-page {
             page-break-before: auto;
         }
+
+        /* QR Code Styles - Kept absolute positioning for placement within the last page */
+        .qr-code-container {
+            position: absolute;
+            right: 20px;
+            bottom: 10px;
+            text-align: center;
+            width: 120px;
+            z-index: 100;
+        }
+
+        .qr-code-container img {
+            width: 100px;
+            height: 100px;
+        }
+
+        .qr-code-label {
+            font-size: 7px;
+            margin-top: 2px;
+            color: #555;
+        }
+
+        .global-totals {
+            margin-top: 20px;
+            page-break-inside: avoid;
+            position: relative; /* Essential for positioning the QR code within this div */
+        }
     </style>
 </head>
 <body>
@@ -187,19 +216,25 @@
     </div>
 @endforeach
 
-<div class="divider"></div>
-<div class="info-section">
-    <table class="t2">
-        <thead>
-        <tr class="total-row">
-            <td colspan="2"><strong>TOTAUX GÉNÉRAUX</strong></td>
-            <td class="text-right"><strong>{{ $globalTotals['totalFourniture'] }}</strong></td>
-            <td class="text-right"><strong>{{ $globalTotals['totalTravaux'] }}</strong></td>
-            <td class="text-right"><strong>{{ $globalTotals['totalAutres'] }}</strong></td>
-            <td class="text-right" colspan="3"><strong>{{ $globalTotals['grandTotal'] }}</strong></td>
-        </tr>
-        </thead>
-    </table>
+<div class="global-totals page-break"> {{-- Added page-break to ensure this starts on a new page --}}
+    <div class="divider"></div>
+    <div class="info-section">
+        <table class="t2">
+            <thead>
+            <tr class="total-row">
+                <td colspan="2"><strong>TOTAUX GÉNÉRAUX</strong></td>
+                <td class="text-right"><strong>{{ $globalTotals['totalFourniture'] }}</strong></td>
+                <td class="text-right"><strong>{{ $globalTotals['totalTravaux'] }}</strong></td>
+                <td class="text-right"><strong>{{ $globalTotals['totalAutres'] }}</strong></td>
+                <td class="text-right" colspan="3"><strong>{{ $globalTotals['grandTotal'] }}</strong></td>
+            </tr>
+            </thead>
+        </table>
+    </div>
+    <div class="qr-code-container">
+        <img src="data:image/png;base64,{{ $qrCode }}" alt="QR Code de vérification">
+        <div class="qr-code-label">Scan pour vérification</div>
+    </div>
 </div>
 
 <p class="footer-text">Généré le: {{ $currentDate }}</p>

@@ -7,7 +7,7 @@ import {
 } from '@/components/ui/table'
 import { type BreadcrumbItem } from '@/types'
 import { Plus, Lock, FileText, Trash2, ArrowUpDown, Search } from 'lucide-vue-next'
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 
 const props = defineProps<{
     dras: Array<{
@@ -22,7 +22,9 @@ const props = defineProps<{
             montant_disponible: number;
         };
     }>,
-    id_centre: string
+    id_centre: string,
+    selectedTrimestre: string | null,
+    selectedYear: string | null,
 }>()
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -53,10 +55,52 @@ const yearOptions = computed(() => {
     return Array.from({ length: 6 }, (_, i) => (currentYear - i).toString());
 });
 
+// Function to calculate current trimester (utility function)
+const getCurrentTrimestre = () => {
+    const currentMonth = new Date().getMonth() + 1; // getMonth() is 0-indexed
+    if (currentMonth >= 1 && currentMonth <= 3) return '1';
+    if (currentMonth >= 4 && currentMonth <= 6) return '2';
+    if (currentMonth >= 7 && currentMonth <= 9) return '3';
+    if (currentMonth >= 10 && currentMonth <= 12) return '4';
+    return '';
+};
+
+// Set initial values based on props from backend or current date
+onMounted(() => {
+    if (props.selectedTrimestre && props.selectedYear) {
+        selectedTrimestre.value = props.selectedTrimestre;
+        selectedYear.value = props.selectedYear;
+    } else {
+        selectedTrimestre.value = ''; // Use empty string for 'Trimestre actuel'
+        selectedYear.value = new Date().getFullYear().toString();
+    }
+});
+
+// Function to perform the Inertia visit with current filters
+const applyFilters = () => {
+    router.get(route('scentre.dras.index'), {
+        trimestre: selectedTrimestre.value,
+        year: selectedYear.value,
+        etat: selectedEtat.value,
+        search: searchQuery.value,
+    }, {
+        preserveState: true,
+        preserveScroll: true,
+        only: ['dras', 'selectedTrimestre', 'selectedYear'],
+    });
+};
+
+// Watch for changes in selectedTrimestre or selectedYear and trigger backend request
+watch([selectedTrimestre, selectedYear], () => {
+    applyFilters();
+});
+
 const filteredDras = computed(() => {
-    let data = selectedEtat.value
-        ? props.dras.filter(dra => dra.etat === selectedEtat.value)
-        : props.dras;
+    let data = props.dras;
+
+    if (selectedEtat.value) {
+        data = data.filter(dra => dra.etat === selectedEtat.value);
+    }
 
     if (searchQuery.value) {
         const query = searchQuery.value.toLowerCase();
@@ -95,10 +139,12 @@ const sortedDrasComputed = computed(() => {
             return direction === 'asc' ? valA - valB : valB - valA;
         }
 
-        if (valA instanceof Date && valB instanceof Date) {
+        if (column === 'date_creation') {
+            const dateA = new Date(valA);
+            const dateB = new Date(valB);
             return direction === 'asc'
-                ? valA.getTime() - valB.getTime()
-                : valB.getTime() - valA.getTime();
+                ? dateA.getTime() - dateB.getTime()
+                : dateB.getTime() - dateA.getTime();
         }
 
         return direction === 'asc'
@@ -120,6 +166,21 @@ watch(
 );
 
 const hasActiveDra = computed(() => localDras.value.some(dra => dra.etat === 'actif'));
+
+// --- NEW COMPUTED PROPERTY FOR DISABLING THE BUTTON ---
+const isCurrentTrimestreSelected = computed(() => {
+    const currentYear = new Date().getFullYear().toString();
+    const currentTrimestre = getCurrentTrimestre(); // This returns '1', '2', '3', '4' or ''
+
+    // If 'Trimestre actuel' is selected (value is empty string), check if the current year is also selected
+    if (selectedTrimestre.value === '') {
+        return selectedYear.value === currentYear;
+    }
+
+    // If a specific trimester is selected, both trimester and year must match the current ones
+    return selectedTrimestre.value === currentTrimestre && selectedYear.value === currentYear;
+});
+// --- END NEW COMPUTED PROPERTY ---
 
 
 const exportAllDras = () => {
@@ -152,7 +213,10 @@ const requestSort = (column: string) => {
 };
 
 const createDra = () => {
-    if (hasActiveDra.value) return;
+    // Also add isCurrentTrimestreSelected check here
+    if (hasActiveDra.value || !isCurrentTrimestreSelected.value) {
+        return;
+    }
 
     const draCount = props.dras.filter(dra => dra.id_centre === props.id_centre).length;
     const newNDra = `${props.id_centre}-${String(draCount + 1).padStart(3, '0')}`;
@@ -200,6 +264,7 @@ const exportEtatTrimestriel = () => {
             <div class="flex items-center gap-2">
                 <select
                     v-model="selectedTrimestre"
+                    @change="applyFilters"
                     class="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                     <option
@@ -213,6 +278,7 @@ const exportEtatTrimestriel = () => {
 
                 <select
                     v-model="selectedYear"
+                    @change="applyFilters"
                     class="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                     <option
@@ -235,8 +301,6 @@ const exportEtatTrimestriel = () => {
                 </button>
             </div>
 
-
-
             <button
                 @click="exportAllDras"
                 class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition flex items-center gap-2"
@@ -249,10 +313,9 @@ const exportEtatTrimestriel = () => {
 
             <button
                 @click="createDra"
-                :disabled="hasActiveDra"
-                :class="{
-                    'bg-[#042B62] dark:bg-[#F3B21B] dark:text-[#042B62] text-white hover:bg-blue-900 dark:hover:bg-yellow-200 cursor-pointer': !hasActiveDra,
-                    'bg-gray-400 dark:bg-gray-600 text-gray-700 dark:text-gray-300 cursor-not-allowed': hasActiveDra
+                :disabled="hasActiveDra || !isCurrentTrimestreSelected" :class="{
+                    'bg-[#042B62] dark:bg-[#F3B21B] dark:text-[#042B62] text-white hover:bg-blue-900 dark:hover:bg-yellow-200 cursor-pointer': !hasActiveDra && isCurrentTrimestreSelected,
+                    'bg-gray-400 dark:bg-gray-600 text-gray-700 dark:text-gray-300 cursor-not-allowed': hasActiveDra || !isCurrentTrimestreSelected
                 }"
                 class="px-4 py-2 rounded-lg transition flex items-center gap-1 ml-auto"
             >
@@ -277,7 +340,7 @@ const exportEtatTrimestriel = () => {
                 <button
                     v-for="etat in etatOptions"
                     :key="etat"
-                    @click="selectedEtat = selectedEtat === etat ? null : etat"
+                    @click="selectedEtat = selectedEtat === etat ? null : etat; applyFilters();"
                     class="px-4 py-1 rounded-full border text-sm font-medium transition"
                     :class="{
                         'bg-blue-600 text-white': selectedEtat === etat,
