@@ -141,7 +141,6 @@ const deleteRemboursement = (id: number) => {
                             A Remboursé
                             <ArrowUpDown class="ml-2 h-4 w-4 inline-block" />
                         </TableHead>
-                        <TableHead>Actions</TableHead>
                     </TableRow>
                 </TableHeader>
 

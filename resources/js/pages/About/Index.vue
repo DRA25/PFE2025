@@ -21,7 +21,9 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'À propos', href: '/about' },
 ];
 
-const canEdit = computed(() => !!props.auth?.user);
+const canEdit = computed(() => {
+    return props.auth?.user?.roles?.some(role => role.name === 'admin');
+});
 </script>
 
 <template>
@@ -29,10 +31,8 @@ const canEdit = computed(() => !!props.auth?.user);
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="m-5 mr-2 bg-gray-100 dark:bg-gray-800 rounded-lg p-6 relative">
-
-            <div class="absolute top-6 right-6 flex gap-3">
+            <div v-if="canEdit" class="absolute top-6 right-6 flex gap-3">
                 <Link
-                    v-if="canEdit"
                     :href="route('about.edit')"
                     class="bg-[#042B62] dark:bg-[#F3B21B] dark:text-[#042B62] text-white px-4 py-2 rounded-lg hover:bg-blue-900 dark:hover:bg-yellow-200 transition flex items-center gap-2"
                 >
@@ -41,7 +41,6 @@ const canEdit = computed(() => !!props.auth?.user);
                 </Link>
 
                 <Link
-                    v-if="canEdit"
                     :href="route('about.create')"
                     class="bg-green-600 dark:bg-green-400 text-white dark:text-[#042B62] px-4 py-2 rounded-lg hover:bg-green-700 dark:hover:bg-green-300 transition flex items-center gap-2"
                 >
@@ -69,7 +68,7 @@ const canEdit = computed(() => !!props.auth?.user);
                             v-if="section.image_path"
                             :src="`/storage/${section.image_path}`"
                             alt="Image de la section"
-                            class="w-full md:w-1/2 rounded-lg border-2 border-[#042B62] dark:border-[#F3B21B] object-cover"
+                            class="w-full md:w-1/3 rounded-lg border-0 border-[#042B62] dark:border-[#F3B21B] object-cover"
                         />
                     </div>
                 </template>
