@@ -24,7 +24,8 @@ Route::middleware(['auth', 'role:service centre|admin'])->group(function () {
     Route::get('/export/demande-derogation/{draNumber}', [ExportController::class, 'exportDemandeDerogation'])
         ->name('export.demande-derogation');
 
-
+    Route::get('/export/bordereau-operations/{draNumber}', [ExportController::class, 'exportBordereauOperations'])
+        ->name('export.bordereau-operations');
 
 
 

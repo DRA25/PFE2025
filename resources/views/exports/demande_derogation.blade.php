@@ -121,7 +121,7 @@
         }
 
         #signtab {
-            width: 100%;
+            width: 90%;
             margin-top: 50px;
             margin-left: 100px;
         }
@@ -129,8 +129,8 @@
         /* QR Code Styles */
         .qr-code-container {
             position: absolute;
-            right: 20px;
-            bottom: 20px;
+            right: 0px;
+            bottom: 0px;
             text-align: center;
             width: 120px;
         }
@@ -200,9 +200,9 @@
 
 <table id="signtab">
     <tr>
-        <td style="width: 200px">Chef unité</td>
-        <td style="width: 200px">Chef Département</td>
-        <td style="width: 200px">DIRECTEUR {{ strtoupper($centreType) }}</td>
+        <td style="width: 150px">Chef unité</td>
+        <td style="width: 150px">Chef Département</td>
+        <td style="width: 150px">DIRECTEUR {{ strtoupper($centreType) }}</td>
     </tr>
 </table>
 

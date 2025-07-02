@@ -970,6 +970,303 @@ class ExportController extends Controller
     }
 
 
+    public function exportBordereauOperations($draNumber)
+    {
+        // Authenticate and validate user
+        $user = Auth::user();
+        if (!$user->id_centre) {
+            abort(403, 'User is not associated with any centre');
+        }
+
+        // Get centre info
+        $centreCode = $user->id_centre;
+        $formattedCentreCode = str_pad($centreCode, 4, '0', STR_PAD_LEFT);
+        $centre = Centre::find($centreCode);
+        $seuilcentre = $centre?->seuil_centre;
+        $centreType = $centre?->type_centre ?? 'Inconnu';
+
+        // Fetch DRA
+        $dra = DB::table('dras')
+            ->where('id_centre', $centreCode)
+            ->where('n_dra', $draNumber)
+            ->first();
+
+        if (!$dra) {
+            abort(404, 'DRA not found');
+        }
+
+        // Prepare
+        $operations = collect();
+        $lineNumber = 1;
+        $currentPage = 1;
+
+        // FACTURES
+        $factures = DB::table('factures')
+            ->where('n_dra', $dra->n_dra)
+            ->get();
+
+        foreach ($factures as $facture) {
+            $firstLine = true;
+
+            // PIECES
+            $pieces = DB::table('quantite__f_s')
+                ->where('n_facture', $facture->n_facture)
+                ->join('pieces', 'quantite__f_s.id_piece', '=', 'pieces.id_piece')
+                ->get();
+
+            foreach ($pieces as $piece) {
+                $quantity = $piece->qte_f ?? 1;
+                $price = $piece->prix_piece ?? 0;
+                $montant = ($price * $quantity) * (1 + ($piece->tva ?? 0) / 100);
+
+                // Add droit_timbre to first line only
+                if ($firstLine && $facture->droit_timbre > 0) {
+                    $montant += $facture->droit_timbre;
+                    $firstLine = false;
+                }
+
+                $operations->push([
+                    'page' => $currentPage,
+                    'ligne' => $lineNumber++,
+                    'n_enregistrement' => '',
+                    'reference_document' => '',
+                    'compte_general' => $piece->compte_general_code ?? '/',
+                    'compte_analytique' => $piece->compte_analytique_code ?? '/',
+                    'debit' => $montant,
+                    'credit' => '',
+                    'devise' => '',
+                    'libelle' => $piece->nom_piece ?? 'Pièce sans nom'
+                ]);
+            }
+
+            // PRESTATIONS
+            $prestations = DB::table('facture_prestation')
+                ->where('n_facture', $facture->n_facture)
+                ->join('prestations', 'facture_prestation.id_prest', '=', 'prestations.id_prest')
+                ->get();
+
+            foreach ($prestations as $prestation) {
+                $quantity = $prestation->qte_fpr ?? 1;
+                $price = $prestation->prix_prest ?? 0;
+                $montant = ($price * $quantity) * (1 + ($prestation->tva ?? 0) / 100);
+
+                // Add droit_timbre to first prestation if not yet added
+                if ($firstLine && $facture->droit_timbre > 0) {
+                    $montant += $facture->droit_timbre;
+                    $firstLine = false;
+                }
+
+                $operations->push([
+                    'page' => $currentPage,
+                    'ligne' => $lineNumber++,
+                    'n_enregistrement' => '',
+                    'reference_document' => '',
+                    'compte_general' => $prestation->compte_general_code ?? '/',
+                    'compte_analytique' => $prestation->compte_analytique_code ?? '/',
+                    'debit' => $montant,
+                    'credit' => '',
+                    'devise' => '',
+                    'libelle' => $prestation->nom_prest ?? 'Prestation sans nom'
+                ]);
+            }
+
+            // CHARGES
+            try {
+                $factureCharges = DB::table('facture_charge')
+                    ->where('n_facture', $facture->n_facture)
+                    ->join('charges', 'facture_charge.id_charge', '=', 'charges.id_charge')
+                    ->get();
+
+                foreach ($factureCharges as $charge) {
+                    $quantity = $charge->qte_charge ?? 1;
+                    $price = $charge->prix_charge ?? $charge->montant_charge ?? 0;
+                    $montant = ($price * $quantity) * (1 + ($charge->tva ?? 0) / 100);
+
+                    // Add droit_timbre to first charge if not yet added
+                    if ($firstLine && $facture->droit_timbre > 0) {
+                        $montant += $facture->droit_timbre;
+                        $firstLine = false;
+                    }
+
+                    $operations->push([
+                        'page' => $currentPage,
+                        'ligne' => $lineNumber++,
+                        'n_enregistrement' => '',
+                        'reference_document' => '',
+                        'compte_general' => $charge->compte_general_code ?? '/',
+                        'compte_analytique' => $charge->compte_analytique_code ?? '/',
+                        'debit' => $montant,
+                        'credit' => '',
+                        'devise' => '',
+                        'libelle' => $charge->nom_charge ?? 'Charge sans nom'
+                    ]);
+                }
+            } catch (\Exception $e) {
+                // skip
+            }
+        }
+
+        // BON ACHATS
+        $bonAchats = DB::table('bon_achats')
+            ->where('n_dra', $dra->n_dra)
+            ->get();
+
+        foreach ($bonAchats as $bonAchat) {
+            $pieces = DB::table('quantite_b_a_s')
+                ->where('n_ba', $bonAchat->n_ba)
+                ->join('pieces', 'quantite_b_a_s.id_piece', '=', 'pieces.id_piece')
+                ->get();
+
+            foreach ($pieces as $piece) {
+                $quantity = $piece->qte_ba ?? 1;
+                $price = $piece->prix_piece ?? 0;
+                $montant = ($price * $quantity) * (1 + ($piece->tva ?? 0) / 100);
+
+                $operations->push([
+                    'page' => $currentPage,
+                    'ligne' => $lineNumber++,
+                    'n_enregistrement' => '',
+                    'reference_document' => '',
+                    'compte_general' => $piece->compte_general_code ?? '/',
+                    'compte_analytique' => $piece->compte_analytique_code ?? '/',
+                    'debit' => $montant,
+                    'credit' => '',
+                    'devise' => '',
+                    'libelle' => $piece->nom_piece ?? 'Pièce sans nom'
+                ]);
+            }
+        }
+
+        // DIRECT CHARGES
+        try {
+            $directCharges = DB::table('charges')
+                ->where('n_dra', $dra->n_dra)
+                ->get();
+
+            foreach ($directCharges as $charge) {
+                $montant = $charge->montant_charge ?? 0;
+
+                $operations->push([
+                    'page' => $currentPage,
+                    'ligne' => $lineNumber++,
+                    'n_enregistrement' => '',
+                    'reference_document' => '',
+                    'compte_general' => $charge->compte_general_code ?? '/',
+                    'compte_analytique' => $charge->compte_analytique_code ?? '/',
+                    'debit' => $montant,
+                    'credit' => '',
+                    'devise' => '',
+                    'libelle' => $charge->nom_charge ?? 'Charge sans nom'
+                ]);
+            }
+        } catch (\Exception $e) {
+            // skip if direct charge relation fails
+        }
+
+        // Totals
+        $totalDebits = $operations->sum('debit');
+        $totalCredits = $totalDebits;
+
+        $operations->push([
+            'page' => '',
+            'ligne' => '',
+            'n_enregistrement' => '',
+            'reference_document' => '',
+            'compte_general' => '',
+            'compte_analytique' => 'TOTAUX',
+            'debit' => $totalDebits,
+            'credit' => $totalCredits,
+            'devise' => '',
+            'libelle' => "Remboursement DRA N°:{$draNumber}"
+        ]);
+
+        // Summary values
+        $montantRegie = $seuilcentre ?? 0;
+        $enCaisseDebut = $seuilcentre ?? 0;
+        $encaissementRemb = $dra->montant_rembourse ?? 0;
+        $depensesPeriode = $totalDebits;
+        $enCaisseFin = $centre?->montant_disponible ?? ($enCaisseDebut + $encaissementRemb - $depensesPeriode);
+
+        $dateDebut = $dra->date_creation ? Carbon::parse($dra->date_creation)->format('d/m/y') : '01/01/25';
+        $dateFin = Carbon::now()->format('d/m/y');
+        $periodeCompte = $dra->trimestre ?? $this->calculateTrimestre($dra->date_creation);
+
+        // Generate QR code content
+        $qrContent = "NAFTAL BORDEREAU OPERATIONS\n";
+        $qrContent .= "DRA Number: {$draNumber}\n";
+        $qrContent .= "Centre: {$formattedCentreCode}\n";
+        $qrContent .= "Date: " . Carbon::now()->format('d/m/Y') . "\n";
+        $qrContent .= "Total Debits: " . number_format($totalDebits, 2, ',', ' ') . " DZD\n";
+        $qrContent .= "Total Credits: " . number_format($totalCredits, 2, ',', ' ') . " DZD";
+
+        // Generate QR code
+        $qrCode = Builder::create()
+            ->writer(new PngWriter())
+            ->data($qrContent)
+            ->encoding(new Encoding('UTF-8'))
+            ->errorCorrectionLevel(ErrorCorrectionLevel::High)
+            ->size(200)
+            ->margin(10)
+            ->roundBlockSizeMode(RoundBlockSizeMode::Margin)
+            ->build();
+
+        // Get QR code as base64 string
+        $qrCodeBase64 = base64_encode($qrCode->getString());
+
+        // Generate PDF with QR code
+        $pdf = PDF::loadView('exports.bordereau_operations', [
+            'dra' => $dra,
+            'operations' => $operations,
+            'centreCode' => $formattedCentreCode,
+            'centreType' => $centreType,
+            'totalDebits' => $totalDebits,
+            'totalCredits' => $totalCredits,
+            'montantRegie' => $montantRegie,
+            'enCaisseDebut' => $enCaisseDebut,
+            'encaissementRemb' => $encaissementRemb,
+            'depensesPeriode' => $depensesPeriode,
+            'enCaisseFin' => $enCaisseFin,
+            'dateDebut' => $dateDebut,
+            'dateFin' => $dateFin,
+            'periodeCompte' => $periodeCompte,
+            'currentDate' => Carbon::now()->format('d/m/Y'),
+            'numeroRemboursement' => $dra->numero_remboursement ?? '3761002',
+            'qrCode' => $qrCodeBase64, // Pass the QR code to view
+        ]);
+
+        return $pdf->setOption('defaultFont', 'dejavu sans')
+            ->setOption('isRemoteEnabled', true)
+            ->setOption('isHtml5ParserEnabled', true)
+            ->setOption('enable_php', true)
+            ->setOption('dpi', 96)
+            ->setPaper('A4', 'landscape')
+            ->download('bordereau_operations_' . $draNumber . '_' . Carbon::now()->format('Y-m-d') . '.pdf');
+    }
+
+
+    /**
+     * Calculate trimestre based on date
+     */
+    private function calculateTrimestre($date)
+    {
+        if (!$date) {
+            return 'T1'; // Default to first trimestre
+        }
+
+        $month = Carbon::parse($date)->month;
+
+        if ($month >= 1 && $month <= 3) {
+            return 'T1';
+        } elseif ($month >= 4 && $month <= 6) {
+            return 'T2';
+        } elseif ($month >= 7 && $month <= 9) {
+            return 'T3';
+        } else {
+            return 'T4';
+        }
+    }
+
+
 
 
 
