@@ -25,7 +25,8 @@ const props = defineProps<{
         remboursement: { n_remb: string,dra: { n_dra: string } },
         montant_enc: number,
         date_enc: string
-    }>
+    }>,
+    userCentre: string
 }>()
 
 const searchQuery = ref('')
@@ -77,6 +78,10 @@ const sortedEncaissements = computed(() => {
     return data
 })
 
+const filteredEncaissements = computed(() => {
+    // This is just for extra safety - the filtering should be done in the backend
+    return props.encaissements.filter(enc => enc.centre.id_centre === props.userCentre);
+});
 
 </script>
 
@@ -135,8 +140,8 @@ const sortedEncaissements = computed(() => {
                 <TableBody>
                     <TableRow
                         v-for="encaissement in sortedEncaissements"
-                        :key="encaissement.id"
-                        class="hover:bg-gray-300 dark:hover:bg-gray-900"
+                    :key="encaissement.id"
+                    class="hover:bg-gray-300 dark:hover:bg-gray-900"
                     >
                         <TableCell>{{ encaissement.centre.adresse_centre }}</TableCell>
                         <TableCell>{{ encaissement.remboursement.n_remb }}</TableCell>

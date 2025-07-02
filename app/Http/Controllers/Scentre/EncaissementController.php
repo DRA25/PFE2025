@@ -15,10 +15,15 @@ class EncaissementController extends Controller
 {
     public function index()
     {
+        $userCentre = Auth::user()->id_centre;
+
         $encaissements = Encaissement::with([
             'centre',
             'remboursement.dra',
-        ])->latest()->get();
+        ])
+            ->where('id_centre', $userCentre) // Filter by user's centre
+            ->latest()
+            ->get();
 
         return Inertia::render('Encaissements/Index', ['encaissements' => $encaissements]);
     }
@@ -26,13 +31,13 @@ class EncaissementController extends Controller
     public function create()
     {
         $centres = Centre::all();
+        $userCentre = Auth::user()->id_centre;
 
-        $remboursements = Remboursement::select('remboursements.n_remb', 'dras.total_dra','dras.n_dra')
+        $remboursements = Remboursement::select('remboursements.n_remb', 'dras.total_dra', 'dras.n_dra')
             ->join('dras', 'remboursements.n_dra', '=', 'dras.n_dra')
+            ->where('dras.id_centre', $userCentre) // Filter by user's centre
             ->whereDoesntHave('encaissements')
             ->get();
-
-        $userCentre = Auth::user()->id_centre;
 
         return Inertia::render('Encaissements/Create', [
             'centres' => $centres,

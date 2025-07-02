@@ -35,6 +35,8 @@ const montantEncaissement = computed(() => {
     return remb ? remb.total_dra : 0
 })
 
+
+
 function submit() {
     form.post('/encaissements', {
         data: {
