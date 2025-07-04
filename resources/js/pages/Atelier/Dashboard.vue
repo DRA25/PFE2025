@@ -21,7 +21,7 @@ const getIconForPath = (path: string) => {
 </script>
 
 <template>
-    <Head title="Atelier Dashboard" />
+    <Head title="Atelier" />
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="min-h-screen bg-gradient-to-br from-white to-blue-50 dark:from-slate-900 dark:to-gray-900 font-inter text-gray-800 dark:text-gray-200 p-4 sm:p-6 lg:p-8">
             <div class="max-w-6xl mx-auto bg-white dark:bg-gray-800 rounded-3xl shadow-2xl overflow-hidden transition-all duration-500">

@@ -29,7 +29,9 @@ class Dra extends Model
         'date_creation',
         'etat',
         'total_dra',
+        'motif',
         'created_at'
+
     ];
 
     public function factures()

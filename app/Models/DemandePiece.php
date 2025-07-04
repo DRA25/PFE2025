@@ -20,6 +20,7 @@ class DemandePiece extends Model
         'qte_demandep',
         'id_magasin',
         'id_atelier',
+        'motif'
     ];
 
     public function atelier()

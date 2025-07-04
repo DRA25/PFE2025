@@ -18,6 +18,7 @@ return new class extends Migration
             $table->date('date_creation');
             $table->enum('etat', ['actif', 'cloture','refuse','accepte','rembourse'])->default('actif');
             $table->decimal('total_dra');
+            $table->text('motif')->nullable();
             $table->timestamp('created_at')->nullable();
         });
     }

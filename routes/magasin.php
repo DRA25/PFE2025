@@ -2,7 +2,6 @@
 
 
 use App\Http\Controllers\Atelier\PieceController;
-use App\Http\Controllers\Magasin\DMPieceController;
 use App\Http\Controllers\Magasin\MagasinController;
 use App\Http\Controllers\Magasin\MagasinDemandePieceController;
 use App\Http\Controllers\Magasin\QuantiteStockeController;
@@ -15,6 +14,8 @@ use Inertia\Inertia;
 
 // Magasin routes
 Route::middleware(['auth', 'verified', 'role:service magasin|admin'])->group(function () {
+
+
 
     Route::prefix('magasin/quantites')->name('magasin.quantites.')->middleware(['auth', 'verified', 'role:service magasin|admin'])->group(function () {
         Route::get('/', [QuantiteStockeController::class, 'index'])->name('index');
@@ -42,15 +43,7 @@ Route::put('/{piece}', [PieceController::class, 'update'])->name('magasin.pieces
 Route::delete('/{piece}', [PieceController::class, 'destroy'])->name('magasin.pieces.destroy');
 });
 
-// Demandes pieces routes for magasin - scoped by centre
-Route::prefix('magasin/demandes-pieces')->group(function () {
-Route::get('/', [DMPieceController::class, 'index'])->name('magasin.demandes-pieces.index');
-Route::get('/create', [DMPieceController::class, 'create'])->name('magasin.demandes-pieces.create');
-Route::post('/', [DMPieceController::class, 'store'])->name('magasin.demandes-pieces.store');
-Route::get('/{demande_piece}/edit', [DMPieceController::class, 'edit'])->name('magasin.demandes-pieces.edit');
-Route::put('/{demande_piece}', [DMPieceController::class, 'update'])->name('magasin.demandes-pieces.update');
-Route::delete('/{demande_piece}', [DMPieceController::class, 'destroy'])->name('magasin.demandes-pieces.destroy');
-});
+
 
 
 // New MagasinDemandePieceController routes (specific to magasin's own demandes)

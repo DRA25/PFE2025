@@ -15,6 +15,7 @@ defineProps<{
         qte_demandep: number;
         id_magasin: number;
         id_atelier: number;
+        motif?: string | null; // Added motif prop
         piece: {
             nom_piece: string;
         };
@@ -25,6 +26,7 @@ defineProps<{
             adresse_atelier: string;
         };
     }[];
+    etatOptions: string[]; // Added prop for etat_dp options
 }>();
 
 const page = usePage();
@@ -47,8 +49,6 @@ const searchQuery = ref('');
 const sortConfig = ref<{ column: string; direction: 'asc' | 'desc' } | null>(null);
 const selectedEtat = ref<string | null>(null);
 
-const etatOptions = ['En attente', 'Livrée', 'Validée', 'Refusée'];
-
 const requestSort = (column: string) => {
     if (!sortConfig.value || sortConfig.value.column !== column) {
         sortConfig.value = { column, direction: 'asc' };
@@ -67,7 +67,8 @@ const sortedDemandes = computed(() => {
             d.piece?.nom_piece.toLowerCase().includes(query) ||
             d.qte_demandep.toString().includes(query) ||
             d.magasin?.adresse_magasin?.toLowerCase().includes(query) ||
-            d.atelier?.adresse_atelier?.toLowerCase().includes(query)
+            d.atelier?.adresse_atelier?.toLowerCase().includes(query) ||
+            (d.motif ?? '').toLowerCase().includes(query) // Include motif in search
         );
     }
 
@@ -119,7 +120,7 @@ function deleteDemande(id_dp: number) {
                 <input
                     v-model="searchQuery"
                     type="text"
-                    placeholder="Rechercher par état, pièce, atelier ou magasin..."
+                    placeholder="Rechercher par état, pièce, atelier, magasin ou motif..."
                     class="w-full bg-gray-100 px-4 py-2 rounded-md border border-gray-200 dark:border-gray-700 dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
                 />
             </div>
@@ -141,6 +142,7 @@ function deleteDemande(id_dp: number) {
 
             <!-- Moved filter tags here below the title -->
             <div class="flex flex-wrap gap-2 px-5 pb-2">
+                <!-- Use the etatOptions prop here -->
                 <button
                     v-for="etat in etatOptions"
                     :key="etat"
@@ -179,6 +181,9 @@ function deleteDemande(id_dp: number) {
                         <TableHead v-if="isServiceAtelier" class="cursor-pointer" @click="requestSort('atelier')">
                             Adresse Atelier <ArrowUpDown class="ml-2 h-4 w-4 inline-block" />
                         </TableHead>
+                        <TableHead class="cursor-pointer" @click="requestSort('motif')">
+                            Motif <ArrowUpDown class="ml-2 h-4 w-4 inline-block" />
+                        </TableHead>
                         <TableHead>Actions</TableHead>
                     </TableRow>
                 </TableHeader>
@@ -192,6 +197,7 @@ function deleteDemande(id_dp: number) {
                         <TableCell>{{ demande.qte_demandep }}</TableCell>
                         <TableCell v-if="isServiceMagasin">{{ demande.magasin?.adresse_magasin || 'N/A' }}</TableCell>
                         <TableCell v-if="isServiceAtelier">{{ demande.atelier?.adresse_atelier || 'N/A' }}</TableCell>
+                        <TableCell>{{ demande.motif || 'N/A' }}</TableCell>
                         <TableCell class="flex space-x-2">
                             <Link
                                 :href="route('atelier.demandes-pieces.edit', demande.id_dp)"
@@ -214,4 +220,3 @@ function deleteDemande(id_dp: number) {
         </div>
     </AppLayout>
 </template>
-

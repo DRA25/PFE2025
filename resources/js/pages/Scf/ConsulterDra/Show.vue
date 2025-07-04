@@ -4,6 +4,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { TableBody, TableCell, TableHead, TableHeader, TableRow, Table } from '@/components/ui/table';
 import { ArrowLeft } from 'lucide-vue-next';
+import { watch } from 'vue'; // Import watch for reactivity
 
 const props = defineProps<{
     dra: {
@@ -11,12 +12,10 @@ const props = defineProps<{
         date_creation: string;
         etat: string;
         total_dra: number;
+        motif?: string | null; // Added motif prop to receive existing motif from backend
         centre: {
             seuil_centre: number;
             montant_disponible: number;
-        };
-        errors?: {
-            etat?: string;
         };
     };
     factures: Array<{
@@ -33,11 +32,24 @@ const props = defineProps<{
         pieces: Array<{ id_piece: number; nom_piece: string; tva: number; pivot: { qte_ba: number; prix_piece: number } }>;
         // Removed prestations and charges from BonAchat type as per new schema
     }>;
+    errors: Record<string, string>; // Explicitly define errors prop for Inertia's automatic error handling
 }>();
 
 const form = useForm({
-    etat: props.dra.etat.toLowerCase()
+    etat: props.dra.etat.toLowerCase(), // Initialize form.etat with the current DRA's etat
+    motif: props.dra.motif || null, // Initialize form.motif with the current DRA's motif or null
 });
+
+// Watch for changes in the 'etat' field to conditionally clear the 'motif'
+watch(() => form.etat, (newEtat) => {
+    if (newEtat !== 'refuse') {
+        form.motif = null; // Clear motif if etat is not 'refuse'
+        console.log('Motif cleared by watch function. Current form.motif:', form.motif); // Added log
+    } else {
+        console.log('Etat is "refuse", motif not cleared. Current form.motif:', form.motif); // Added log
+    }
+});
+
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Service Coordination Finnanciere', href: route('scf.index') },
@@ -55,27 +67,31 @@ const submit = () => {
     form.put(route('scf.dras.update', { dra: props.dra.n_dra }), {
         preserveScroll: true,
         onSuccess: () => {
+            console.log('DRA updated successfully!');
+            // Redirect to the index page after successful update
             router.visit(route('scf.dras.index'), {
                 preserveScroll: true,
-                preserveState: true
+                preserveState: false // This ensures a fresh page load
             });
+        },
+        onError: (errors) => {
+            console.error('Form submission errors:', errors);
         }
     });
 };
 
-// Updated calculation functions to correctly get prices and quantities from pivot
+
 const getItemPrice = (item: any, type: 'pieces' | 'prestations' | 'charges') => {
     if (type === 'pieces') return item.pivot?.prix_piece || 0;
     if (type === 'prestations') return item.pivot?.prix_prest || 0;
-    return item.pivot?.prix_charge || 0; // Corrected: prix_charge is on pivot
+    return item.pivot?.prix_charge || 0;
 };
 
 const getItemQuantity = (item: any, type: 'pieces' | 'prestations' | 'charges', isBonAchat: boolean) => {
     if (isBonAchat) {
         if (type === 'pieces') return item.pivot?.qte_ba || 0;
-        // BonAchat no longer has prestations or charges, so these cases are simplified
-        return 0; // Should not be reached for bonAchats type 'prestations' or 'charges'
-    } else { // For Facture
+        return 0;
+    } else {
         if (type === 'pieces') return item.pivot?.qte_f || 0;
         if (type === 'prestations') return item.pivot?.qte_fpr || 0;
         return item.pivot?.qte_fc || 0;
@@ -84,7 +100,6 @@ const getItemQuantity = (item: any, type: 'pieces' | 'prestations' | 'charges', 
 
 const calculateItemTypeHtTotal = (items: any[] = [], type: 'pieces' | 'prestations' | 'charges', isBonAchat: boolean = false) => {
     if (!items || items.length === 0) return 0;
-
     return items.reduce((sum, item) => {
         const price = getItemPrice(item, type);
         const quantity = getItemQuantity(item, type, isBonAchat);
@@ -94,7 +109,6 @@ const calculateItemTypeHtTotal = (items: any[] = [], type: 'pieces' | 'prestatio
 
 const calculateItemTypeTVA = (items: any[] = [], type: 'pieces' | 'prestations' | 'charges', isBonAchat: boolean = false) => {
     if (!items || items.length === 0) return 0;
-
     return items.reduce((sum, item) => {
         const price = getItemPrice(item, type);
         const quantity = getItemQuantity(item, type, isBonAchat);
@@ -111,7 +125,6 @@ const calculateFullTotal = (items: {
 }, isBonAchat: boolean = false) => {
     let total = 0;
 
-    // Pieces (using pivot price)
     total += (items.pieces || []).reduce((sum, item) => {
         const price = getItemPrice(item, 'pieces');
         const quantity = getItemQuantity(item, 'pieces', isBonAchat);
@@ -119,7 +132,6 @@ const calculateFullTotal = (items: {
         return sum + (price * quantity * (1 + (tvaRate / 100)));
     }, 0);
 
-    // Prestations (using pivot price) - Only for Facture
     if (!isBonAchat && items.prestations) {
         total += items.prestations.reduce((sum, item) => {
             const price = getItemPrice(item, 'prestations');
@@ -129,17 +141,15 @@ const calculateFullTotal = (items: {
         }, 0);
     }
 
-    // Charges (using pivot price) - Only for Facture
     if (!isBonAchat && items.charges) {
         total += items.charges.reduce((sum, item) => {
             const price = getItemPrice(item, 'charges');
-            const quantity = getItemQuantity(item, 'charges', isBonAachat);
+            const quantity = getItemQuantity(item, 'charges', isBonAchat);
             const tvaRate = item.tva || 0;
             return sum + (price * quantity * (1 + (tvaRate / 100)));
         }, 0);
     }
 
-    // Droit timbre (only for factures)
     if (!isBonAchat && items.droit_timbre !== undefined) {
         total += items.droit_timbre || 0;
     }
@@ -165,12 +175,18 @@ const calculateFullTotal = (items: {
 
                     <div>
                         <p class="text-sm text-gray-500 dark:text-gray-400">Date de création</p>
-                        <p class="text-gray-900 dark:text-gray-100">{{ dra.date_creation }}</p>
+                        <p class="text-900 dark:text-gray-100">{{ dra.date_creation }}</p>
                     </div>
 
                     <div>
                         <p class="text-sm text-gray-500 dark:text-gray-400">État</p>
                         <p class="text-gray-900 dark:text-gray-100">{{ dra.etat }}</p>
+                    </div>
+
+                    <!-- Display Motif if available and DRA is refused -->
+                    <div v-if="dra.etat.toLowerCase() === 'refuse' && dra.motif">
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Motif du Refus</p>
+                        <p class="text-gray-900 dark:text-gray-100">{{ dra.motif }}</p>
                     </div>
 
                     <div>
@@ -215,7 +231,7 @@ const calculateFullTotal = (items: {
                             <select
                                 v-model="form.etat"
                                 class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
-                                :class="{ 'border-red-500': props.dra.errors?.etat }"
+                                :class="{ 'border-red-500': form.errors.etat }"
                                 :disabled="form.processing"
                             >
                                 <option
@@ -226,8 +242,26 @@ const calculateFullTotal = (items: {
                                     {{ option.label }}
                                 </option>
                             </select>
-                            <p v-if="props.dra.errors?.etat" class="mt-2 text-sm text-red-600">
-                                {{ props.dra.errors.etat }}
+                            <p v-if="form.errors.etat" class="mt-2 text-sm text-red-600">
+                                {{ form.errors.etat }}
+                            </p>
+                        </div>
+
+                        <!-- Motif field, conditionally rendered -->
+                        <div v-if="form.etat === 'refuse'" class="mb-4">
+                            <label for="motif" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Motif du refus
+                            </label>
+                            <textarea
+                                id="motif"
+                                v-model="form.motif"
+                                rows="3"
+                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
+                                :class="{ 'border-red-500': form.errors.motif }"
+                                placeholder="Veuillez préciser le motif du refus"
+                            ></textarea>
+                            <p v-if="form.errors.motif" class="mt-2 text-sm text-red-600">
+                                {{ form.errors.motif }}
                             </p>
                         </div>
 
@@ -391,7 +425,7 @@ const calculateFullTotal = (items: {
                                             {{ calculateItemTypeHtTotal(bon.pieces, 'pieces', true).toFixed(2) }} DA
                                         </div>
                                     </template>
-                                    </TableCell>
+                                </TableCell>
                                 <TableCell>
                                     <template v-if="bon.pieces?.length > 0">
                                         <div class="text-sm">
@@ -412,15 +446,7 @@ const calculateFullTotal = (items: {
 
 
 
-            <div class="mt-10">
-                <Link
-                    :href="route('scf.dras.index')"
-                    class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-400 transition inline-flex items-center space-x-1"
-                >
-                    <ArrowLeft class="w-4 h-4" />
-                    <span>Retour</span>
-                </Link>
-            </div>
+
         </div>
     </AppLayout>
-</template>
+    </template>

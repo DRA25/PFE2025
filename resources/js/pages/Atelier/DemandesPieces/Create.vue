@@ -8,9 +8,18 @@ import { useForm } from '@inertiajs/vue3';
 
 const page = usePage();
 
+// Define props including etatOptions (though etatOptions is no longer used for this form)
+defineProps<{
+    pieces: {
+        id_piece: number;
+        nom_piece: string;
+    }[];
+    // etatOptions: string[]; // Removed as etat_dp is no longer a user-selectable field in creation
+}>();
+
 const form = useForm({
     date_dp: new Date().toISOString().split('T')[0],
-    etat_dp: 'En attente',
+    // etat_dp field removed as it will be set by default in the backend
     id_piece: '',
     qte_demandep: 1,
     // id_magasin: null, // Removed - keeping original fields
@@ -22,13 +31,6 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Demandes de Pièces', href: route('atelier.demandes-pieces.index') },
     { title: 'Créer', href: route('atelier.demandes-pieces.create') }
 ];
-
-defineProps<{
-    pieces: {
-        id_piece: number;
-        nom_piece: string;
-    }[];
-}>();
 
 // Original submit function retained
 function submit() {
@@ -64,6 +66,7 @@ function submit() {
                     />
                     <div v-if="form.errors.date_dp" class="text-red-500 text-sm">{{ form.errors.date_dp }}</div>
                 </div>
+
 
                 <div class="space-y-2">
                     <label for="qte_demandep" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Quantité</label>

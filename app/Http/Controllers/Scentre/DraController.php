@@ -8,11 +8,15 @@ use App\Models\Centre;
 use App\Models\Dra;
 use App\Models\Facture;
 use Barryvdh\DomPDF\Facade\Pdf;
+
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
+use Exception;
 use Inertia\Inertia;
 
 
@@ -180,6 +184,7 @@ class DraController extends Controller
                 'etat' => $dra->etat,
                 'total_dra' => $dra->total_dra,
                 'created_at' => $dra->created_at?->toISOString(),
+                'motif' => $dra->motif,
                 'centre' => [
                     'seuil_centre' => $dra->centre->seuil_centre,
                     'montant_disponible' => $dra->centre->montant_disponible,
@@ -253,15 +258,45 @@ class DraController extends Controller
 
     public function update(Request $request, Dra $dra)
     {
-        $validated = $request->validate([
-            'etat' => 'required|string|in:cloture,refuse,accepte',
-        ]);
+        try {
+            // Log the incoming request data for debugging
+            Log::info('DRA Update Request Data (DraController):', $request->all());
 
-        $dra->update($validated);
+            // Validate the request data
+            $validatedData = $request->validate([
+                'etat' => ['required', 'string', Rule::in(['cloture', 'refuse', 'accepte'])],
+                'motif' => ['nullable', 'string', 'max:500', 'required_if:etat,refuse'], // Motif is required if etat is 'refuse'
+            ]);
 
-        return redirect()->back()->with('success', 'État du DRA mis à jour avec succès.');
+            // Log the validated data for debugging
+            Log::info('DRA Update Validated Data (DraController):', $validatedData);
+
+            // Update the DRA's etat and motif
+            $dra->etat = $validatedData['etat'];
+            $dra->motif = $validatedData['motif'] ?? null; // Set motif to null if not provided or not 'refuse'
+
+            // Save the changes to the database
+            $dra->save();
+
+            // Log success
+            Log::info('DRA ' . $dra->n_dra . ' updated successfully to etat: ' . $dra->etat . ' and motif: ' . ($dra->motif ?? 'N/A'));
+
+            // Redirect to the index page with a success message
+            return redirect()->route('scf.dras.index')->with('success', 'DRA mis à jour avec succès.');
+
+        } catch (ValidationException $e) {
+            // If validation fails, Inertia will automatically send errors to the frontend.
+            // Log them here for server-side debugging.
+            Log::error('Validation error updating DRA ' . $dra->n_dra . ': ' . json_encode($e->errors()));
+            throw $e; // Re-throw to let Inertia handle the response
+        } catch (Exception $e) {
+            // Catch any other unexpected errors
+            Log::error('Error updating DRA ' . $dra->n_dra . ': ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+            // You might want to return a more generic error response for unexpected issues
+            return redirect()->back()->withErrors(['error' => 'Une erreur inattendue est survenue lors de la mise à jour du DRA.']);
+        }
+    
     }
-
 
     public function destroy($n_dra)
     {
@@ -327,7 +362,7 @@ class DraController extends Controller
     }
 
 
-    public function close(Dra $dra)
+    public function close(Request $request, Dra $dra) // Inject Request
     {
         $userCentreId = Auth::user()->id_centre;
 
@@ -343,7 +378,15 @@ class DraController extends Controller
             ]);
         }
 
-        $dra->update(['etat' => 'cloture']);
+        // Get the motif from the request, defaulting to null
+        // This ensures that if the frontend sends motif: null, it's captured.
+        // If the motif is not sent, it will also default to null.
+        $motif = $request->input('motif', null);
+
+        $dra->update([
+            'etat' => 'cloture',
+            'motif' => $motif, // Set the motif based on the request (will be null from frontend)
+        ]);
 
         return redirect()->route('scentre.dras.index')
             ->with('success', 'DRA clôturé avec succès');

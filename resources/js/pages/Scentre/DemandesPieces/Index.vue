@@ -29,6 +29,7 @@ const props = defineProps<{
             centre?: { id_centre: number; nom_centre?: string };
         };
     }>;
+    etatOptions: string[]; // Add etatOptions as a prop
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -36,8 +37,8 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Demandes de Pièces', href: route('scentre.demandes-pieces.index') }
 ];
 
-const etatOptions = ['En attente', 'Validée', 'Refusée', 'Livrée'];
-const selectedEtat = ref<string | null>(null);
+// Initialize selectedEtat to 'non disponible' to match the backend's default filter
+const selectedEtat = ref<string | null>('non disponible');
 
 const searchQuery = ref('');
 
@@ -45,9 +46,11 @@ const sortConfig = ref<{ column: string; direction: 'asc' | 'desc' } | null>(nul
 
 // First filter by state, then by search query
 const filteredDemandes = computed(() => {
-    let data = selectedEtat.value
-        ? props.demandes.filter(d => d.etat_dp === selectedEtat.value)
-        : props.demandes;
+    let data = props.demandes;
+
+    if (selectedEtat.value) {
+        data = data.filter(d => d.etat_dp === selectedEtat.value);
+    }
 
     if (searchQuery.value) {
         const query = searchQuery.value.toLowerCase();
@@ -73,8 +76,9 @@ const sortedDemandes = computed(() => {
         const valueB = b[column as keyof typeof b];
 
         if (column === 'date_dp') {
-            const dateA = new Date(valueA.replace(/(\d{2})\/(\d{2})\/(\d{4})/, '$3-$2-$1')).getTime();
-            const dateB = new Date(valueB.replace(/(\d{2})\/(\d{2})\/(\d{4})/, '$3-$2-$1')).getTime();
+            // Assuming date_dp is in 'YYYY-MM-DD' format from backend, no need for replace
+            const dateA = new Date(valueA).getTime();
+            const dateB = new Date(valueB).getTime();
             return direction === 'asc' ? dateA - dateB : dateB - dateA;
         } else if (column === 'id_dp' || column === 'qte_demandep') {
             return direction === 'asc'
@@ -98,9 +102,10 @@ const requestSort = (column: string) => {
 };
 
 const exportUrl = computed(() => {
+    // Corrected to use 'export-full-list-pdf' route which accepts 'etat' parameter
     return selectedEtat.value
-        ? route('scentre.demandes-pieces.export-pdf', { etat: selectedEtat.value })
-        : route('scentre.demandes-pieces.export-pdf');
+        ? route('scentre.demandes-pieces.export-full-list-pdf', { etat: selectedEtat.value })
+        : route('scentre.demandes-pieces.export-full-list-pdf');
 });
 </script>
 
@@ -135,20 +140,7 @@ const exportUrl = computed(() => {
                 </h1>
             </div>
 
-            <div class="flex flex-wrap gap-2 px-5 pb-2">
-                <button
-                    v-for="etat in etatOptions"
-                    :key="etat"
-                    @click="selectedEtat = selectedEtat === etat ? null : etat"
-                    class="px-4 py-1 rounded-full border text-sm font-medium transition"
-                    :class="{
-                        'bg-blue-600 text-white': selectedEtat === etat,
-                        'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200': selectedEtat !== etat
-                    }"
-                >
-                    {{ etat }}
-                </button>
-            </div>
+
 
             <Table class="m-3 w-39/40">
                 <TableHeader>
@@ -211,6 +203,11 @@ const exportUrl = computed(() => {
                                     <Eye class="w-4 h-4" />
                                 </span>
                             </Link>
+                        </TableCell>
+                    </TableRow>
+                    <TableRow v-if="sortedDemandes.length === 0">
+                        <TableCell colspan="8" class="text-center py-4 text-gray-500 dark:text-gray-400">
+                            Aucune demande de pièce trouvée.
                         </TableCell>
                     </TableRow>
                 </TableBody>

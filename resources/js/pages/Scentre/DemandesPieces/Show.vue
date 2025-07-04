@@ -12,13 +12,14 @@ const props = defineProps<{
         piece?: { nom_piece: string };
         magasin?: {
             adresse_magasin: string;
-            centre?: { id_centre: number };
+            centre?: { id_centre: number; nom_centre?: string; }; // Added nom_centre for consistency
         };
         atelier?: {
             adresse_atelier: string;
-            centre?: { id_centre: number };
+            centre?: { id_centre: number; nom_centre?: string; }; // Added nom_centre for consistency
         };
     };
+    etatOptions: string[]; // Added prop for etat_dp options
 }>();
 
 const form = useForm({
@@ -70,7 +71,9 @@ const breadcrumbs: BreadcrumbItem[] = [
                         <p class="text-sm text-gray-500 dark:text-gray-400">Centre</p>
                         <p class="text-gray-900 dark:text-gray-100">
                             {{
-                                demande.magasin?.centre?.id_centre
+                                demande.magasin?.centre?.nom_centre // Display nom_centre
+                                || demande.magasin?.centre?.id_centre
+                                || demande.atelier?.centre?.nom_centre // Display nom_centre
                                 || demande.atelier?.centre?.id_centre
                                 || 'N/A'
                             }}
@@ -86,6 +89,17 @@ const breadcrumbs: BreadcrumbItem[] = [
                         <p class="text-sm text-gray-500 dark:text-gray-400">Nom de la Pièce</p>
                         <p class="text-gray-900 dark:text-gray-100">{{ demande.piece?.nom_piece || 'N/A' }}</p>
                     </div>
+
+                    <div>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Statut</p>
+                        <p class="text-gray-900 dark:text-gray-100" :class="{
+                            'text-yellow-600 dark:text-yellow-400': demande.etat_dp === 'en attente' || demande.etat_dp === 'non disponible',
+                            'text-green-600 dark:text-green-400': demande.etat_dp === 'livre',
+                            'text-red-600 dark:text-red-400': demande.etat_dp === 'refuse'
+                        }">
+                            {{ demande.etat_dp }}
+                        </p>
+                    </div>
                 </div>
 
                 <div>
@@ -100,9 +114,10 @@ const breadcrumbs: BreadcrumbItem[] = [
                             </label>
                             <select v-model="form.etat_dp"
                                     class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-[#042B62] focus:border-[#042B62] dark:bg-gray-700 dark:text-white">
-                                <option value="En attente">En attente</option>
-                                <option value="Refusée">Refusée</option>
-                                <option value="Livrée">Livrée</option>
+                                <!-- Dynamically populate options from etatOptions prop -->
+                                <option v-for="option in etatOptions" :key="option" :value="option">
+                                    {{ option }}
+                                </option>
                             </select>
                         </div>
 

@@ -2,6 +2,7 @@
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
+import { watch } from 'vue'; // Import watch for reactivity
 
 const props = defineProps<{
     demande: {
@@ -10,6 +11,7 @@ const props = defineProps<{
         etat_dp: string;
         qte_demandep: number;
         qte_stocke?: number;
+        motif?: string | null; // Added motif prop
         piece?: {
             nom_piece: string;
             id_piece: number;
@@ -17,17 +19,26 @@ const props = defineProps<{
         magasin?: {
             id_magasin: number;
             adresse_magasin: string;
-            centre?: { id_centre: number };
+            centre?: { id_centre: number; nom_centre?: string };
         };
         atelier?: {
             adresse_atelier: string;
-            centre?: { id_centre: number };
+            centre?: { id_centre: number; nom_centre?: string };
         };
     };
+    etatOptions: string[];
 }>();
 
 const form = useForm({
-    etat_dp: props.demande.etat_dp
+    etat_dp: props.demande.etat_dp,
+    motif: props.demande.motif || null, // Initialize motif from prop or null
+});
+
+// Watch for changes in etat_dp to clear motif if it's not 'refuse'
+watch(() => form.etat_dp, (newEtat) => {
+    if (newEtat !== 'refuse') {
+        form.motif = null;
+    }
 });
 
 const livrerForm = useForm({});
@@ -89,7 +100,9 @@ const breadcrumbs: BreadcrumbItem[] = [
                         <p class="text-sm text-gray-500 dark:text-gray-400">Centre</p>
                         <p class="text-gray-900 dark:text-gray-100">
                             {{
-                                demande.magasin?.centre?.id_centre
+                                demande.magasin?.centre?.nom_centre
+                                || demande.magasin?.centre?.id_centre
+                                || demande.atelier?.centre?.nom_centre
                                 || demande.atelier?.centre?.id_centre
                                 || 'N/A'
                             }}
@@ -104,8 +117,8 @@ const breadcrumbs: BreadcrumbItem[] = [
                     <div>
                         <p class="text-sm text-gray-500 dark:text-gray-400">Quantité Disponible en Stock</p>
                         <p class="text-gray-900 dark:text-gray-100" :class="{
-                            'text-red-500 dark:text-red-400': demande.qte_stocke < demande.qte_demandep,
-                            'text-green-600 dark:text-green-400': demande.qte_stocke >= demande.qte_demandep
+                            'text-red-500 dark:text-red-400': demande.qte_stocke !== undefined && demande.qte_stocke < demande.qte_demandep,
+                            'text-green-600 dark:text-green-400': demande.qte_stocke !== undefined && demande.qte_stocke >= demande.qte_demandep
                         }">
                             {{ demande.qte_stocke !== undefined ? demande.qte_stocke : 'N/A' }}
                         </p>
@@ -119,12 +132,18 @@ const breadcrumbs: BreadcrumbItem[] = [
                     <div>
                         <p class="text-sm text-gray-500 dark:text-gray-400">Statut</p>
                         <p class="text-gray-900 dark:text-gray-100" :class="{
-                            'text-yellow-600 dark:text-yellow-400': demande.etat_dp === 'En attente',
-                            'text-green-600 dark:text-green-400': demande.etat_dp === 'Validée' || demande.etat_dp === 'Livrée',
-                            'text-red-600 dark:text-red-400': demande.etat_dp === 'Refusée'
+                            'text-yellow-600 dark:text-yellow-400': demande.etat_dp === 'en attente' || demande.etat_dp === 'non disponible',
+                            'text-green-600 dark:text-green-400': demande.etat_dp === 'livre',
+                            'text-red-600 dark:text-red-400': demande.etat_dp === 'refuse'
                         }">
                             {{ demande.etat_dp }}
                         </p>
+                    </div>
+
+                    <!-- Display Motif if available -->
+                    <div v-if="demande.motif">
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Motif du Refus</p>
+                        <p class="text-gray-900 dark:text-gray-100">{{ demande.motif }}</p>
                     </div>
                 </div>
 
@@ -141,11 +160,25 @@ const breadcrumbs: BreadcrumbItem[] = [
                                 </label>
                                 <select v-model="form.etat_dp"
                                         class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-[#042B62] focus:border-[#042B62] dark:bg-gray-700 dark:text-white">
-                                    <option value="En attente">En attente</option>
-                                    <option value="Validée">Validée</option>
-                                    <option value="Refusée">Refusée</option>
-                                    <option value="Livrée">Livrée</option>
+                                    <option v-for="option in etatOptions" :key="option" :value="option">
+                                        {{ option }}
+                                    </option>
                                 </select>
+                            </div>
+
+                            <!-- Motif field, conditionally rendered -->
+                            <div v-if="form.etat_dp === 'refuse'" class="mb-4">
+                                <label for="motif" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    Motif du Refus
+                                </label>
+                                <textarea
+                                    id="motif"
+                                    v-model="form.motif"
+                                    rows="3"
+                                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-[#042B62] focus:border-[#042B62] dark:bg-gray-700 dark:text-white"
+                                    placeholder="Veuillez indiquer la raison du refus..."
+                                ></textarea>
+                                <p v-if="form.errors.motif" class="text-sm text-red-600">{{ form.errors.motif }}</p>
                             </div>
 
                             <div class="flex justify-end space-x-2">
@@ -172,19 +205,19 @@ const breadcrumbs: BreadcrumbItem[] = [
                         <div class="space-y-4">
                             <button
                                 @click="livrerPiece"
-                                :disabled="demande.etat_dp === 'Livrée' || demande.qte_stocke < demande.qte_demandep || demande.etat_dp === 'Refusée'"
+                                :disabled="demande.etat_dp === 'livre' || (demande.qte_stocke !== undefined && demande.qte_stocke < demande.qte_demandep) || demande.etat_dp === 'refuse'"
                                 class="w-full px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 Livrer Pièce
                             </button>
 
-                            <div v-if="demande.etat_dp === 'Livrée'" class="p-3 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-md">
+                            <div v-if="demande.etat_dp === 'livre'" class="p-3 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-md">
                                 Cette pièce a déjà été livrée.
                             </div>
-                            <div v-else-if="demande.etat_dp === 'Refusée'" class="p-3 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded-md">
+                            <div v-else-if="demande.etat_dp === 'refuse'" class="p-3 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded-md">
                                 Cette demande a été refusée et ne peut pas être livrée.
                             </div>
-                            <div v-else-if="demande.qte_stocke < demande.qte_demandep" class="p-3 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded-md">
+                            <div v-else-if="demande.qte_stocke !== undefined && demande.qte_stocke < demande.qte_demandep" class="p-3 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded-md">
                                 Quantité insuffisante en stock pour livrer cette demande.
                             </div>
                         </div>

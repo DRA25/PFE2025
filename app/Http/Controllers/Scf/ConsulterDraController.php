@@ -4,8 +4,13 @@ namespace App\Http\Controllers\Scf;
 
 use App\Http\Controllers\Controller;
 use App\Models\Dra;
+use Illuminate\Http\Request; // Import Request class
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule; // Import Rule for validation
 use Inertia\Inertia;
+use Illuminate\Validation\ValidationException; // Import ValidationException
+use Exception; // Import Exception
+use Illuminate\Support\Facades\Log; // Import Log facade
 
 class ConsulterDraController extends Controller
 {
@@ -77,6 +82,7 @@ class ConsulterDraController extends Controller
                 'etat' => $dra->etat,
                 'total_dra' => $dra->total_dra,
                 'created_at' => $dra->created_at?->toISOString(),
+                'motif' => $dra->motif, // Pass the motif to the frontend
                 'centre' => [
                     'seuil_centre' => $dra->centre->seuil_centre,
                     'montant_disponible' => $dra->centre->montant_disponible,
@@ -86,6 +92,15 @@ class ConsulterDraController extends Controller
             'bonAchats' => $bonAchats,
         ]);
     }
+
+    /**
+     * Update the specified DRA's state and motif.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  string  $n_dra
+     * @return \Illuminate\Http\RedirectResponse
+     */
+
 
 
     protected function calculateMontant($model)

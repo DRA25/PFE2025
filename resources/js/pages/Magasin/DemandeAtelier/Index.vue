@@ -29,6 +29,7 @@ const props = defineProps<{
             centre?: { id_centre: number; nom_centre?: string };
         };
     }>;
+    etatOptions: string[]; // Re-added prop for etat_dp options
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -36,17 +37,18 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Mes Demandes de Pièces', href: route('magasin.mes-demandes.index') }
 ];
 
-const etatOptions = ['En attente', 'Validée', 'Refusée', 'Livrée'];
-const selectedEtat = ref<string | null>(null);
+const selectedEtat = ref<string | null>(null); // Re-added ref for selected state
 const searchQuery = ref('');
 
 const sortConfig = ref<{ column: string; direction: 'asc' | 'desc' } | null>(null);
 
 const filteredDemandes = computed(() => {
+    let data = props.demandes;
+
     // Filter by selected state first
-    let data = selectedEtat.value
-        ? props.demandes.filter(d => d.etat_dp === selectedEtat.value)
-        : props.demandes;
+    if (selectedEtat.value) {
+        data = data.filter(d => d.etat_dp === selectedEtat.value);
+    }
 
     // Then filter by search query (search multiple fields)
     if (searchQuery.value) {
@@ -72,9 +74,10 @@ const sortedDemandes = computed(() => {
         const valueA = a[column as keyof typeof a];
         const valueB = b[column as keyof typeof b];
 
+        // Assuming date_dp is in 'YYYY-MM-DD' format from backend, no need for replace
         if (column === 'date_dp') {
-            const dateA = new Date(valueA.replace(/(\d{2})\/(\d{2})\/(\d{4})/, '$3-$2-$1')).getTime();
-            const dateB = new Date(valueB.replace(/(\d{2})\/(\d{2})\/(\d{4})/, '$3-$2-$1')).getTime();
+            const dateA = new Date(valueA).getTime();
+            const dateB = new Date(valueB).getTime();
             return direction === 'asc' ? dateA - dateB : dateB - dateA;
         } else if (column === 'id_dp' || column === 'qte_demandep') {
             return direction === 'asc'
@@ -107,9 +110,6 @@ const exportUrl = computed(() => {
 <template>
     <Head title="Mes Demandes de Pièces" />
     <AppLayout :breadcrumbs="breadcrumbs">
-
-
-
         <div class="flex flex-wrap justify-between items-center m-5 mb-0 gap-4">
             <!-- Search input with icon -->
             <div class="flex items-center gap-2 w-full md:w-1/3">
@@ -138,20 +138,7 @@ const exportUrl = computed(() => {
                 </h1>
             </div>
 
-            <div class="flex flex-wrap gap-2 px-5 pb-2">
-                <button
-                    v-for="etat in etatOptions"
-                    :key="etat"
-                    @click="selectedEtat = selectedEtat === etat ? null : etat"
-                    class="px-4 py-1 rounded-full border text-sm font-medium transition"
-                    :class="{
-                        'bg-blue-600 text-white': selectedEtat === etat,
-                        'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200': selectedEtat !== etat
-                    }"
-                >
-                    {{ etat }}
-                </button>
-            </div>
+
 
             <Table class="m-3 w-39/40">
                 <TableHeader>
@@ -214,6 +201,11 @@ const exportUrl = computed(() => {
                                     <Eye class="w-4 h-4" />
                                 </span>
                             </Link>
+                        </TableCell>
+                    </TableRow>
+                    <TableRow v-if="sortedDemandes.length === 0">
+                        <TableCell colspan="8" class="text-center py-4 text-gray-500 dark:text-gray-400">
+                            Aucune demande de pièce trouvée.
                         </TableCell>
                     </TableRow>
                 </TableBody>

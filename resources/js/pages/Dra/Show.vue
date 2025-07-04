@@ -12,6 +12,7 @@ const props = defineProps<{
         date_creation: string;
         etat: string;
         total_dra: number;
+        motif?: string | null; // Added motif prop to receive existing motif from backend
         centre: {
             seuil_centre: number;
             montant_disponible: number;
@@ -55,18 +56,25 @@ const closeDra = (draId: string, currentEtat: string) => {
 };
 
 const executeCloseDra = () => {
+    // Send 'etat' as 'cloture' and 'motif' as null when closing the DRA
     router.put(route('scentre.dras.close', { dra: props.dra.n_dra }), {
+        etat: 'cloture', // Explicitly set etat to 'cloture'
+        motif: null,     // Explicitly set motif to null
+    }, {
         preserveScroll: true,
         onSuccess: () => {
-            // Optionally, refresh the page or update local state if needed
-            // For example, if 'dra.etat' is reactive and updated by the backend
-            // Inertia will automatically re-render with new props if data changes.
+            console.log('DRA updated successfully!');
             showCloseDraConfirmModal.value = false; // Close modal on success
+            // Force a full page reload to ensure the DRA data (including motif) is fresh
+            router.visit(route('scentre.dras.show', { dra: props.dra.n_dra }), {
+                preserveScroll: true,
+                preserveState: false // Crucial: Set to false to force a full page reload and get fresh props
+            });
         },
         onError: (errors) => {
             console.error('Erreur lors de la clôture du DRA:', errors);
             // Display error to user via a message box or a dedicated error display area
-            alert('Erreur lors de la clôture du DRA: ' + (errors.message || 'Une erreur est survenue'));
+            // Note: Removed alert() as per previous instructions. Error details will be in console.
             showCloseDraConfirmModal.value = false; // Close modal on error
         },
     });
@@ -212,6 +220,12 @@ const calculateFactureFullTotal = (facture: typeof props.factures[0]) => {
                     <div>
                         <p class="text-sm text-gray-500 dark:text-gray-400">État</p>
                         <p class="text-gray-900 dark:text-gray-100">{{ dra.etat }}</p>
+                    </div>
+
+                    <!-- Display Motif if available and DRA is refused -->
+                    <div v-if="dra.etat.toLowerCase() === 'refuse' && dra.motif">
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Motif du Refus</p>
+                        <p class="text-gray-900 dark:text-gray-100">{{ dra.motif }}</p>
                     </div>
 
                     <div>

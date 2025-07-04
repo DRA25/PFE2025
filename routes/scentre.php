@@ -28,6 +28,15 @@ Route::middleware(['auth', 'role:service centre|admin'])->group(function () {
         ->name('export.bordereau-operations');
 
 
+    // Single demande PDF export
+    Route::get('/scentre/demandes-pieces/{demande_piece}/export-single-pdf', [ScentreDemandePieceController::class, 'exportPdf'])
+        ->name('scentre.demandes-pieces.export-single-pdf');
+
+// Full list PDF export
+    Route::get('/scentre/demandes-pieces/export-full-list-pdf', [ScentreDemandePieceController::class, 'exportListPdf'])
+        ->name('scentre.demandes-pieces.export-full-list-pdf');
+
+
 
     Route::resource('scentre/charges', ChargeController::class)
         ->names([
@@ -93,8 +102,11 @@ Route::middleware(['auth', 'role:service centre|admin'])->group(function () {
             Route::get('/{n_bc}/export-pdf', [BonCommandeController::class, 'exportPdf'])->name('export-pdf');
         });
 
-        Route::get('/demandes-export-pdf', [ScentreDemandePieceController::class, 'exportListPdf'])
-            ->name('demandes-pieces.export-pdf');
+//        Route::get('/demandes-export-pdf', [ScentreDemandePieceController::class, 'exportPdf'])
+//            ->name('demandes-pieces.export-pdf');
+
+
+
 
         // Main dashboard route - name it simply 'index' (will become 'scentre.index')
         Route::get('/', [ScentreController::class, 'index'])->name('index');
@@ -156,10 +168,3 @@ Route::get('encaissements/{id_centre}/{n_remb}/edit', [EncaissementController::c
 Route::put('encaissements/{id_centre}/{n_remb}', [EncaissementController::class, 'update'])->name('encaissements.update');
 Route::delete('encaissements/{id_centre}/{n_remb}', [EncaissementController::class, 'destroy'])->name('encaissements.destroy');
 
-// Single demande PDF export
-Route::get('/scentre/demandes-pieces/{demande_piece}/export-single-pdf', [ScentreDemandePieceController::class, 'exportPdf'])
-    ->name('scentre.demandes-pieces.export-single-pdf');
-
-// Full list PDF export
-Route::get('/scentre/demandes-pieces/export-full-list-pdf', [ScentreDemandePieceController::class, 'exportListPdf'])
-    ->name('scentre.demandes-pieces.export-full-list-pdf');
