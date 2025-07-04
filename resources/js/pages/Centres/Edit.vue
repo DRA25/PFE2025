@@ -13,6 +13,7 @@ const props = defineProps<{
 }>()
 
 const breadcrumbs: BreadcrumbItem[] = [
+    { title: 'Espace admin', href: '/espace-admin' },
     { title: 'Gestion des Centres', href: '/centres' },
     { title: `Modifier Centre ${props.centre.id_centre}`, href: `/centres/${props.centre.id_centre}/edit` },
 ]

@@ -133,7 +133,7 @@ const calculateFullTotal = (items: {
     if (!isBonAchat && items.charges) {
         total += items.charges.reduce((sum, item) => {
             const price = getItemPrice(item, 'charges');
-            const quantity = getItemQuantity(item, 'charges', isBonAchat);
+            const quantity = getItemQuantity(item, 'charges', isBonAachat);
             const tvaRate = item.tva || 0;
             return sum + (price * quantity * (1 + (tvaRate / 100)));
         }, 0);
@@ -181,6 +181,28 @@ const calculateFullTotal = (items: {
                 </div>
 
                 <div>
+                    <div class="flex justify-between gap-1 mb-6 w-fit">
+                        <a
+                            :href="route('export.bordereau-operations', dra.n_dra)"
+                            class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition flex items-center gap-2 shadow-md"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                            </svg>
+                            <span>Exporter BOD</span>
+                        </a>
+
+                        <a
+                            :href="route('export.demande-derogation', dra.n_dra)"
+                            class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition flex items-center gap-2 shadow-md"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                            </svg>
+                            <span>Exporter Demande de Dérogation</span>
+                        </a>
+                    </div>
+
                     <h2 class="text-xl font-semibold text-primary-600 dark:text-yellow-400 mb-4">
                         Mettre à jour l'état
                     </h2>
@@ -355,7 +377,6 @@ const calculateFullTotal = (items: {
                                     <template v-if="bon.pieces?.length > 0">
                                         <span class="block">Pièces</span>
                                     </template>
-                                    <!-- Removed prestations and charges templates for BonAchat -->
                                 </TableCell>
                                 <TableCell>
                                     <template v-if="bon.pieces">
@@ -363,7 +384,6 @@ const calculateFullTotal = (items: {
                                             {{ piece.nom_piece }} (x{{ piece.pivot?.qte_ba || 0 }})
                                         </div>
                                     </template>
-                                    <!-- Removed prestations and charges content for BonAchat -->
                                 </TableCell>
                                 <TableCell>
                                     <template v-if="bon.pieces?.length > 0">
@@ -371,15 +391,13 @@ const calculateFullTotal = (items: {
                                             {{ calculateItemTypeHtTotal(bon.pieces, 'pieces', true).toFixed(2) }} DA
                                         </div>
                                     </template>
-                                    <!-- Removed HT totals for prestations and charges for BonAchat -->
-                                </TableCell>
+                                    </TableCell>
                                 <TableCell>
                                     <template v-if="bon.pieces?.length > 0">
                                         <div class="text-sm">
                                             {{ calculateItemTypeTVA(bon.pieces, 'pieces', true).toFixed(2) }} DA
                                         </div>
                                     </template>
-                                    <!-- Removed TVA totals for prestations and charges for BonAchat -->
                                 </TableCell>
                                 <TableCell>
                                     {{ calculateFullTotal(bon, true).toFixed(2) }} DA

@@ -13,6 +13,7 @@ import { ref, computed } from 'vue';
 import { type BreadcrumbItem } from '@/types';
 
 const breadcrumbs: BreadcrumbItem[] = [
+    { title: 'Espace admin', href: '/espace-admin' },
     { title: 'Gestion des Utilisateurs', href: '/users' },
 ];
 

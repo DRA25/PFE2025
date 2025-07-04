@@ -155,7 +155,7 @@ const deleteRemboursement = (id: number) => {
                         <TableCell>{{ remb.method_remb }}</TableCell>
                         <TableCell>{{ remb.n_dra }}</TableCell>
                         <TableCell>{{ remb.id_centre }}</TableCell>
-                        <TableCell>{{ remb.montant_rembourse }}</TableCell>
+                        <TableCell>{{ Number(remb.montant_rembourse).toFixed(2) }}</TableCell>
                         <TableCell class="flex flex-wrap gap-2">
                             <template v-if="remb.etat !== 'rembourse'">
                                 <Link

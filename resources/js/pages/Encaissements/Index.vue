@@ -20,9 +20,10 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 const props = defineProps<{
     encaissements: Array<{
-        id: string,
-        centre: { adresse_centre: string },
-        remboursement: { n_remb: string,dra: { n_dra: string } },
+        id_centre: string,
+        n_remb: string,
+        centre: { adresse_centre: string, id_centre: string },
+        remboursement: { n_remb: string, dra: { n_dra: string } },
         montant_enc: number,
         date_enc: string
     }>,
@@ -49,8 +50,7 @@ const sortedEncaissements = computed(() => {
             enc.remboursement.n_remb.toLowerCase().includes(query) ||
             enc.remboursement.dra.n_dra.toLowerCase().includes(query) ||
             String(enc.montant_enc).toLowerCase().includes(query) ||
-            enc.date_enc.toLowerCase().includes(query)
-        )
+            enc.date_enc.toLowerCase().includes(query))
     }
 
 
@@ -64,6 +64,9 @@ const sortedEncaissements = computed(() => {
             } else if (column === 'remboursement') {
                 valA = a.remboursement.n_remb;
                 valB = b.remboursement.n_remb;
+            } else if (column === 'n_dra') {
+                valA = a.remboursement.dra.n_dra;
+                valB = b.remboursement.dra.n_dra;
             } else {
                 valA = a[column as keyof typeof a] ?? '';
                 valB = b[column as keyof typeof b] ?? '';
@@ -79,9 +82,11 @@ const sortedEncaissements = computed(() => {
 })
 
 const filteredEncaissements = computed(() => {
-    // This is just for extra safety - the filtering should be done in the backend
     return props.encaissements.filter(enc => enc.centre.id_centre === props.userCentre);
-});
+})
+
+
+
 
 </script>
 
@@ -90,7 +95,13 @@ const filteredEncaissements = computed(() => {
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex justify-between items-center m-5 mb-0 gap-4 flex-wrap">
             <div class="flex items-center gap-2 w-full md:w-1/3">
-
+                <Search class="w-4 h-4" />
+                <input
+                    v-model="searchQuery"
+                    type="text"
+                    placeholder="Rechercher..."
+                    class="bg-gray-100 dark:bg-gray-700 rounded-lg px-3 py-2 w-full"
+                />
             </div>
 
             <Link
@@ -140,15 +151,14 @@ const filteredEncaissements = computed(() => {
                 <TableBody>
                     <TableRow
                         v-for="encaissement in sortedEncaissements"
-                    :key="encaissement.id"
-                    class="hover:bg-gray-300 dark:hover:bg-gray-900"
+                        :key="`${encaissement.id_centre}-${encaissement.n_remb}`"
+                        class="hover:bg-gray-300 dark:hover:bg-gray-900"
                     >
                         <TableCell>{{ encaissement.centre.adresse_centre }}</TableCell>
                         <TableCell>{{ encaissement.remboursement.n_remb }}</TableCell>
-                        <TableCell>{{ encaissement.montant_enc?.toLocaleString('fr-FR') }} DA</TableCell>
+                        <TableCell>{{ Number(encaissement.montant_enc?.toLocaleString('fr-FR')).toFixed(2) }} DA</TableCell>
                         <TableCell>{{ encaissement.date_enc }}</TableCell>
                         <TableCell>{{ encaissement.remboursement.dra.n_dra }}</TableCell>
-
 
                     </TableRow>
                 </TableBody>

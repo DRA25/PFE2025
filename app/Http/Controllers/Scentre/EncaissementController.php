@@ -50,7 +50,7 @@ class EncaissementController extends Controller
     {
         $validated = $request->validate([
             'id_centre' => 'required|exists:centres,id_centre',
-            'n_remb' => 'required|exists:remboursements,n_remb',
+            'n_remb' => 'required|exists:remboursements,n_remb|unique:encaissements,n_remb,NULL,id,id_centre,'.$request->id_centre,
             'date_enc' => 'required|date',
         ]);
 
@@ -73,8 +73,12 @@ class EncaissementController extends Controller
         return redirect()->route('encaissements.index')->with('success', 'Encaissement créé avec succès et état du DRA mis à jour.');
     }
 
-    public function edit(Encaissement $encaissement)
+    public function edit($id_centre, $n_remb)
     {
+        $encaissement = Encaissement::where('id_centre', $id_centre)
+            ->where('n_remb', $n_remb)
+            ->firstOrFail();
+
         $centres = Centre::all();
         $remboursements = Remboursement::all();
 
@@ -85,7 +89,7 @@ class EncaissementController extends Controller
         ]);
     }
 
-    public function update(Request $request, Encaissement $encaissement)
+    public function update(Request $request, $id_centre, $n_remb)
     {
         $validated = $request->validate([
             'id_centre' => 'required|exists:centres,id_centre',
@@ -94,13 +98,23 @@ class EncaissementController extends Controller
             'date_enc' => 'required|date',
         ]);
 
+        $encaissement = Encaissement::where('id_centre', $id_centre)
+            ->where('n_remb', $n_remb)
+            ->firstOrFail();
+
         $oldMontant = $encaissement->montant_enc;
         $oldCentreId = $encaissement->id_centre;
 
         Centre::where('id_centre', $oldCentreId)
             ->decrement('montant_disponible', $oldMontant);
 
-        $encaissement->update($validated);
+        // Delete the old record and create a new one if the keys changed
+        if ($id_centre != $validated['id_centre'] || $n_remb != $validated['n_remb']) {
+            $encaissement->delete();
+            $encaissement = Encaissement::create($validated);
+        } else {
+            $encaissement->update($validated);
+        }
 
         Centre::where('id_centre', $validated['id_centre'])
             ->increment('montant_disponible', $validated['montant_enc']);
@@ -108,8 +122,12 @@ class EncaissementController extends Controller
         return redirect()->route('encaissements.index')->with('success', 'Encaissement mis à jour avec succès.');
     }
 
-    public function destroy(Encaissement $encaissement)
+    public function destroy($id_centre, $n_remb)
     {
+        $encaissement = Encaissement::where('id_centre', $id_centre)
+            ->where('n_remb', $n_remb)
+            ->firstOrFail();
+
         $centre = Centre::findOrFail($encaissement->id_centre);
 
         if ($centre->montant_disponible >= $encaissement->montant_enc) {

@@ -17,6 +17,7 @@ const props = defineProps<{
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [
+    { title: 'Espace admin', href: '/espace-admin' },
     { title: 'Gestion des Ateliers', href: '/gestionatelier' },
     { title: `Modifier l'Atelier ${props.atelier.id_atelier}`, href: `/gestionatelier/${props.atelier.id_atelier}/edit` },
 ];

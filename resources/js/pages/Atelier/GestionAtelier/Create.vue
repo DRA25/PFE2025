@@ -4,6 +4,7 @@ import AppLayout from '@/layouts/AppLayout.vue'
 import { type BreadcrumbItem } from '@/types'
 
 const breadcrumbs: BreadcrumbItem[] = [
+    { title: 'Espace admin', href: '/espace-admin' },
     { title: 'Gestion des Ateliers', href: '/gestionatelier' },
     { title: 'Créer un Atelier', href: '/gestionatelier/create' },
 ]

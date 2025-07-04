@@ -14,6 +14,7 @@ import { ref, computed } from 'vue'
 import { type BreadcrumbItem } from '@/types'
 
 const breadcrumbs: BreadcrumbItem[] = [
+    { title: 'Espace admin', href: '/espace-admin' },
     { title: 'Gestion des Centres', href: '/centres' },
 ]
 
@@ -146,7 +147,7 @@ const deleteCentre = (id: string) => {
                         <TableCell>{{ centre.id_centre }}</TableCell>
                         <TableCell>{{ centre.adresse_centre }}</TableCell>
                         <TableCell>{{ centre.seuil_centre?.toLocaleString('fr-FR') }} DA</TableCell>
-                        <TableCell>{{ centre.montant_disponible?.toLocaleString('fr-FR') }} DA</TableCell>
+                        <TableCell>{{ Number(centre.montant_disponible?.toLocaleString('fr-FR')).toFixed(2) }} DA</TableCell>
                         <TableCell>{{ centre.type_centre }}</TableCell>
                         <TableCell class="flex flex-wrap gap-2">
                             <Link

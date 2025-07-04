@@ -8,7 +8,9 @@ import { watchEffect } from 'vue';
 import type { BreadcrumbItem } from '@/types';
 
 const breadcrumbs: BreadcrumbItem[] = [
+    { title: 'Espace admin', href: '/espace-admin' },
     { title: 'Role', href: '/roles' },
+
 
 ];
 

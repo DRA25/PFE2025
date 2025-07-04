@@ -149,7 +149,12 @@ Route::middleware(['auth', 'role:service centre|admin'])->group(function () {
 });
 
 // Encaissements routes
-Route::resource('encaissements', EncaissementController::class);
+Route::get('encaissements', [EncaissementController::class, 'index'])->name('encaissements.index');
+Route::get('encaissements/create', [EncaissementController::class, 'create'])->name('encaissements.create');
+Route::post('encaissements', [EncaissementController::class, 'store'])->name('encaissements.store');
+Route::get('encaissements/{id_centre}/{n_remb}/edit', [EncaissementController::class, 'edit'])->name('encaissements.edit');
+Route::put('encaissements/{id_centre}/{n_remb}', [EncaissementController::class, 'update'])->name('encaissements.update');
+Route::delete('encaissements/{id_centre}/{n_remb}', [EncaissementController::class, 'destroy'])->name('encaissements.destroy');
 
 // Single demande PDF export
 Route::get('/scentre/demandes-pieces/{demande_piece}/export-single-pdf', [ScentreDemandePieceController::class, 'exportPdf'])

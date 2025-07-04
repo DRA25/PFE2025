@@ -165,7 +165,7 @@ const requestSort = (column: string) => {
                     >
                         <TableCell>{{ dra.n_dra }}</TableCell>
                         <TableCell>{{ new Date(dra.date_creation).toLocaleDateString() }}</TableCell>
-                        <TableCell>{{ dra.total_dra.toLocaleString('fr-FR') }} DA</TableCell>
+                        <TableCell>{{ Number(dra.total_dra.toLocaleString('fr-FR')).toFixed(2) }} DA</TableCell>
                         <TableCell>
                             <span
                                 class="font-bold"

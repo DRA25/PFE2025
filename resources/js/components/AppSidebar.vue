@@ -55,7 +55,7 @@ const mainNavItems: NavItem[] = [
 if (user.value?.roles?.some((role: any) =>
     role.name === 'service centre')) {
     mainNavItems.push({
-        title: 'Dashboard',
+        title: 'Tableau de Bord',
         href: '/dashboard',
         icon: LayoutGrid,
     });
@@ -66,7 +66,7 @@ if (user.value?.roles?.some((role: any) =>
 if (user.value?.roles?.some((role: any) =>
     role.name === 'admin' || role.name === 'service cf' || role.name === 'service achat' || role.name === 'service paiment' )) {
     mainNavItems.push({
-        title: 'Dashboard',
+        title: 'Tableau de Bord',
         href: '/directiondashboard',
         icon: LayoutGrid,
     });
@@ -84,7 +84,7 @@ if (user.value?.roles?.some((role: any) => role.name === 'admin' )) {
 
 
 // Conditionally add "fournisseurs"
-if (user.value?.roles?.some((role: any) => role.name === 'admin' || role.name === 'service achat' )) {
+if (user.value?.roles?.some((role: any) => role.name === 'admin' || role.name === 'service achat' || role.name === 'service centre'  )) {
     mainNavItems.push({
         title: 'Fournisseur',
         href: '/fournisseurs',
