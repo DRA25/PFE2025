@@ -4,7 +4,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DirectionDashboardController;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware(['auth', 'role:service achat|service cf|service paiment|admin'])->group(function () {
+Route::middleware(['auth', 'role:service achat|service cf|admin'])->group(function () {
 
 Route::get('/directiondashboard', [DirectionDashboardController::class, 'index'])->name('directiondashboard');
 

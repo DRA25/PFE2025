@@ -295,7 +295,7 @@ class DraController extends Controller
             // You might want to return a more generic error response for unexpected issues
             return redirect()->back()->withErrors(['error' => 'Une erreur inattendue est survenue lors de la mise à jour du DRA.']);
         }
-    
+
     }
 
     public function destroy($n_dra)

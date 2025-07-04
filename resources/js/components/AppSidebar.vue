@@ -64,7 +64,7 @@ if (user.value?.roles?.some((role: any) =>
 
 // Conditionally add "Centre"
 if (user.value?.roles?.some((role: any) =>
-    role.name === 'admin' || role.name === 'service cf' || role.name === 'service achat' || role.name === 'service paiment' )) {
+    role.name === 'admin' || role.name === 'service cf' || role.name === 'service achat' )) {
     mainNavItems.push({
         title: 'Tableau de Bord',
         href: '/directiondashboard',
