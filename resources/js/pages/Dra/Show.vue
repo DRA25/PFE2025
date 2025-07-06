@@ -222,7 +222,6 @@ const calculateFactureFullTotal = (facture: typeof props.factures[0]) => {
                         <p class="text-gray-900 dark:text-gray-100">{{ dra.etat }}</p>
                     </div>
 
-                    <!-- Display Motif if available and DRA is refused -->
                     <div v-if="dra.etat.toLowerCase() === 'refuse' && dra.motif">
                         <p class="text-sm text-gray-500 dark:text-gray-400">Motif du Refus</p>
                         <p class="text-gray-900 dark:text-gray-100">{{ dra.motif }}</p>
@@ -258,6 +257,8 @@ const calculateFactureFullTotal = (facture: typeof props.factures[0]) => {
                     <button
                         v-if="dra.etat === 'actif' || dra.etat === 'refuse'"
                         @click="closeDra(dra.n_dra, dra.etat)"
+                        :disabled="factures.length === 0 && bonAchats.length === 0"
+                        :class="{'opacity-50 cursor-not-allowed': factures.length === 0 && bonAchats.length === 0}"
                         class="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition flex items-center gap-2"
                     >
                         <Lock class="w-4 h-4" />

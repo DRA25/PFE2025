@@ -4,8 +4,12 @@ namespace App\Http\Controllers\Magasin;
 use App\Http\Controllers\Controller;
 use App\Models\DemandePiece;
 use App\Models\QuantiteStocke;
+use App\Models\User;
+use App\Notifications\DemandePieceStatusChanged;
+use App\Notifications\NewDemandePieceNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Barryvdh\DomPDF\Facade\Pdf;
 
@@ -70,12 +74,63 @@ class MagasinDemandePieceController extends Controller
     {
         $validated = $request->validate([
             'etat_dp' => 'required|string|in:en attente,non disponible,livre,refuse',
-            // Add motif validation: required if etat_dp is 'refuse', otherwise nullable
             'motif' => 'nullable|string|max:500|required_if:etat_dp,refuse',
         ]);
 
-        // Update the demande_piece with the validated data, including motif
+        $oldStatus = $demande_piece->etat_dp;
         $demande_piece->update($validated);
+
+        $magasinUser = auth()->user();
+
+        Log::info('DemandePiece status changed', [
+            'demande_id' => $demande_piece->id_dp,
+            'old_status' => $oldStatus,
+            'new_status' => $validated['etat_dp'],
+            'user_id' => $magasinUser->id,
+            'user_centre' => $magasinUser->id_centre,
+        ]);
+
+        if ($oldStatus !== $validated['etat_dp']) {
+            try {
+                if (!$magasinUser->id_centre) {
+                    throw new \Exception('Magasin user has no center assigned');
+                }
+
+                // Notify atelier users in same center (for any status change)
+                $atelierUsers = User::role('service atelier')
+                    ->where('id_centre', $magasinUser->id_centre)
+                    ->get();
+
+                foreach ($atelierUsers as $atelierUser) {
+                    $atelierUser->notify(new DemandePieceStatusChanged($demande_piece));
+                    Log::info('Notification sent to atelier user', [
+                        'to_user' => $atelierUser->id,
+                        'centre' => $magasinUser->id_centre,
+                        'demande' => $demande_piece->id_dp
+                    ]);
+                }
+
+                // Additional notification for centre when status becomes 'non disponible'
+                if ($validated['etat_dp'] === 'non disponible') {
+                    $centreUsers = User::role('service centre')
+                        ->where('id_centre', $magasinUser->id_centre)
+                        ->get();
+
+                    foreach ($centreUsers as $centreUser) {
+                        $centreUser->notify(new NewDemandePieceNotification($demande_piece));
+                        Log::info('Notification sent to centre user', [
+                            'to_user' => $centreUser->id,
+                            'centre' => $magasinUser->id_centre,
+                            'demande' => $demande_piece->id_dp,
+                            'status' => 'non disponible'
+                        ]);
+                    }
+                }
+
+            } catch (\Exception $e) {
+                Log::error('Notification failed: '.$e->getMessage());
+            }
+        }
 
         return redirect()->route('magasin.mes-demandes.index')
             ->with('success', 'État mis à jour avec succès');
@@ -124,36 +179,46 @@ class MagasinDemandePieceController extends Controller
     {
         DB::beginTransaction();
         try {
+            // Get the authenticated magasin user
+            $magasinUser = auth()->user();
 
-
-            $demande = DemandePiece::with(['piece', 'atelier.centre'])
+            // Load the demande with necessary relationships
+            $demande = DemandePiece::with(['piece'])
                 ->findOrFail($demande_piece_id);
 
-
+            // Check if already delivered
             if ($demande->etat_dp === 'livre') {
                 return back()->with('error', 'Cette demande a déjà été livrée');
             }
 
-
-            $stock = QuantiteStocke::where('id_piece', $demande->id_piece )
+            // Verify stock
+            $stock = QuantiteStocke::where('id_piece', $demande->id_piece)
                 ->first();
 
             if (!$stock) {
                 return back()->with('error', 'Pièce non trouvée dans votre stock');
             }
 
-
             if ($stock->qte_stocke < $demande->qte_demandep) {
                 return back()->with('error', 'Stock insuffisant');
             }
 
-
+            // Update stock
             QuantiteStocke::where('id_piece', $demande->id_piece)
                 ->decrement('qte_stocke', $demande->qte_demandep);
 
-
+            // Update demande status
             $demande->etat_dp = 'livre';
             $demande->save();
+
+            // Notify atelier users in the same center
+            $atelierUsers = User::role('service atelier')
+                ->where('id_centre', $magasinUser->id_centre)
+                ->get();
+
+            foreach ($atelierUsers as $atelierUser) {
+                $atelierUser->notify(new DemandePieceStatusChanged($demande));
+            }
 
             DB::commit();
 
@@ -163,6 +228,10 @@ class MagasinDemandePieceController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
+            Log::error('Livraison échouée: ' . $e->getMessage(), [
+                'demande_id' => $demande_piece_id,
+                'user_id' => auth()->id()
+            ]);
             return back()->with('error', 'Erreur lors de la livraison: ' . $e->getMessage());
         }
     }

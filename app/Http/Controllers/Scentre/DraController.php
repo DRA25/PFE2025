@@ -7,9 +7,12 @@ use App\Models\BonAchat;
 use App\Models\Centre;
 use App\Models\Dra;
 use App\Models\Facture;
+use App\Models\User;
+use App\Notifications\DraClosedNotification;
+use App\Notifications\DraStatusChangedNotification;
 use Barryvdh\DomPDF\Facade\Pdf;
-
 use Illuminate\Http\Request;
+use Illuminate\Notifications\Notification;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -259,43 +262,75 @@ class DraController extends Controller
     public function update(Request $request, Dra $dra)
     {
         try {
-            // Log the incoming request data for debugging
             Log::info('DRA Update Request Data (DraController):', $request->all());
 
-            // Validate the request data
             $validatedData = $request->validate([
                 'etat' => ['required', 'string', Rule::in(['cloture', 'refuse', 'accepte'])],
-                'motif' => ['nullable', 'string', 'max:500', 'required_if:etat,refuse'], // Motif is required if etat is 'refuse'
+                'motif' => ['nullable', 'string', 'max:500', 'required_if:etat,refuse'],
             ]);
 
-            // Log the validated data for debugging
             Log::info('DRA Update Validated Data (DraController):', $validatedData);
 
-            // Update the DRA's etat and motif
+            $oldEtat = $dra->etat;
             $dra->etat = $validatedData['etat'];
-            $dra->motif = $validatedData['motif'] ?? null; // Set motif to null if not provided or not 'refuse'
-
-            // Save the changes to the database
+            $dra->motif = $validatedData['motif'] ?? null;
             $dra->save();
 
-            // Log success
-            Log::info('DRA ' . $dra->n_dra . ' updated successfully to etat: ' . $dra->etat . ' and motif: ' . ($dra->motif ?? 'N/A'));
+            // Send notifications based on the new state
+            if ($oldEtat !== $dra->etat) {
+                try {
+                    $currentUser = auth()->user();
 
-            // Redirect to the index page with a success message
+                    if ($dra->etat === 'accepte') {
+                        // Notify 'service paiment' users
+                        $paymentUsers = User::role('service paiment')->get();
+                        foreach ($paymentUsers as $paymentUser) {
+                            $paymentUser->notify(new DraStatusChangedNotification(
+                                $dra,
+                                $currentUser,
+                                'accepté'
+                            ));
+                            Log::info('Notification sent to service paiment user', [
+                                'user_id' => $paymentUser->id,
+                                'dra_number' => $dra->n_dra,
+                                'new_status' => $dra->etat
+                            ]);
+                        }
+                    }
+                    elseif ($dra->etat === 'refuse') {
+                        // Notify 'service centre' users
+                        $centreUsers = User::role('service centre')->get();
+                        foreach ($centreUsers as $centreUser) {
+                            $centreUser->notify(new DraStatusChangedNotification(
+                                $dra,
+                                $currentUser,
+                                'refusé'
+                            ));
+                            Log::info('Notification sent to service centre user', [
+                                'user_id' => $centreUser->id,
+                                'dra_number' => $dra->n_dra,
+                                'new_status' => $dra->etat
+                            ]);
+                        }
+                    }
+                } catch (\Exception $e) {
+                    Log::error('Failed to send notifications', [
+                        'error' => $e->getMessage(),
+                        'dra_number' => $dra->n_dra
+                    ]);
+                }
+            }
+
+            Log::info('DRA ' . $dra->n_dra . ' updated successfully to etat: ' . $dra->etat);
             return redirect()->route('scf.dras.index')->with('success', 'DRA mis à jour avec succès.');
 
         } catch (ValidationException $e) {
-            // If validation fails, Inertia will automatically send errors to the frontend.
-            // Log them here for server-side debugging.
             Log::error('Validation error updating DRA ' . $dra->n_dra . ': ' . json_encode($e->errors()));
-            throw $e; // Re-throw to let Inertia handle the response
+            throw $e;
         } catch (Exception $e) {
-            // Catch any other unexpected errors
             Log::error('Error updating DRA ' . $dra->n_dra . ': ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
-            // You might want to return a more generic error response for unexpected issues
             return redirect()->back()->withErrors(['error' => 'Une erreur inattendue est survenue lors de la mise à jour du DRA.']);
         }
-
     }
 
     public function destroy($n_dra)
@@ -362,7 +397,9 @@ class DraController extends Controller
     }
 
 
-    public function close(Request $request, Dra $dra) // Inject Request
+
+
+    public function close(Request $request, Dra $dra)
     {
         $userCentreId = Auth::user()->id_centre;
 
@@ -378,15 +415,41 @@ class DraController extends Controller
             ]);
         }
 
-        // Get the motif from the request, defaulting to null
-        // This ensures that if the frontend sends motif: null, it's captured.
-        // If the motif is not sent, it will also default to null.
+        $oldStatus = $dra->etat;
         $motif = $request->input('motif', null);
 
         $dra->update([
             'etat' => 'cloture',
-            'motif' => $motif, // Set the motif based on the request (will be null from frontend)
+            'motif' => $motif,
         ]);
+
+        if ($oldStatus !== $dra->etat) {
+            try {
+                $currentUser = auth()->user();
+
+                // Notify both 'service cf' and 'service achat' users
+                $rolesToNotify = ['service cf', 'service achat'];
+                $usersToNotify = User::whereHas('roles', function($q) use ($rolesToNotify) {
+                    $q->whereIn('name', $rolesToNotify);
+                })->get();
+
+                foreach ($usersToNotify as $user) {
+                    $user->notify(new DraClosedNotification($dra, $currentUser));
+                    Log::info('Notification sent to service user', [
+                        'user_id' => $user->id,
+                        'role' => $user->getRoleNames()->first(),
+                        'dra_number' => $dra->n_dra,
+                        'new_status' => $dra->etat
+                    ]);
+                }
+
+            } catch (\Exception $e) {
+                Log::error('Failed to send notifications', [
+                    'error' => $e->getMessage(),
+                    'dra_number' => $dra->n_dra
+                ]);
+            }
+        }
 
         return redirect()->route('scentre.dras.index')
             ->with('success', 'DRA clôturé avec succès');

@@ -5,7 +5,10 @@ namespace App\Http\Controllers\Paiment;
 use App\Http\Controllers\Controller;
 use App\Models\Dra;
 use App\Models\Remboursement;
+use App\Models\User;
+use App\Notifications\RemboursementCreatedNotification;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
@@ -65,7 +68,24 @@ class RemboursementController extends Controller
         $remboursement = Remboursement::create($validated);
 
         // Update dra's etat to 'rembourse'
-        Dra::where('n_dra', $validated['n_dra'])->update(['etat' => 'rembourse']);
+        $dra = Dra::where('n_dra', $validated['n_dra'])->first();
+        $dra->update(['etat' => 'rembourse']);
+
+        // Send notification to 'service centre' users
+        $centreUsers = User::role('service centre')->get();
+        $currentUser = auth()->user();
+
+        foreach ($centreUsers as $centreUser) {
+            $centreUser->notify(new RemboursementCreatedNotification(
+                $dra,
+                $currentUser
+            ));
+            Log::info('Notification sent to service centre user', [
+                'user_id' => $centreUser->id,
+                'dra_number' => $dra->n_dra,
+                'status' => 'remboursé'
+            ]);
+        }
 
         return redirect()->route('paiment.remboursements.index')->with('success', 'Remboursement créé avec succès.');
     }

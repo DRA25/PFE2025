@@ -5,6 +5,7 @@ use App\Http\Controllers\Atelier\PieceController;
 use App\Http\Controllers\Magasin\MagasinController;
 use App\Http\Controllers\Magasin\MagasinDemandePieceController;
 use App\Http\Controllers\Magasin\QuantiteStockeController;
+use App\Http\Controllers\NotificationController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 

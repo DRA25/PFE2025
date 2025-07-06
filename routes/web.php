@@ -3,6 +3,7 @@
 
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DirectionDashboardController;
+use App\Http\Controllers\NotificationController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -17,7 +18,9 @@ Route::get('/espace-admin', function () {
 
 
 
-
+Route::get('/notifications', [NotificationController::class, 'index']);
+Route::post('/notifications/{notification}/read', [NotificationController::class, 'markAsRead']);
+Route::post('/notifications/mark-all-read', [NotificationController::class, 'markAllAsRead']);
 
 
 

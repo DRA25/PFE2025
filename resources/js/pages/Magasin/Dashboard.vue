@@ -2,7 +2,8 @@
 import { Head, Link } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
-import { Package, ClipboardList, PackageCheck, Warehouse } from 'lucide-vue-next'; // Import icons
+import { Package, ClipboardList, PackageCheck, Warehouse } from 'lucide-vue-next';
+
 
 const breadcrumbs: BreadcrumbItem[] = [
     {

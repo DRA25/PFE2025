@@ -7,6 +7,8 @@ use App\Models\DemandePiece;
 use App\Models\Magasin;
 use App\Models\Atelier;
 use App\Models\Piece;
+use App\Models\User;
+use App\Notifications\NewDemandePieceNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -75,7 +77,20 @@ class DPieceController extends Controller
             $validated['id_atelier'] = $atelier->id_atelier;
         }
 
-        DemandePiece::create($validated);
+        $demandePiece = DemandePiece::create($validated);
+
+        // Load relationships for the notification
+        $demandePiece->load(['piece', 'atelier']);
+
+        // Get users with same center and 'service magasin' role
+        $magasinUsers = User::where('id_centre', $user->id_centre)
+            ->role('service magasin')
+            ->get();
+
+        // Send notification to each user
+        foreach ($magasinUsers as $magasinUser) {
+            $magasinUser->notify(new NewDemandePieceNotification($demandePiece));
+        }
 
         return redirect()->route('atelier.demandes-pieces.index')
             ->with('success', 'Demande créée avec succès');

@@ -7,6 +7,7 @@ import { usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import MenuForeachRole from '@/components/MenuForeachRole.vue';
 import AppearanceTabs from '@/components/AppearanceTabs.vue';
+import NotificationIcon from '@/components/NotificationIcon.vue';
 
 const page = usePage();
 const userHasRole = computed(() => page.props.userHasRole as string);
@@ -32,7 +33,12 @@ defineProps<{
 
             <MenuForeachRole class="ml-10"/>
         </div>
-        <div class="absolute right-0"> <AppearanceTabs class="ml-5 mr-5" /></div>
+
+        <div class="absolute right-0 flex items-center">
+            <NotificationIcon class="mr-5" />
+            <AppearanceTabs class="ml-5 mr-5" />
+        </div>
 
     </header>
+
 </template>
