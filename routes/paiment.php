@@ -11,7 +11,7 @@ use Inertia\Inertia;
 
 
 //Paiment routes
-Route::middleware(['auth', 'role:service paiment|admin'])->group(function () {
+Route::middleware(['auth', 'role:service paiment'])->group(function () {
 Route::get('/paiment', [PaimentController::class, 'index'])->name('paiment.index');
 
 Route::prefix('/paiment/dras')->name('dras.')->group(function () {

@@ -13,7 +13,7 @@ use App\Http\Controllers\Scentre\ScentreDemandePieceController;
 
 use Illuminate\Support\Facades\Route;
 
-Route::middleware(['auth', 'role:service centre|admin'])->group(function () {
+Route::middleware(['auth', 'role:service centre|service achat'])->group(function () {
 
     Route::get('/export/etat-trimestriel', [ExportController::class, 'exportEtatTrimestriel'])
         ->name('export.etat-trimestriel');

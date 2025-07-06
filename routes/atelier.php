@@ -11,7 +11,7 @@ use Inertia\Inertia;
 
 
 //atelier routes
-Route::middleware(['auth', 'verified', 'role:service atelier|admin'])->group(function () {
+Route::middleware(['auth', 'verified', 'role:service atelier'])->group(function () {
 // Main atelier dashboard
 Route::get('/atelier', [AtelierController::class, 'index'])->name('atelier.index');
 

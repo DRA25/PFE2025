@@ -7,7 +7,7 @@ use App\Http\Controllers\Achat\ConsulterDraController;
 use Illuminate\Support\Facades\Route;
 
 
-Route::middleware(['auth', 'role:service achat|admin'])->group(function () {
+Route::middleware(['auth', 'role:service achat'])->group(function () {
 // Group all achat-related routes under /achat prefix
 Route::prefix('achat')->name('achat.')->group(function () {
 

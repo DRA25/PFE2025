@@ -10,7 +10,7 @@
         @page {
             size: landscape;
             margin: 20px;
-            margin-bottom: 50px; /* Extra space for QR code */
+            margin-bottom: 50px; /* Extra space for QR code if it were on every page, adjust if needed for last page only */
         }
 
         body {
@@ -143,15 +143,22 @@
             background-color: #e6e6e6;
         }
 
-        /* QR Code Styles */
+        /* QR Code Styles - Modified */
         .qr-code-container {
-            position: fixed;
+            /* Initially hide the QR code container */
+            display: none;
+        }
+
+        /* This is the key: only display the QR code when it's inside the last-page-content */
+        .last-page-content .qr-code-container {
+            display: block; /* Make it visible */
+            position: absolute; /* Position relative to the last page's content flow */
             right: 20px;
             bottom: 20px;
             text-align: center;
             width: 150px;
-
         }
+
 
         .qr-code-container img {
             width: 150px;
@@ -160,16 +167,10 @@
 
         .qr-code-label {
             font-size: 7px;
-
         }
     </style>
 </head>
 <body>
-<!-- QR Code - Fixed position on all pages -->
-<div class="qr-code-container">
-    <img src="data:image/png;base64,{{ $qrCode }}" alt="QR Code">
-    <p class="qr-code-label">Scan pour vérification</p>
-</div>
 
 <table class="t1">
     <tr>
@@ -241,5 +242,13 @@
 </div>
 
 <p class="footer-text">Généré le: {{ \Carbon\Carbon::now()->format('d/m/Y H:i') }}</p>
+
+<div class="last-page-content">
+    <div class="qr-code-container">
+        <img src="data:image/png;base64,{{ $qrCode }}" alt="QR Code">
+        <p class="qr-code-label">Scan pour vérification</p>
+    </div>
+</div>
+
 </body>
 </html>

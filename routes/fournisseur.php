@@ -8,7 +8,7 @@ use Inertia\Inertia;
 
 
 //fournisseur routes
-Route::middleware(['auth', 'role:service achat|service centre|admin'])->group(function () {
+Route::middleware(['auth', 'role:service achat|service centre'])->group(function () {
 Route::get('/fournisseurs', [FournisseurController::class, 'index'])->name('fournisseurs.index');
 Route::get('/fournisseurs/create', [FournisseurController::class, 'create'])->name('fournisseurs.create');
 Route::post('/fournisseurs', [FournisseurController::class, 'store'])->name('fournisseurs.store');

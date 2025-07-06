@@ -13,7 +13,7 @@ use Inertia\Inertia;
 
 
 // Magasin routes
-Route::middleware(['auth', 'verified', 'role:service magasin|admin'])->group(function () {
+Route::middleware(['auth', 'verified', 'role:service magasin'])->group(function () {
 
 
 

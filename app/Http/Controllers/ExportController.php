@@ -259,6 +259,7 @@ class ExportController extends Controller
             ->margin(10)
             ->build();
 
+        // In your exportAllDras function, modify the PDF loadView part:
         $pdf = PDF::loadView('scentre.dra.export_brouillard', [
             'items' => $allItems,
             'totalEncaissement' => number_format($rawTotalEncaissement, 2, ',', ' '),
@@ -274,6 +275,7 @@ class ExportController extends Controller
             'exercice' => $year,
             'trimestre' => 'Trimestre ' . $trimestre . ' ' . $year,
             'qrCode' => base64_encode($qrCode->getString()),
+            'showQrCode' => false // Default to false, we'll handle it in the view
         ]);
 
         return $pdf->setOption('defaultFont', 'dejavu sans')

@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Route;
 
 
 //SCF routes
-Route::middleware(['auth', 'role:service cf|admin'])
+Route::middleware(['auth', 'role:service cf'])
 ->prefix('scf')
 ->name('scf.')
 ->group(function () {

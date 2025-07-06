@@ -64,7 +64,7 @@ if (user.value?.roles?.some((role: any) =>
 
 // Conditionally add "Centre"
 if (user.value?.roles?.some((role: any) =>
-    role.name === 'admin' || role.name === 'service cf' || role.name === 'service achat' )) {
+    role.name === 'service cf' || role.name === 'service achat' )) {
     mainNavItems.push({
         title: 'Tableau de Bord',
         href: '/directiondashboard',
@@ -84,7 +84,7 @@ if (user.value?.roles?.some((role: any) => role.name === 'admin' )) {
 
 
 // Conditionally add "fournisseurs"
-if (user.value?.roles?.some((role: any) => role.name === 'admin' || role.name === 'service achat' || role.name === 'service centre'  )) {
+if (user.value?.roles?.some((role: any) => role.name === 'service achat' || role.name === 'service centre'  )) {
     mainNavItems.push({
         title: 'Fournisseur',
         href: '/fournisseurs',
@@ -94,7 +94,7 @@ if (user.value?.roles?.some((role: any) => role.name === 'admin' || role.name ==
 
 
 // Conditionally add "Atelier"
-if (user.value?.roles?.some((role: any) => role.name === 'admin' || role.name === 'service atelier')) {
+if (user.value?.roles?.some((role: any) => role.name === 'service atelier')) {
     mainNavItems.push({
         title: 'Atelier',
         href: '/atelier',
@@ -102,7 +102,7 @@ if (user.value?.roles?.some((role: any) => role.name === 'admin' || role.name ==
     });
 }
 // Conditionally add "Magasin"
-if (user.value?.roles?.some((role: any) => role.name === 'admin' || role.name === 'service magasin')) {
+if (user.value?.roles?.some((role: any) =>role.name === 'service magasin')) {
     mainNavItems.push({
         title: 'Magasin',
         href: '/magasin',
@@ -110,7 +110,7 @@ if (user.value?.roles?.some((role: any) => role.name === 'admin' || role.name ==
     });
 }
     // Conditionally add "Achat"
-    if (user.value?.roles?.some((role: any) => role.name === 'admin' || role.name === 'service achat' )) {
+    if (user.value?.roles?.some((role: any) =>role.name === 'service achat' )) {
         mainNavItems.push({
             title: 'Service Achat',
             href: '/achat',
@@ -119,7 +119,7 @@ if (user.value?.roles?.some((role: any) => role.name === 'admin' || role.name ==
     }
 
 // Conditionally add "Centre"
-if (user.value?.roles?.some((role: any) => role.name === 'admin' || role.name === 'service centre' || role.name === 'service achat' )) {
+if (user.value?.roles?.some((role: any) =>role.name === 'service centre' || role.name === 'service achat' )) {
     mainNavItems.push({
         title: 'Centre',
         href: '/scentre',
@@ -128,7 +128,7 @@ if (user.value?.roles?.some((role: any) => role.name === 'admin' || role.name ==
 }
 
 // Conditionally add "coordination finnanciere"
-if (user.value?.roles?.some((role: any) => role.name === 'admin' || role.name === 'service cf')) {
+if (user.value?.roles?.some((role: any) => role.name === 'service cf')) {
     mainNavItems.push({
         title: 'S.coordination finnanciere',
         href: '/scf',
@@ -137,7 +137,7 @@ if (user.value?.roles?.some((role: any) => role.name === 'admin' || role.name ==
 }
 
 // Conditionally add "paiment"
-if (user.value?.roles?.some((role: any) => role.name === 'admin' || role.name === 'service paiment')) {
+if (user.value?.roles?.some((role: any) =>role.name === 'service paiment')) {
     mainNavItems.push({
         title: 'Service Paiment',
         href: '/paiment',
