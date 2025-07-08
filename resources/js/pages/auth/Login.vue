@@ -103,17 +103,7 @@ onMounted(() => {
                                 </div>
 
                                 <div class="flex items-center justify-between">
-                                    <div class="flex items-center">
-                                        <Checkbox
-                                            id="remember"
-                                            v-model="form.remember"
-                                            :tabindex="3"
-                                            class="h-4 w-4 text-[#f3b41c] focus:ring-[#f3b41c] border-gray-300 rounded transition-shadow duration-200 focus:shadow-md"
-                                        />
-                                        <Label for="remember" class="ml-2 block text-sm text-gray-900">
-                                            Se souvenir de moi
-                                        </Label>
-                                    </div>
+
 
                                     <TextLink v-if="canResetPassword" :href="route('password.request')" class="text-sm text-[#042c68] hover:underline transition-colors duration-200" :tabindex="4">
                                         Mot de passe oublié?

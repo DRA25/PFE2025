@@ -32,7 +32,7 @@ class DemandePieceStatusChanged extends Notification implements ShouldQueue
             'piece' => $this->demandePiece->piece->nom_piece,
             'new_status' => $this->demandePiece->etat_dp,
             'motif' => $this->demandePiece->motif ?? 'Aucun motif',
-            'link' => url('/demandes-pieces/' . $this->demandePiece->id_dp),
+
         ];
     }
 

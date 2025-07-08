@@ -27,16 +27,10 @@ const fetchNotifications = async () => {
 
 const markAsRead = async (notification) => {
     try {
-        // Send POST request to mark as read
+        // Simply mark the notification as read
         await axios.post(`/notifications/${notification.id}/read`);
 
-        // Navigate to the demand piece detail page if demande_piece_id exists
-        if (notification.data.demande_piece_id) {
-            // Use Inertia's router.visit for client-side navigation
-            router.visit(`/magasin/mes-demandes/${notification.data.demande_piece_id}`);
-        }
-
-        // Refresh notifications after marking as read and potentially navigating
+        // Refresh the notifications list
         fetchNotifications();
     } catch (error) {
         console.error('Error marking notification as read:', error);
