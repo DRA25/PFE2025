@@ -3,7 +3,9 @@
 
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DirectionDashboardController;
+use App\Http\Controllers\ExportController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\Scentre\ScentreDemandePieceController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -21,6 +23,23 @@ Route::get('/espace-admin', function () {
 Route::get('/notifications', [NotificationController::class, 'index']);
 Route::post('/notifications/{notification}/read', [NotificationController::class, 'markAsRead']);
 Route::post('/notifications/mark-all-read', [NotificationController::class, 'markAllAsRead']);
+
+
+
+Route::get('/export/etat-trimestriel', [ExportController::class, 'exportEtatTrimestriel'])
+    ->name('export.etat-trimestriel');
+
+Route::get('/export/etat-trimestriel-all', [ExportController::class, 'exportEtatTrimestrielAllCentres'])
+    ->name('export.etat-trimestriel-all');
+
+Route::get('/export/demande-derogation/{draNumber}', [ExportController::class, 'exportDemandeDerogation'])
+    ->name('export.demande-derogation');
+
+Route::get('/export/bordereau-operations/{draNumber}', [ExportController::class, 'exportBordereauOperations'])
+    ->name('export.bordereau-operations');
+
+
+
 
 
 

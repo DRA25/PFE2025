@@ -22,6 +22,14 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: `Créer une Facture pour DRA ${props.dra.n_dra}`, href: route('scentre.dras.factures.create', { dra: props.dra.n_dra }) },
 ]
 
+const maxDate = computed(() => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = (today.getMonth() + 1).toString().padStart(2, '0'); // Months are 0-indexed
+    const day = today.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
+});
+
 const form = useForm({
     n_facture: '',
     date_facture: '',
@@ -163,11 +171,13 @@ function submit() {
                         <div v-if="form.errors.n_facture" class="text-red-500 text-sm">{{ form.errors.n_facture }}</div>
                     </div>
 
+
                     <div class="space-y-2">
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Date Facture</label>
                         <input
                             v-model="form.date_facture"
                             type="date"
+                            :max="maxDate"
                             class="w-full border border-gray-300 dark:border-gray-600 p-2 rounded focus:ring-2 focus:ring-[#042B62] dark:focus:ring-[#F3B21B] focus:border-transparent dark:bg-gray-800 dark:text-white"
                         />
                         <div v-if="form.errors.date_facture" class="text-red-500 text-sm">{{ form.errors.date_facture }}</div>

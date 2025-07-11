@@ -2,6 +2,7 @@
 import { useForm, Head, Link } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
+import { computed } from 'vue';
 
 const props = defineProps<{
     comptesGeneraux: Array<{ code: string; libelle: string }>,
@@ -13,6 +14,14 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Prestations', href: route('scentre.prestations.index') },
     { title: 'Créer', href: route('scentre.prestations.create') },
 ];
+
+const maxDate = computed(() => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = (today.getMonth() + 1).toString().padStart(2, '0'); // Months are 0-indexed (0=Jan, 11=Dec)
+    const day = today.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
+});
 
 const form = useForm({
     id_prest: null as number | null,
@@ -80,7 +89,8 @@ function submit() {
                         id="date_prest"
                         v-model="form.date_prest"
                         type="date"
-                        class="w-full border border-gray-300 dark:border-gray-600 p-2 rounded focus:ring-2 focus:ring-[#042B62] dark:focus:ring-[#F3B21B] focus:border-transparent dark:bg-gray-800 dark:text-white"
+                        :max="maxDate"
+                    class="w-full border border-gray-300 dark:border-gray-600 p-2 rounded focus:ring-2 focus:ring-[#042B62] dark:focus:ring-[#F3B21B] focus:border-transparent dark:bg-gray-800 dark:text-white"
                     />
                     <p v-if="form.errors.date_prest" class="text-sm text-red-600">{{ form.errors.date_prest }}</p>
                 </div>

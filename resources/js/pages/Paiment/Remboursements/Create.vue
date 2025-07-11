@@ -2,6 +2,7 @@
 import { Head, Link, useForm } from '@inertiajs/vue3'
 import AppLayout from '@/layouts/AppLayout.vue'
 import { type BreadcrumbItem } from '@/types'
+import { computed } from 'vue';
 
 const props = defineProps<{
     dras: { n_dra: string }[]
@@ -12,6 +13,14 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Gestion des Remboursements', href: '/paiment/remboursements' },
     { title: 'Créer un Remboursement', href: '/paiment/remboursements/create' },
 ]
+
+const maxDate = computed(() => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = (today.getMonth() + 1).toString().padStart(2, '0'); // Months are 0-indexed (0=Jan, 11=Dec)
+    const day = today.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
+});
 
 const form = useForm({
     date_remb: '',
@@ -40,7 +49,8 @@ function submit() {
                     <input
                         v-model="form.date_remb"
                         type="date"
-                        class="w-full border border-gray-300 dark:border-gray-600 p-2 rounded focus:ring-2 focus:ring-[#042B62] dark:focus:ring-[#F3B21B] focus:border-transparent dark:bg-gray-800 dark:text-white"
+                        :max="maxDate"
+                    class="w-full border border-gray-300 dark:border-gray-600 p-2 rounded focus:ring-2 focus:ring-[#042B62] dark:focus:ring-[#F3B21B] focus:border-transparent dark:bg-gray-800 dark:text-white"
                     />
                     <div v-if="form.errors.date_remb" class="text-red-500 text-sm">{{ form.errors.date_remb }}</div>
                 </div>

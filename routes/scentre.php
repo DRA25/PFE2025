@@ -15,20 +15,10 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth', 'role:service centre|service achat'])->group(function () {
 
-    Route::get('/export/etat-trimestriel', [ExportController::class, 'exportEtatTrimestriel'])
-        ->name('export.etat-trimestriel');
-
-    Route::get('/export/etat-trimestriel-all', [ExportController::class, 'exportEtatTrimestrielAllCentres'])
-        ->name('export.etat-trimestriel-all');
-
-    Route::get('/export/demande-derogation/{draNumber}', [ExportController::class, 'exportDemandeDerogation'])
-        ->name('export.demande-derogation');
-
-    Route::get('/export/bordereau-operations/{draNumber}', [ExportController::class, 'exportBordereauOperations'])
-        ->name('export.bordereau-operations');
 
 
-    // Single demande PDF export
+
+// Single demande PDF export
     Route::get('/scentre/demandes-pieces/{demande_piece}/export-single-pdf', [ScentreDemandePieceController::class, 'exportPdf'])
         ->name('scentre.demandes-pieces.export-single-pdf');
 
@@ -52,10 +42,9 @@ Route::middleware(['auth', 'role:service centre|service achat'])->group(function
     // Group all scentre-related routes under /scentre prefix
     Route::prefix('scentre')->name('scentre.')->group(function () {
 
-
-
         Route::get('/dras/export-all', [ExportController::class, 'exportAllDras'])
             ->name('dras.export-all');
+
 
 
         // Prestations Routes

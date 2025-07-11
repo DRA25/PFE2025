@@ -127,7 +127,7 @@ const getIconForPath = (path: string) => {
                             </div>
                             <h2 class="text-xl sm:text-2xl font-bold mb-2 text-[#042B62] dark:text-[#F3B21B] group-hover:text-blue-700 dark:group-hover:text-yellow-300
                                            transition-colors duration-300 leading-snug">
-                                Rédiger les Bons de Commandes
+                                Gestion des Bons de Commandes
                             </h2>
                             <p class="text-gray-600 dark:text-gray-300 text-sm sm:text-base leading-relaxed">
                                 Créez et gérez tous les bons de commandes pour vos achats et services.

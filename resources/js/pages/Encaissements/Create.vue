@@ -10,6 +10,14 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Créer un Encaissement', href: '/encaissements/create' },
 ]
 
+const maxDate = computed(() => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = (today.getMonth() + 1).toString().padStart(2, '0');
+    const day = today.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
+});
+
 const props = defineProps<{
     centres: Array<{
         id_centre: string,
@@ -109,7 +117,7 @@ function submit() {
                         v-model="form.date_enc"
                         type="date"
                         id="date_enc"
-                        class="w-full border border-gray-300 dark:border-gray-600 p-2 rounded focus:ring-2 focus:ring-[#042B62] dark:focus:ring-[#F3B21B] focus:border-transparent dark:bg-gray-800 dark:text-white"
+                        :max="maxDate" class="w-full border border-gray-300 dark:border-gray-600 p-2 rounded focus:ring-2 focus:ring-[#042B62] dark:focus:ring-[#F3B21B] focus:border-transparent dark:bg-gray-800 dark:text-white"
                     />
                     <div v-if="form.errors.date_enc" class="text-red-500 text-sm">{{ form.errors.date_enc }}</div>
                 </div>

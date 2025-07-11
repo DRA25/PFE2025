@@ -115,14 +115,16 @@
             margin: 15px 0;
         }
 
-        /* QR Code Styles */
         .qr-code-container {
-            position: fixed;
-            right: 20px;
-            bottom: 10px;
+
+             right: 20px;
+             bottom: 10px;
             text-align: center;
             width: 120px;
-            z-index: 100;
+
+            margin-left: auto;
+            margin-right: auto;
+            margin-top: 30px;
         }
 
         .qr-code-container img {
@@ -199,13 +201,12 @@
     </tbody>
 </table>
 
-<!-- QR Code positioned in bottom right -->
+<div class="divider"></div>
+<p class="footer-text">Généré le: {{ $currentDate }}</p>
+
 <div class="qr-code-container">
     <img src="data:image/png;base64,{{ $qrCode }}" alt="QR Code de vérification">
     <div class="qr-code-label">Scan pour vérification</div>
 </div>
-
-<div class="divider"></div>
-<p class="footer-text">Généré le: {{ $currentDate }}</p>
 </body>
 </html>

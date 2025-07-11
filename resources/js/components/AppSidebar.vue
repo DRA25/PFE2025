@@ -83,14 +83,7 @@ if (user.value?.roles?.some((role: any) => role.name === 'admin' )) {
 
 
 
-// Conditionally add "fournisseurs"
-if (user.value?.roles?.some((role: any) => role.name === 'service achat' || role.name === 'service centre'  )) {
-    mainNavItems.push({
-        title: 'Fournisseur',
-        href: '/fournisseurs',
-        icon: User,
-    });
-}
+
 
 
 // Conditionally add "Atelier"

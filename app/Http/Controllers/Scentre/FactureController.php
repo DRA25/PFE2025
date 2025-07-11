@@ -14,12 +14,7 @@ use Inertia\Inertia;
 
 class FactureController extends Controller
 {
-    /**
-     * Display a listing of the factures for a specific DRA.
-     *
-     * @param  \App\Models\Dra  $dra
-     * @return \Inertia\Response
-     */
+
     public function index(Dra $dra)
     {
         $factures = $dra->factures()

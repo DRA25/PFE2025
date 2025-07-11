@@ -328,7 +328,7 @@ class ExportController extends Controller
         $centreType = $centre ? $centre->type_centre : 'Inconnu';
         $items = collect();
 
-        // Document processing function (THIS WAS MISSING)
+        // Document processing function
         $processDocument = function ($document, $isFacture = true) use (&$items, $formattedCentreCode) {
             $date = $isFacture
                 ? Carbon::parse($document->date_facture)->format('d/m/Y')
@@ -418,8 +418,7 @@ class ExportController extends Controller
             }
         };
 
-        // [Rest of your existing code for fetching factures and bonAchats]
-
+        // Fetch factures with related data
         $factures = Facture::with([
             'pieces' => function ($query) {
                 $query->withPivot('qte_f', 'prix_piece')->with('compteGeneral:code,libelle');
@@ -443,6 +442,7 @@ class ExportController extends Controller
             $processDocument($facture, true);
         }
 
+        // Fetch bonAchats with related data
         $bonAchats = BonAchat::with([
             'pieces' => function ($query) {
                 $query->withPivot('qte_ba', 'prix_piece')->with('compteGeneral:code,libelle');
@@ -779,27 +779,31 @@ class ExportController extends Controller
             abort(403, 'User is not associated with any centre');
         }
 
-        // Get centre information
-        $centreCode = $user->id_centre;
-        $formattedCentreCode = '1' . $centreCode;
-        $centre = Centre::find($centreCode);
-        $centreType = $centre ? $centre->type_centre : 'Inconnu';
+        // Get user's centre info
+        $userCentreCode = $user->id_centre;
+        $isDirection = ($userCentreCode === 'A20');
 
-        // Find the specific DRA by its number
-        $dra = DB::table('dras')
-            ->where('id_centre', $centreCode)
-            ->where('n_dra', $draNumber)
-            ->first();
+        // Find the specific DRA
+        $query = DB::table('dras')->where('n_dra', $draNumber);
+        if (!$isDirection) {
+            $query->where('id_centre', $userCentreCode);
+        }
+        $dra = $query->first();
 
         if (!$dra) {
             abort(404, 'DRA not found');
         }
 
+        // Determine which center to use for document data
+        $documentCentreCode = $isDirection ? $dra->id_centre : $userCentreCode;
+        $formattedCentreCode = '1' . $documentCentreCode;
+        $centre = Centre::find($documentCentreCode);
+        $centreType = $centre ? $centre->type_centre : 'Inconnu';
+
         // Create reference number (n_dra/year)
         $reference = $dra->n_dra . '/' . Carbon::now()->format('Y');
 
         $items = collect();
-
         // Document processing function
         $processDocument = function ($document, $isFacture = true) use (&$items, $formattedCentreCode) {
             $date = $isFacture
@@ -928,7 +932,6 @@ class ExportController extends Controller
         $totalAutres = $calculateTotal('autres');
         $grandTotal = $totalFourniture + $totalTravaux + $totalAutres;
 
-
         // Generate QR code content
         $qrContent = "NAFTAL DRA DOCUMENT\n";
         $qrContent .= "Référence: {$reference}\n";
@@ -947,10 +950,9 @@ class ExportController extends Controller
             ->roundBlockSizeMode(RoundBlockSizeMode::Margin)
             ->build();
 
-        // Get QR code as base64 string
         $qrCodeBase64 = base64_encode($qrCode->getString());
 
-        // Generate PDF with QR code
+        // Generate PDF
         $pdf = PDF::loadView('exports.demande_derogation', [
             'items' => $items,
             'centreCode' => $formattedCentreCode,
@@ -961,10 +963,11 @@ class ExportController extends Controller
             'totalAutres' => number_format($totalAutres, 2, ',', ' '),
             'grandTotal' => number_format($grandTotal, 2, ',', ' '),
             'currentDate' => Carbon::now()->format('d/m/Y'),
-            'qrCode' => $qrCodeBase64, // Pass the QR code to view
+            'qrCode' => $qrCodeBase64,
+            'accessedByDirection' => $isDirection,
+            'originalCenter' => $isDirection ? $centre?->nom_centre : null,
         ]);
 
-        // Ensure proper PDF rendering
         return $pdf->setOption('defaultFont', 'dejavu sans')
             ->setOption('isRemoteEnabled', true)
             ->setOption('isHtml5ParserEnabled', true)
@@ -987,17 +990,25 @@ class ExportController extends Controller
         $seuilcentre = $centre?->seuil_centre;
         $centreType = $centre?->type_centre ?? 'Inconnu';
 
-        // Fetch DRA
-        $dra = DB::table('dras')
-            ->where('id_centre', $centreCode)
-            ->where('n_dra', $draNumber)
-            ->first();
+        // Fetch DRA - modified to allow Direction (A20) to access any DRA
+        $query = DB::table('dras')->where('n_dra', $draNumber);
+
+        // Only add center filter if user is not from Direction center (A20)
+        if ($centreCode !== 'A20') {
+            $query->where('id_centre', $centreCode);
+        }
+
+        $dra = $query->first();
 
         if (!$dra) {
             abort(404, 'DRA not found');
         }
 
-        // Prepare
+        // Add indication if accessed by Direction
+        $accessedByDirection = $centreCode === 'A20';
+        $originalCenter = $accessedByDirection ? Centre::find($dra->id_centre)?->nom_centre : null;
+
+        // Prepare operations collection
         $operations = collect();
         $lineNumber = 1;
         $currentPage = 1;
@@ -1104,7 +1115,7 @@ class ExportController extends Controller
                     ]);
                 }
             } catch (\Exception $e) {
-                // skip
+                // skip if charges relation fails
             }
         }
 
@@ -1196,7 +1207,6 @@ class ExportController extends Controller
         // Generate QR code content
         $qrContent = "NAFTAL BORDEREAU OPERATIONS\n";
         $qrContent .= "DRA Number: {$draNumber}\n";
-        $qrContent .= "Centre: {$formattedCentreCode}\n";
         $qrContent .= "Date: " . Carbon::now()->format('d/m/Y') . "\n";
         $qrContent .= "Total Debits: " . number_format($totalDebits, 2, ',', ' ') . " DZD\n";
         $qrContent .= "Total Credits: " . number_format($totalCredits, 2, ',', ' ') . " DZD";
@@ -1233,7 +1243,9 @@ class ExportController extends Controller
             'periodeCompte' => $periodeCompte,
             'currentDate' => Carbon::now()->format('d/m/Y'),
             'numeroRemboursement' => $dra->numero_remboursement ?? '3761002',
-            'qrCode' => $qrCodeBase64, // Pass the QR code to view
+            'qrCode' => $qrCodeBase64,
+            'accessedByDirection' => $accessedByDirection,
+            'originalCenter' => $originalCenter,
         ]);
 
         return $pdf->setOption('defaultFont', 'dejavu sans')
