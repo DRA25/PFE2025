@@ -3,19 +3,28 @@ import { Head, Link, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { useForm } from '@inertiajs/vue3';
-// No need for 'computed' or 'ref' as the complex logic for multiple items is removed
-// No need for 'Plus' or 'Trash2' icons as they are part of the complex item adding
+import { computed } from 'vue';
+
 
 const page = usePage();
 
-// Define props including etatOptions (though etatOptions is no longer used for this form)
+
 defineProps<{
     pieces: {
         id_piece: number;
         nom_piece: string;
     }[];
-    // etatOptions: string[]; // Removed as etat_dp is no longer a user-selectable field in creation
+
 }>();
+
+const maxDate = computed(() => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = (today.getMonth() + 1).toString().padStart(2, '0'); // Months are 0-indexed
+    const day = today.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
+});
+
 
 const form = useForm({
     date_dp: new Date().toISOString().split('T')[0],
@@ -56,13 +65,15 @@ function submit() {
                     </ul>
                 </div>
 
+
                 <div class="space-y-2">
                     <label for="date_dp" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Date</label>
                     <input
                         id="date_dp"
                         v-model="form.date_dp"
                         type="date"
-                        class="w-full border border-gray-300 dark:border-gray-600 p-2 rounded focus:ring-2 focus:ring-[#042B62] dark:focus:ring-[#F3B21B] focus:border-transparent dark:bg-gray-800 dark:text-white"
+                        :max="maxDate"
+                    class="w-full border border-gray-300 dark:border-gray-600 p-2 rounded focus:ring-2 focus:ring-[#042B62] dark:focus:ring-[#F3B21B] focus:border-transparent dark:bg-gray-800 dark:text-white"
                     />
                     <div v-if="form.errors.date_dp" class="text-red-500 text-sm">{{ form.errors.date_dp }}</div>
                 </div>
